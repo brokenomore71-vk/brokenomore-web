@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
         if (!start && end) return end >= nowDate;
         
         // Both dates = must be in range
-        return start <= nowDate && end >= nowDate;
+        return start != null && end != null && start <= nowDate && end >= nowDate;
       });
       
       // Re-apply pagination after filtering
