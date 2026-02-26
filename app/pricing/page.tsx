@@ -680,15 +680,15 @@ export default function Pricing() {
             <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-8">
               <div className="text-center mb-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Free Plan</h3>
-                <p className="text-gray-600 mb-6">Perfect for getting started</p>
+                <p className="text-gray-600 mb-6">New users trying the app — zero risk, curiosity</p>
                 <div className="mb-4">
-                  <span className="text-5xl font-bold text-gray-900">Free</span>
+                  <span className="text-5xl font-bold text-gray-900">₹0</span>
                 </div>
                 <div className="bg-purple-50 rounded-lg p-4">
                   <div className="text-3xl font-bold text-[#6B46C1] mb-1">
                     5 Credits
                   </div>
-                  <div className="text-sm text-gray-600">Lifetime</div>
+                  <div className="text-sm text-gray-600">One-time</div>
                 </div>
               </div>
 
@@ -707,7 +707,7 @@ export default function Pricing() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  <span className="text-gray-700">5 lifetime credits</span>
+                  <span className="text-gray-700">Access to Offers & Deals only</span>
                 </li>
                 <li className="flex items-start">
                   <svg
@@ -723,7 +723,7 @@ export default function Pricing() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  <span className="text-gray-700">No card required</span>
+                  <span className="text-gray-700">5 credits one-time, no card required</span>
                 </li>
                 <li className="flex items-start">
                   <svg
@@ -739,7 +739,7 @@ export default function Pricing() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  <span className="text-gray-700">One-time activation</span>
+                  <span className="text-gray-700">Zero risk, one-time activation</span>
                 </li>
               </ul>
 
@@ -760,31 +760,27 @@ export default function Pricing() {
               </button>
             </div>
 
-            {/* Pro Plan - Middle (Most Popular) */}
+            {/* Monthly / Yearly Plan - Middle (Recommended) */}
             <div className="bg-white rounded-2xl shadow-lg border-2 border-[#6B46C1] p-8 scale-105 md:scale-110 relative">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                 <span className="bg-[#6B46C1] text-white px-4 py-1 rounded-full text-sm font-semibold">
-                  Most Popular
+                  ⭐ Recommended
                 </span>
               </div>
 
               <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Pro Plan</h3>
-                <p className="text-gray-600 mb-6">Best for regular users</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Monthly / Yearly Plan</h3>
+                <p className="text-gray-600 mb-6">Long-term users who want maximum value — best price, savings, bonus credits</p>
                 <div className="mb-4">
-                  <span className="text-5xl font-bold text-gray-900"><span className="line-through text-gray-400">₹399</span> ₹299</span>
+                  <span className="text-5xl font-bold text-gray-900">₹399</span>
                   <span className="text-gray-600">/month</span>
                 </div>
-                <p className="text-sm text-gray-500 mb-4">
-                  Launch month offer
-                  <br />
-                  <p className="text-[#6B46C1]"><strong>Offer can be claimed during the payment</strong></p>
-                </p>
+                <p className="text-sm text-gray-500 mb-4">Billed yearly</p>
                 <div className="bg-purple-50 rounded-lg p-4">
                   <div className="text-3xl font-bold text-[#6B46C1] mb-1">
-                    50 Credits/Day
+                    500 Credits
                   </div>
-                  <div className="text-sm text-gray-600">1,500 credits total</div>
+                  <div className="text-sm text-gray-600">Per billing cycle</div>
                 </div>
               </div>
 
@@ -803,7 +799,7 @@ export default function Pricing() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  <span className="text-gray-700">50 credits per day</span>
+                  <span className="text-gray-700">Broke AI</span>
                 </li>
                 <li className="flex items-start">
                   <svg
@@ -819,7 +815,7 @@ export default function Pricing() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  <span className="text-gray-700">Valid for 1 month (30 days)</span>
+                  <span className="text-gray-700">AI Fundamental Analysis</span>
                 </li>
                 <li className="flex items-start">
                   <svg
@@ -835,7 +831,23 @@ export default function Pricing() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  <span className="text-gray-700">1,500 total credits upfront</span>
+                  <span className="text-gray-700">Mutual Fund Research</span>
+                </li>
+                <li className="flex items-start">
+                  <svg
+                    className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <span className="text-gray-700">Free Offers</span>
                 </li>
                 <li className="flex items-start">
                   <svg
@@ -898,24 +910,24 @@ export default function Pricing() {
                   ? 'Processing...'
                   : isProSubscribed
                   ? 'Already Purchased'
-                  : 'Buy Pro Plan'}
+                  : 'Buy Yearly Plan'}
               </button>
             </div>
 
-            {/* Pro Plan - One Month (₹499) - same styling as Free */}
+            {/* Monthly Plan (₹499) */}
             <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-8">
               <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Pro Plan</h3>
-                <p className="text-gray-600 mb-6">One month access</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Monthly Plan</h3>
+                <p className="text-gray-600 mb-6">Users who want flexibility at lower cost — discount advantage</p>
                 <div className="mb-4">
                   <span className="text-5xl font-bold text-gray-900">₹499</span>
                   <span className="text-gray-600">/month</span>
                 </div>
                 <div className="bg-purple-50 rounded-lg p-4">
                   <div className="text-3xl font-bold text-[#6B46C1] mb-1">
-                    50 Credits/Day
+                    400 Credits
                   </div>
-                  <div className="text-sm text-gray-600">1 month validity</div>
+                  <div className="text-sm text-gray-600">Per month</div>
                 </div>
               </div>
 
@@ -934,7 +946,7 @@ export default function Pricing() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  <span className="text-gray-700">50 credits per day</span>
+                  <span className="text-gray-700">Broke AI</span>
                 </li>
                 <li className="flex items-start">
                   <svg
@@ -950,7 +962,7 @@ export default function Pricing() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  <span className="text-gray-700">Valid for 1 month (30 days)</span>
+                  <span className="text-gray-700">AI Fundamental Analysis</span>
                 </li>
                 <li className="flex items-start">
                   <svg
@@ -966,7 +978,7 @@ export default function Pricing() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  <span className="text-gray-700">1,500 total credits</span>
+                  <span className="text-gray-700">Mutual Fund Research</span>
                 </li>
                 <li className="flex items-start">
                   <svg
@@ -982,7 +994,23 @@ export default function Pricing() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  <span className="text-gray-700">One-time payment via Razorpay</span>
+                  <span className="text-gray-700">Free Offers</span>
+                </li>
+                <li className="flex items-start">
+                  <svg
+                    className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <span className="text-gray-700">Secure payment via Razorpay</span>
                 </li>
               </ul>
 
@@ -1028,7 +1056,7 @@ export default function Pricing() {
                   ? 'Processing...'
                   : isProSubscribed
                   ? 'Already Purchased'
-                  : 'Buy Pro Plan (1 Month)'}
+                  : 'Buy Monthly Plan'}
               </button>
             </div>
           </div>
