@@ -284,7 +284,7 @@ export async function POST(request: NextRequest) {
             .maybeSingle();
 
           if (!existingCredits) {
-            const creditsToAdd = 1500; // Monthly credits for Pro Plan
+            const creditsToAdd = 500; // Yearly plan: 500 credits per billing cycle
 
             console.log(`💰 Granting ${creditsToAdd} credits for missed renewal...`);
 
@@ -292,7 +292,7 @@ export async function POST(request: NextRequest) {
               p_user_id: userId,
               p_amount: creditsToAdd,
               p_transaction_type: 'purchase',
-              p_description: `Pro Plan Monthly Renewal (Sync) - Billing Cycle ${currentPaidCount} (${creditsToAdd} credits)`,
+              p_description: `Yearly Plan Renewal (Sync) - Billing Cycle ${currentPaidCount} (${creditsToAdd} credits)`,
               p_purchase_id: subscriptionId,
               p_order_id: subscriptionId,
               p_metadata: {

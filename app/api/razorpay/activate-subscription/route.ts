@@ -135,8 +135,8 @@ export async function POST(request: NextRequest) {
       razorpay_end_at: subscriptionDetails.end_at,
     });
 
-    // Calculate credits (50 credits/day * 30 days = 1500 credits for Pro Plan)
-    const creditsToAdd = 1500; // Pro Plan credits
+    // Yearly Plan: 500 credits per billing cycle (₹399/month billed yearly)
+    const creditsToAdd = 500;
 
     console.log('📊 Subscription details:', {
       start: subscriptionStart,

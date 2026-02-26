@@ -10,7 +10,7 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 // Get Razorpay credentials
 const razorpayKeyId = process.env.RAZORPAY_KEY_ID?.trim();
 const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
-// Use demo plan ID only (for testing)
+// Yearly plan: set RAZORPAY_PLAN_ID to a Razorpay plan set to ₹399/month, billed yearly (12 cycles). Users get 500 credits per cycle.
 const razorpayPlanId = process.env.RAZORPAY_PLAN_ID?.trim();
 // Original plan offer ID - commented out for demo plan (demo plan has no offer)
 // const razorpayOfferId = process.env.RAZORPAY_OFFER_ID?.trim();

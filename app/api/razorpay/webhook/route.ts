@@ -165,8 +165,8 @@ export async function POST(request: NextRequest) {
           razorpay_end_at: subscriptionDetails.end_at,
         });
 
-        // Calculate credits (50 credits/day * 30 days = 1500 credits for Pro Plan)
-        const creditsToAdd = 1500; // Pro Plan credits
+        // Yearly Plan: 500 credits per billing cycle (₹399/month billed yearly)
+        const creditsToAdd = 500;
 
         // Check if subscription already exists
         const { data: existingSubscription } = await supabaseAdmin
@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
               p_user_id: userId,
               p_amount: creditsToAdd,
               p_transaction_type: 'purchase',
-              p_description: `Pro Plan Subscription - 50 credits/day for 1 month (${creditsToAdd} credits)`,
+              p_description: `Yearly Plan Subscription - ${creditsToAdd} credits per cycle`,
               p_purchase_id: subscriptionId,
               p_order_id: subscriptionId,
               p_metadata: {
@@ -385,7 +385,7 @@ export async function POST(request: NextRequest) {
 
         // Grant credits if this is a new billing period (paid_count increased)
         if (currentPaidCount > lastCreditGrantPeriod) {
-          const creditsToAdd = 1500; // Monthly credits for Pro Plan
+          const creditsToAdd = 500; // Yearly plan: 500 credits per billing cycle
 
           // Check if credits were already added for this specific billing period
           const { data: existingCredits } = await supabaseAdmin
@@ -406,7 +406,7 @@ export async function POST(request: NextRequest) {
               p_user_id: userId,
               p_amount: creditsToAdd,
               p_transaction_type: 'purchase',
-              p_description: `Pro Plan Monthly Renewal - Billing Cycle ${currentPaidCount} (${creditsToAdd} credits)`,
+              p_description: `Yearly Plan Renewal - Billing Cycle ${currentPaidCount} (${creditsToAdd} credits)`,
               p_purchase_id: subscriptionId,
               p_order_id: subscriptionId,
               p_metadata: {
@@ -465,7 +465,7 @@ export async function POST(request: NextRequest) {
           message: 'Monthly renewal processed successfully',
           subscription_id: subscriptionId,
           billing_cycle: currentPaidCount,
-          credits_granted: currentPaidCount > lastCreditGrantPeriod ? 1500 : 0,
+          credits_granted: currentPaidCount > lastCreditGrantPeriod ? 500 : 0,
         });
       }
 

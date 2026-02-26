@@ -92,21 +92,21 @@ export async function POST(request: NextRequest) {
         };
       }
     } else if (plan_type === 'pro_one_month') {
-      // One-month Pro plan: one-shot payment ₹499, 1500 credits
+      // Monthly Plan: one-shot payment ₹499, 400 credits
       let result = await supabaseAdmin
         .from('credit_packages')
         .select('*')
         .eq('is_active', true)
-        .or('name.ilike.%Pro 1 Month%,name.ilike.%Pro One Month%,name.ilike.%499%')
+        .or('name.ilike.%Monthly Plan%,name.ilike.%Pro 1 Month%,name.ilike.%Pro One Month%,name.ilike.%499%')
         .maybeSingle();
       packages = result.data;
       packageError = result.error;
       if (!packages && !packageError) {
         packages = {
           id: 'default-pro-one-month',
-          name: 'Pro Plan (1 Month)',
-          description: '50 credits per day for 1 month - one-time payment',
-          credits: 1500,
+          name: 'Monthly Plan',
+          description: '400 credits per month - Broke AI, AI Analysis, Mutual Fund Research, Free Offers',
+          credits: 400,
           bonus_credits: 0,
           price_paise: 49900,
           currency: 'INR',
@@ -136,9 +136,9 @@ export async function POST(request: NextRequest) {
         } else if (plan_type === 'pro_one_month') {
           packages = {
             id: 'default-pro-one-month',
-            name: 'Pro Plan (1 Month)',
-            description: '50 credits per day for 1 month - one-time payment',
-            credits: 1500,
+            name: 'Monthly Plan',
+            description: '400 credits per month - Broke AI, AI Analysis, Mutual Fund Research, Free Offers',
+            credits: 400,
             bonus_credits: 0,
             price_paise: 49900,
             currency: 'INR',
@@ -158,8 +158,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ 
         error: 'Package not found',
         message: 'No active Pro Plan found in credit_packages table.',
-        suggestion: 'Please create a package in credit_packages table with: name="Pro Plan" (or containing "Pro"), credits=1500, price_paise=29900, currency="INR", is_active=true',
-        sql_example: `INSERT INTO credit_packages (name, description, credits, bonus_credits, price_paise, currency, is_active, created_at) VALUES ('Pro Plan', '50 credits per day for 1 month', 1500, 0, 29900, 'INR', true, NOW());`
+        suggestion: 'Please create a package in credit_packages table with: name="Monthly Plan" (or containing "499"), credits=400, price_paise=49900, currency="INR", is_active=true',
+        sql_example: `INSERT INTO credit_packages (name, description, credits, bonus_credits, price_paise, currency, is_active, created_at) VALUES ('Monthly Plan', '400 credits per month', 400, 0, 49900, 'INR', true, NOW());`
       }, { status: 404 });
     }
 

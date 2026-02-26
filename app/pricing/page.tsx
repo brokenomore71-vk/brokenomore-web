@@ -583,7 +583,7 @@ export default function Pricing() {
         key: razorpay_key_id,
         order_id,
         name: 'BrokeNoMore',
-        description: 'Pro Plan (1 Month) - ₹499',
+        description: 'Monthly Plan - ₹499',
         prefill: { email: user.email ?? undefined },
         modal: {
           ondismiss: () => setProcessingProOneMonth(false),

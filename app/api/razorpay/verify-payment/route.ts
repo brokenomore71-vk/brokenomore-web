@@ -218,9 +218,8 @@ export async function POST(request: NextRequest) {
     const subscriptionStart = new Date().toISOString();
     const subscriptionEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days from now
 
-    // Calculate credits for Pro Plan (50 credits/day * 30 days = 1500 credits)
-    // Using Option A: Give total credits upfront
-    const creditsToAdd = purchase.credits_purchased || 1500; // Default to 1500 for Pro Plan
+    // Monthly Plan: 400 credits (one-shot ₹499). Use purchase record if set.
+    const creditsToAdd = purchase.credits_purchased || 400;
 
     // Update purchase status with subscription information - try with user context first (respects RLS)
     // Note: supabaseUser is already created above, reusing it

@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
           plan_display: planDisplay,
           status: actualStatus,
           provider: subscription.provider,
-          amount: amountRupees > 0 ? amountRupees : (subscription.plan === 'pro' ? 299 : 0),
+          amount: amountRupees > 0 ? amountRupees : (subscription.plan === 'pro' ? 399 : 0),
           started_at: subscription.started_at || subscription.created_at,
           ends_at: subscription.ends_at,
           current_period_start: subscription.current_period_start,
