@@ -623,6 +623,26 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Video Section */}
+        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-3xl sm:text-4xl font-bold text-center mb-8 text-gray-900">
+              Know More About It
+            </h2>
+            <div className="relative w-full overflow-hidden rounded-2xl shadow-2xl aspect-video">
+              <iframe
+                className="absolute top-0 left-0 w-full h-full"
+                src="https://www.youtube.com/embed/SUSxVzWrFUk?si=94z6dOVuyuxso1mK"
+                title="BrokeNoMore Demo Video"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+              ></iframe>
+            </div>
+          </div>
+        </section>
+
         {/* How BrokeNoMore Works */}
         {/* <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
