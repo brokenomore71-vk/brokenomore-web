@@ -186,6 +186,77 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
+          <section id="google-api-disclosure">
+            <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">
+              Google API Services User Data Policy &amp; Gmail Integration (Limited Use Disclosure)
+            </h2>
+            <p className="mb-4">
+              Broke No More (BNM) provides an optional feature allowing users to connect their Google account to scan and identify recurring bills and digital subscriptions.
+            </p>
+
+            <h3 className="text-xl font-semibold text-gray-900 mt-6 mb-3">
+              1. Data Accessed and Purpose
+            </h3>
+            <ul className="list-disc list-inside ml-4 space-y-2">
+              <li>
+                When you link your Gmail account, we request the{' '}
+                <code className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-sm font-mono">
+                  https://www.googleapis.com/auth/gmail.readonly
+                </code>{' '}
+                permission.
+              </li>
+              <li>
+                We access only relevant message headers and receipt snippets (e.g., invoices from utility providers, telecom operators, and subscription services).
+              </li>
+              <li>
+                This data is accessed solely to identify upcoming payment due dates, amounts, and vendor names to populate your personal Bills &amp; Subscriptions tracker.
+              </li>
+            </ul>
+
+            <h3 className="text-xl font-semibold text-gray-900 mt-6 mb-3">
+              2. Data Storage, Sharing, and Protection
+            </h3>
+            <ul className="list-disc list-inside ml-4 space-y-2">
+              <li>
+                <strong>No Raw Email Storage:</strong> We do not permanently store, copy, or retain your raw email content or message bodies on our external servers.
+              </li>
+              <li>
+                <strong>No Advertising or Profiling:</strong> We never sell, transfer, or use your Gmail content for serving advertisements, personalized marketing, or creditworthiness evaluation.
+              </li>
+              <li>
+                <strong>No Model Training:</strong> Your email data is not used to train generalized artificial intelligence or machine learning models.
+              </li>
+              <li>
+                <strong>User Control &amp; Revocation:</strong> You can disconnect your Gmail account at any time within the app settings under <em>Manage Tracking</em>, or directly revoke access via your{' '}
+                <a
+                  href="https://myaccount.google.com/permissions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#6B46C1] hover:underline font-semibold"
+                >
+                  Google Account Permissions
+                </a>
+                . Upon disconnection, all active session tokens are immediately deleted.
+              </li>
+            </ul>
+
+            <h3 className="text-xl font-semibold text-gray-900 mt-6 mb-3">
+              3. Google API Limited Use Policy
+            </h3>
+            <p className="mt-4">
+              Broke No More&apos;s use and transfer to any other app of information received from Google APIs adheres to the{' '}
+              <a
+                href="https://developers.google.com/terms/api-services-user-data-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#6B46C1] hover:underline font-semibold"
+              >
+                Google API Services User Data Policy
+              </a>
+              , including the Limited Use requirements.
+            </p>
+          </section>
+
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">6. Your Rights</h2>
             <p className="mb-4">You have the right to:</p>
