@@ -6,26 +6,214 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 interface Phone3DProps {
   className?: string;
+  selectedFeatureId?: string | null;
 }
 
-export default function Phone3D({ className = '' }: Phone3DProps) {
+const FEATURE_IMAGES: Record<string, string> = {
+  gold: '/assets/images/features/goldsavings.jpeg',
+  'gold-savings': '/assets/images/features/goldsavings.jpeg',
+  split: '/assets/images/features/splitshare.jpeg',
+  'split-share': '/assets/images/features/splitshare.jpeg',
+  stocks: '/assets/images/features/stocks.jpeg',
+  stock: '/assets/images/features/stocks.jpeg',
+  loan: '/assets/images/features/loanplanner.jpeg',
+  'loan-planner': '/assets/images/features/loanplanner.jpeg',
+  itr: '/assets/images/features/ITR.jpeg',
+  'file-itr': '/assets/images/features/ITR.jpeg',
+};
+
+const TOP_BG_COLORS: Record<string, string> = {
+  gold: '#EAA837',
+  'gold-savings': '#EAA837',
+  split: '#A493D7',
+  'split-share': '#A493D7',
+  stocks: '#121212',
+  stock: '#121212',
+  loan: '#EBE3FA',
+  'loan-planner': '#EBE3FA',
+  itr: '#12121A',
+  'file-itr': '#12121A',
+};
+
+export default function Phone3D({
+  className = '',
+  selectedFeatureId = null,
+}: Phone3DProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const canvasTextureRef = useRef<THREE.CanvasTexture | null>(null);
+  const displayCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const logoImageRef = useRef<HTMLImageElement | null>(null);
+  const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const selectedFeatureIdRef = useRef<string | null | undefined>(selectedFeatureId);
+
+  // Animation & spring reaction references
+  const modelGroupRef = useRef<THREE.Group | null>(null);
+  const hapticOffsetRef = useRef<{ z: number; targetZ: number }>({
+    z: 0,
+    targetZ: 0,
+  });
+
+  // Render the white BrokeNoMore app logo centered on the dark screen
+  const drawLogoToCanvas = (
+    canvas: HTMLCanvasElement,
+    logoImg: HTMLImageElement,
+    texture: THREE.CanvasTexture
+  ) => {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // 1. Deep Midnight Background
+    ctx.fillStyle = '#050508';
+    ctx.fillRect(0, 0, width, height);
+
+    // 2. Large Centered White Logo
+    const logoSize = Math.round(width * 0.6);
+    const logoX = (width - logoSize) / 2;
+    const logoY = (height - logoSize) / 2;
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+
+    texture.needsUpdate = true;
+  };
+
+  // Render feature screenshot onto the phone screen without time/battery
+  const drawFeatureToCanvas = (
+    canvas: HTMLCanvasElement,
+    img: HTMLImageElement,
+    featureId: string,
+    texture: THREE.CanvasTexture
+  ) => {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const width = canvas.width;
+    const height = canvas.height;
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // 1. Draw the full high-res screenshot
+    ctx.drawImage(img, 0, 0, width, height);
+
+    // 2. Ensure top status bar (time/battery) is completely filled with the seamless header background
+    const topColor = TOP_BG_COLORS[featureId];
+    if (topColor) {
+      ctx.fillStyle = topColor;
+      ctx.fillRect(0, 0, width, Math.round(height * (64 / 1400)));
+    }
+
+    texture.needsUpdate = true;
+  };
+
+  // Preload logo and feature screenshots on mount
+  useEffect(() => {
+    // Preload Logo
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    logoImg.src = '/assets/images/logo_white.png';
+    logoImageRef.current = logoImg;
+
+    // Preload Feature Images
+    const uniqueSources = Array.from(new Set(Object.values(FEATURE_IMAGES)));
+    uniqueSources.forEach((src) => {
+      if (!imageCacheRef.current.has(src)) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = src;
+        img.onload = () => {
+          imageCacheRef.current.set(src, img);
+          const currentId = selectedFeatureIdRef.current;
+          if (currentId && FEATURE_IMAGES[currentId] === src) {
+            const canvas = displayCanvasRef.current;
+            const texture = canvasTextureRef.current;
+            if (canvas && texture) {
+              drawFeatureToCanvas(canvas, img, currentId, texture);
+            }
+          }
+        };
+        imageCacheRef.current.set(src, img);
+      }
+    });
+  }, []);
+
+  // Three.js Scene Setup & Animation Loop
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Scene
+    // Offscreen Canvas setup for 630x1400 native retina screen texture
+    const screenWidth = 630;
+    const screenHeight = 1400;
+
+    const displayCanvas = document.createElement('canvas');
+    displayCanvas.width = screenWidth;
+    displayCanvas.height = screenHeight;
+    displayCanvasRef.current = displayCanvas;
+
+    // Fill initial black background
+    const ctx = displayCanvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#050508';
+      ctx.fillRect(0, 0, screenWidth, screenHeight);
+    }
+
+    // Create CanvasTexture immediately
+    const canvasTexture = new THREE.CanvasTexture(displayCanvas);
+    canvasTexture.flipY = false;
+    canvasTexture.colorSpace = THREE.SRGBColorSpace;
+    canvasTexture.minFilter = THREE.LinearFilter;
+    canvasTexture.magFilter = THREE.LinearFilter;
+    canvasTextureRef.current = canvasTexture;
+
+    // Initial draw: selected feature image or BrokeNoMore white logo
+    const initialFeatureId = selectedFeatureIdRef.current;
+    if (initialFeatureId && FEATURE_IMAGES[initialFeatureId]) {
+      const src = FEATURE_IMAGES[initialFeatureId];
+      const cached = imageCacheRef.current.get(src);
+      if (cached && cached.complete && cached.naturalWidth > 0) {
+        drawFeatureToCanvas(displayCanvas, cached, initialFeatureId, canvasTexture);
+      } else {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = src;
+        img.onload = () => {
+          imageCacheRef.current.set(src, img);
+          if (selectedFeatureIdRef.current === initialFeatureId) {
+            drawFeatureToCanvas(displayCanvas, img, initialFeatureId, canvasTexture);
+          }
+        };
+      }
+    } else {
+      const logoImg = logoImageRef.current || new Image();
+      if (!logoImageRef.current) {
+        logoImg.crossOrigin = 'anonymous';
+        logoImg.src = '/assets/images/logo_white.png';
+        logoImageRef.current = logoImg;
+      }
+      if (logoImg.complete && logoImg.naturalWidth > 0) {
+        drawLogoToCanvas(displayCanvas, logoImg, canvasTexture);
+      } else {
+        logoImg.onload = () => {
+          if (!selectedFeatureIdRef.current) {
+            drawLogoToCanvas(displayCanvas, logoImg, canvasTexture);
+          }
+        };
+      }
+    }
+
+    // Three.js Scene Setup
     const scene = new THREE.Scene();
 
-    // Camera
     const width = container.clientWidth || 400;
     const height = container.clientHeight || 650;
     const camera = new THREE.PerspectiveCamera(38, width / height, 0.05, 10);
-    camera.position.set(0, 0, 0.265);
+    camera.position.set(0, 0, 0.285);
 
-    // Renderer with rich contrast tone mapping
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
       antialias: true,
@@ -34,33 +222,30 @@ export default function Phone3D({ className = '' }: Phone3DProps) {
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.88; // Deep, rich dark tones
+    renderer.toneMappingExposure = 0.95;
     container.appendChild(renderer.domElement);
 
-    // Dark sleek studio lighting (deep contrast, no washed-out milky look)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    // Cinematic Lighting matching floating product showcase
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambientLight);
 
-    // Crisp directional key light on the bezel edges
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
-    keyLight.position.set(1.8, 3, 2);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.6);
+    keyLight.position.set(2.5, 2.5, 2.5);
     scene.add(keyLight);
 
-    // Subtle purple/violet fill for the cherry titanium edges
-    const rimLight = new THREE.DirectionalLight(0x7c3aed, 0.8);
-    rimLight.position.set(-2, 1, 1.2);
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    rimLight.position.set(-2, 1.2, 1.2);
     scene.add(rimLight);
 
-    // Top specular highlight
-    const topLight = new THREE.DirectionalLight(0xffffff, 0.7);
-    topLight.position.set(0, 4, -1);
+    const topLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    topLight.position.set(0, 4, 1.5);
     scene.add(topLight);
 
-    // Group for model and animations
     const modelGroup = new THREE.Group();
+    modelGroupRef.current = modelGroup;
     scene.add(modelGroup);
 
-    // Mouse tracking for tilt
+    // Interactive pointer drag tracking
     const mouse = { x: 0, y: 0, targetX: 0, targetY: 0 };
     let isDragging = false;
     let previousPointerPosition = { x: 0, y: 0 };
@@ -74,13 +259,13 @@ export default function Phone3D({ className = '' }: Phone3DProps) {
       if (isDragging) {
         const deltaX = e.clientX - previousPointerPosition.x;
         const deltaY = e.clientY - previousPointerPosition.y;
-        dragRotation.y += deltaX * 0.008;
-        dragRotation.x += deltaY * 0.008;
-        dragRotation.x = Math.max(-0.6, Math.min(0.6, dragRotation.x));
+        dragRotation.y += deltaX * 0.007;
+        dragRotation.x += deltaY * 0.007;
+        dragRotation.x = Math.max(-0.55, Math.min(0.55, dragRotation.x));
         previousPointerPosition = { x: e.clientX, y: e.clientY };
       } else {
-        mouse.targetX = ((clientX / rect.width) * 2 - 1) * 0.25;
-        mouse.targetY = (-(clientY / rect.height) * 2 + 1) * 0.2;
+        mouse.targetX = ((clientX / rect.width) * 2 - 1) * 0.22;
+        mouse.targetY = (-(clientY / rect.height) * 2 + 1) * 0.18;
       }
     };
 
@@ -97,15 +282,11 @@ export default function Phone3D({ className = '' }: Phone3DProps) {
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
 
-    // Load custom app screen texture
-    const textureLoader = new THREE.TextureLoader();
-    const screenTexture = textureLoader.load('/assets/images/app_screen.png');
-    screenTexture.flipY = false;
-    screenTexture.colorSpace = THREE.SRGBColorSpace;
-    screenTexture.minFilter = THREE.LinearFilter;
-    screenTexture.magFilter = THREE.LinearFilter;
+    const screenMaterial = new THREE.MeshBasicMaterial({
+      map: canvasTexture,
+    });
 
-    // Load GLTF model
+    // Load 3D GLTF Model (main.glb)
     const loader = new GLTFLoader();
     let isMounted = true;
 
@@ -115,35 +296,32 @@ export default function Phone3D({ className = '' }: Phone3DProps) {
         if (!isMounted) return;
         const model = gltf.scene;
 
-        // Tune materials for rich dark contrast & realistic satin sheen
         model.traverse((child) => {
           if (child instanceof THREE.Mesh && child.material) {
             const mat = child.material as THREE.MeshStandardMaterial;
 
-            // Screen texture
+            // Apply custom canvas texture displaying the app logo or feature
             if ((mat.name || '').includes('Screen')) {
-              child.material = new THREE.MeshBasicMaterial({
-                map: screenTexture,
-              });
+              child.material = screenMaterial;
               return;
             }
 
-            // Dark satin titanium: retain deep dark base color, prevent pale/light washout
+            // Dark satin titanium frame
             if (typeof mat.metalness === 'number' && mat.metalness > 0.4) {
-              mat.metalness = 0.82; // Sleek dark metallic
-              mat.roughness = 0.28; // Satin sheen, avoids harsh blinding glare
+              mat.metalness = 0.85;
+              mat.roughness = 0.24;
               mat.needsUpdate = true;
             }
 
-            // Dark glass
+            // Dark camera and sensor glass
             if ((mat.name || '').includes('Glass')) {
-              mat.roughness = 0.08;
+              mat.roughness = 0.06;
               mat.needsUpdate = true;
             }
           }
         });
 
-        // Auto-center the model
+        // Center phone model
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
         model.position.x -= center.x;
@@ -160,7 +338,7 @@ export default function Phone3D({ className = '' }: Phone3DProps) {
       }
     );
 
-    // Resize handler
+    // Responsive resize observer
     const onResize = () => {
       if (!container) return;
       const w = container.clientWidth;
@@ -174,12 +352,12 @@ export default function Phone3D({ className = '' }: Phone3DProps) {
     const resizeObserver = new ResizeObserver(onResize);
     resizeObserver.observe(container);
 
-    // Animation loop
-    let animationFrameId: number;
+    // Animation loop (60 FPS)
+    let animId: number;
     let clock = new THREE.Clock();
 
     const animate = () => {
-      animationFrameId = requestAnimationFrame(animate);
+      animId = requestAnimationFrame(animate);
 
       const elapsedTime = clock.getElapsedTime();
 
@@ -187,17 +365,35 @@ export default function Phone3D({ className = '' }: Phone3DProps) {
       mouse.x += (mouse.targetX - mouse.x) * 0.05;
       mouse.y += (mouse.targetY - mouse.y) * 0.05;
 
-      // Gentle floating motion
-      const floatY = Math.sin(elapsedTime * 1.5) * 0.003;
-      modelGroup.position.y = floatY;
+      // Spring-based Haptic bounce interpolation
+      const haptic = hapticOffsetRef.current;
+      haptic.z += (haptic.targetZ - haptic.z) * 0.12;
+      haptic.targetZ *= 0.92;
 
-      // Combine floating tilt with mouse/drag rotation
+      // Organic 3D floating waves matching the reference pose
+      const floatY = Math.sin(elapsedTime * 1.3) * 0.007;
+      const floatX = Math.cos(elapsedTime * 0.9) * 0.002;
+      const floatRotX = Math.sin(elapsedTime * 1.1) * 0.018;
+      const floatRotY = Math.cos(elapsedTime * 0.95) * 0.022;
+      const floatRotZ = Math.sin(elapsedTime * 1.0) * 0.014;
+
+      modelGroup.position.x = floatX;
+      modelGroup.position.y = floatY;
+      modelGroup.position.z = haptic.z;
+
+      // Base isometric floating diagonal pose matching reference image:
+      const baseRotX = 0.16 + floatRotX;
+      const baseRotY = -0.32 + floatRotY;
+      const baseRotZ = -0.24 + floatRotZ;
+
       if (isDragging) {
-        modelGroup.rotation.y = dragRotation.y;
-        modelGroup.rotation.x = dragRotation.x;
+        modelGroup.rotation.x = baseRotX + dragRotation.x;
+        modelGroup.rotation.y = baseRotY + dragRotation.y;
+        modelGroup.rotation.z = baseRotZ;
       } else {
-        modelGroup.rotation.y = mouse.x + dragRotation.y * 0.95;
-        modelGroup.rotation.x = -mouse.y + dragRotation.x * 0.95;
+        modelGroup.rotation.x = baseRotX - mouse.y * 0.4 + dragRotation.x * 0.95;
+        modelGroup.rotation.y = baseRotY + mouse.x * 0.5 + dragRotation.y * 0.95;
+        modelGroup.rotation.z = baseRotZ;
         dragRotation.y *= 0.98;
         dragRotation.x *= 0.98;
       }
@@ -209,12 +405,13 @@ export default function Phone3D({ className = '' }: Phone3DProps) {
 
     return () => {
       isMounted = false;
-      cancelAnimationFrame(animationFrameId);
+      cancelAnimationFrame(animId);
       container.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
       resizeObserver.disconnect();
-      screenTexture.dispose();
+      canvasTexture.dispose();
+      screenMaterial.dispose();
       if (renderer.domElement && container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
@@ -222,15 +419,52 @@ export default function Phone3D({ className = '' }: Phone3DProps) {
     };
   }, []);
 
+  // When selectedFeatureId changes, update the phone screen
+  useEffect(() => {
+    selectedFeatureIdRef.current = selectedFeatureId;
+    hapticOffsetRef.current.targetZ = 0.018; // Haptic spring pop
+
+    const canvas = displayCanvasRef.current;
+    const texture = canvasTextureRef.current;
+    if (!canvas || !texture) return;
+
+    if (!selectedFeatureId) {
+      const logoImg = logoImageRef.current;
+      if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+        drawLogoToCanvas(canvas, logoImg, texture);
+      }
+      return;
+    }
+
+    const imageSrc = FEATURE_IMAGES[selectedFeatureId];
+    if (imageSrc) {
+      const cached = imageCacheRef.current.get(imageSrc);
+      if (cached && cached.complete && cached.naturalWidth > 0) {
+        drawFeatureToCanvas(canvas, cached, selectedFeatureId, texture);
+      } else {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = imageSrc;
+        img.onload = () => {
+          imageCacheRef.current.set(imageSrc, img);
+          if (selectedFeatureIdRef.current === selectedFeatureId) {
+            drawFeatureToCanvas(canvas, img, selectedFeatureId, texture);
+          }
+        };
+      }
+    }
+  }, [selectedFeatureId]);
+
   return (
     <div
       ref={containerRef}
-      className={`relative w-full flex items-center justify-center cursor-grab active:cursor-grabbing touch-none ${className}`}
-      style={{ touchAction: 'none' }}
+      className={`relative w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing select-none ${className}`}
+      style={{ touchAction: 'pan-y' }}
     >
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+          <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-semibold text-neutral-400 tracking-wider uppercase">Loading 3D Phone...</span>
         </div>
       )}
     </div>

@@ -1,10 +1,10 @@
 import Scanner from '@/components/Scanner';
-import Phone3D from '@/components/Phone3D';
 import Navbar from './components/Navbar';
+import FeatureShowcase from '@/components/FeatureShowcase';
 
 export default function Home() {
   return (
-    <main className="relative min-h-screen w-full bg-[#121212] overflow-x-hidden">
+    <main className="relative min-h-screen w-full bg-[#080808] overflow-x-hidden">
       {/* Background Interactive Scanner */}
       <div className="fixed inset-0 w-full h-full pointer-events-auto">
         <Scanner
@@ -44,15 +44,15 @@ export default function Home() {
       {/* Sticky/Fixed Animated Navbar */}
       <Navbar />
 
-      {/* Content Layer */}
-      <div className="relative z-10 flex flex-col items-center justify-start min-h-screen pt-24 sm:pt-28 md:pt-32 pb-16 px-6 pointer-events-none select-none">
+      {/* Hero & Interactive 3D Showcase Content Layer */}
+      <div className="relative z-10 flex flex-col items-center justify-start min-h-screen pt-24 sm:pt-28 md:pt-32 pb-20 px-4 sm:px-6 pointer-events-none select-none">
         {/* Title */}
         <h1 className="text-3xl sm:text-5xl md:text-6xl font-semibold text-white text-center tracking-tight leading-[1.2] max-w-5xl drop-shadow-sm">
           <span className="block sm:whitespace-nowrap">Managing payments has been</span>
           <span className="block sm:whitespace-nowrap">never easier.</span>
         </h1>
 
-        {/* Buttons */}
+        {/* Action Buttons */}
         <div className="flex flex-wrap items-center justify-center gap-4 mt-7 pointer-events-auto">
           {/* Download Android Button */}
           <button
@@ -87,9 +87,9 @@ export default function Home() {
           </button>
         </div>
 
-        {/* 3D Phone Model from main.glb */}
-        <div className="mt-4 sm:mt-5 pointer-events-auto w-full max-w-[480px] sm:max-w-[540px] h-[580px] sm:h-[680px] flex justify-center">
-          <Phone3D className="w-full h-full" />
+        {/* Interactive 3D Floating Phone + Revolving Features Showcase */}
+        <div className="w-full mt-4 sm:mt-6 pointer-events-auto">
+          <FeatureShowcase />
         </div>
       </div>
     </main>
