@@ -53,3 +53,8 @@ body {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
 }
+
+/* Hidden until the GSAP load sequence positions them, so nothing flashes in its final spot */
+.hero-intro-pending {
+  visibility: hidden;
+}

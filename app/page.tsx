@@ -5,6 +5,10 @@ import FeatureShowcase from '@/components/FeatureShowcase';
 export default function Home() {
   return (
     <main className="relative min-h-screen w-full bg-[#080808] overflow-x-hidden">
+      <noscript>
+        <style>{`.hero-intro-pending { visibility: visible; }`}</style>
+      </noscript>
+
       {/* Background Interactive Scanner */}
       <div className="fixed inset-0 w-full h-full pointer-events-auto">
         <Scanner
@@ -46,14 +50,16 @@ export default function Home() {
 
       {/* Hero & Interactive 3D Showcase Content Layer */}
       <div className="relative z-10 flex flex-col items-center justify-start min-h-screen pt-24 sm:pt-28 md:pt-32 pb-20 px-4 sm:px-6 pointer-events-none select-none">
+        {/* First screen: title and buttons centred on screen (bottom padding mirrors the layer's top padding) */}
+        <div data-hero-panel className="w-full flex flex-col items-center justify-center min-h-[calc(100svh-6rem)] pb-24 sm:min-h-[calc(100svh-7rem)] sm:pb-28 md:min-h-[calc(100svh-8rem)] md:pb-32">
         {/* Title */}
-        <h1 className="text-3xl sm:text-5xl md:text-6xl font-semibold text-white text-center tracking-tight leading-[1.2] max-w-5xl drop-shadow-sm">
-          <span className="block sm:whitespace-nowrap">Managing payments has been</span>
-          <span className="block sm:whitespace-nowrap">never easier.</span>
+        <h1 data-hero-title className="hero-intro-pending text-3xl sm:text-5xl md:text-6xl font-semibold text-white text-center tracking-tight leading-[1.2] max-w-5xl drop-shadow-sm">
+          <span className="block sm:whitespace-nowrap"><span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Managing</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">payments</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">has</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">been</span></span></span>
+          <span className="block sm:whitespace-nowrap"><span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">never</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">easier.</span></span></span>
         </h1>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap items-center justify-center gap-4 mt-7 pointer-events-auto">
+        <div data-hero-actions className="hero-intro-pending flex flex-wrap items-center justify-center gap-4 mt-7 pointer-events-auto">
           {/* Download Android Button */}
           <button
             type="button"
@@ -85,6 +91,8 @@ export default function Home() {
             </svg>
             <span>Download iOS</span>
           </button>
+        </div>
+
         </div>
 
         {/* Interactive 3D Floating Phone + Revolving Features Showcase */}

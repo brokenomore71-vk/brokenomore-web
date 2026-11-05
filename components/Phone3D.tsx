@@ -2,13 +2,18 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import gsap from 'gsap';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 interface Phone3DProps {
   className?: string;
   selectedFeatureId?: string | null;
   playIntro?: boolean;
+  /** Holds the entrance back until the page is ready for the phone to appear. */
+  startIntro?: boolean;
   onIntroComplete?: () => void;
+  /** Scroll-driven rotation (radians) added on top of the resting pose. */
+  scrollMotionRef?: React.RefObject<{ rotY: number }>;
 }
 
 const FEATURE_IMAGES: Record<string, string> = {
@@ -41,7 +46,9 @@ export default function Phone3D({
   className = '',
   selectedFeatureId = null,
   playIntro = false,
+  startIntro = true,
   onIntroComplete,
+  scrollMotionRef,
 }: Phone3DProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,6 +63,10 @@ export default function Phone3D({
   onIntroCompleteRef.current = onIntroComplete;
   const playIntroRef = useRef(playIntro);
   playIntroRef.current = playIntro;
+  const startIntroRef = useRef(startIntro);
+  startIntroRef.current = startIntro;
+  const scrollMotionRefLatest = useRef(scrollMotionRef);
+  scrollMotionRefLatest.current = scrollMotionRef;
   const hasNotifiedIntroRef = useRef(false);
 
   // Animation & spring reaction references
@@ -248,6 +259,9 @@ export default function Phone3D({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.95;
+    if (playIntroRef.current) {
+      renderer.domElement.style.visibility = 'hidden';
+    }
     container.appendChild(renderer.domElement);
 
     const onContextLost = (e: Event) => {
@@ -406,9 +420,20 @@ export default function Phone3D({
 
       // Intro entrance animation (rising from down to up while spinning into position)
       let introProgress = 1;
-      if (!introCompleted && modelLoaded) {
+      if (!introCompleted && modelLoaded && startIntroRef.current) {
         if (introStartTime === null) {
           introStartTime = elapsedTime;
+          // The canvas flies in from the side, scaling up, while the model below settles into pose
+          const canvas = renderer.domElement;
+          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            gsap.set(canvas, { autoAlpha: 1 });
+          } else {
+            gsap.fromTo(
+              canvas,
+              { x: -200, scale: 0.3, autoAlpha: 0 },
+              { x: 0, scale: 1, autoAlpha: 1, duration: 0.8, ease: 'power2.out' }
+            );
+          }
         }
         const introDuration = 1.35; // brisk, cinematic rise
         const rawProgress = Math.min(1, Math.max(0, (elapsedTime - introStartTime) / introDuration));
@@ -449,15 +474,16 @@ export default function Phone3D({
       const targetRotY = -0.32 + floatRotY;
       const targetRotZ = -0.24 + floatRotZ;
 
-      // Starting pose: below screen on Y, tilted back, and rotated around Y
-      const startPosY = -0.28; // completely off-screen at bottom
+      // Starting pose: tilted back and turned partly away; the canvas tween handles the travel
+      const startPosY = 0;
       const startRotX = 0.45;  // tilted back as it ascends
-      const startRotY = targetRotY - Math.PI * 2; // full 360° spin
+      const startRotY = targetRotY - 0.9;
       const startRotZ = -0.05;
 
       const currentPosY = startPosY + (0 - startPosY) * introProgress + floatY;
       const currentRotX = startRotX + (targetRotX - startRotX) * introProgress;
-      const currentRotY = startRotY + (targetRotY - startRotY) * introProgress;
+      const scrollRotY = scrollMotionRefLatest.current?.current?.rotY ?? 0;
+      const currentRotY = startRotY + (targetRotY - startRotY) * introProgress + scrollRotY;
       const currentRotZ = startRotZ + (targetRotZ - startRotZ) * introProgress;
 
       modelGroup.position.x = floatX;
@@ -488,6 +514,7 @@ export default function Phone3D({
     return () => {
       isMounted = false;
       cancelAnimationFrame(animId);
+      gsap.killTweensOf(renderer.domElement);
       container.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
@@ -545,7 +572,7 @@ export default function Phone3D({
       className={`relative w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing select-none ${className}`}
       style={{ touchAction: 'pan-y' }}
     >
-      {loading && (
+      {loading && startIntro && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 transition-opacity duration-300">
           <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
           <span className="text-xs font-semibold text-neutral-400 tracking-wider uppercase">Loading 3D Phone...</span>
