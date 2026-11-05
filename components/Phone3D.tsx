@@ -7,6 +7,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 interface Phone3DProps {
   className?: string;
   selectedFeatureId?: string | null;
+  playIntro?: boolean;
+  onIntroComplete?: () => void;
 }
 
 const FEATURE_IMAGES: Record<string, string> = {
@@ -38,6 +40,8 @@ const TOP_BG_COLORS: Record<string, string> = {
 export default function Phone3D({
   className = '',
   selectedFeatureId = null,
+  playIntro = false,
+  onIntroComplete,
 }: Phone3DProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +51,12 @@ export default function Phone3D({
   const logoImageRef = useRef<HTMLImageElement | null>(null);
   const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const selectedFeatureIdRef = useRef<string | null | undefined>(selectedFeatureId);
+
+  const onIntroCompleteRef = useRef(onIntroComplete);
+  onIntroCompleteRef.current = onIntroComplete;
+  const playIntroRef = useRef(playIntro);
+  playIntroRef.current = playIntro;
+  const hasNotifiedIntroRef = useRef(false);
 
   // Animation & spring reaction references
   const modelGroupRef = useRef<THREE.Group | null>(null);
@@ -214,16 +224,37 @@ export default function Phone3D({
     const camera = new THREE.PerspectiveCamera(38, width / height, 0.05, 10);
     camera.position.set(0, 0, 0.285);
 
-    const renderer = new THREE.WebGLRenderer({
-      alpha: true,
-      antialias: true,
-      powerPreference: 'high-performance',
-    });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        alpha: true,
+        antialias: true,
+        powerPreference: 'high-performance',
+      });
+    } catch {
+      try {
+        renderer = new THREE.WebGLRenderer({
+          alpha: true,
+          antialias: false,
+          powerPreference: 'default',
+        });
+      } catch (err) {
+        console.error('WebGL is blocked or unavailable:', err);
+        setLoading(false);
+        return;
+      }
+    }
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.95;
     container.appendChild(renderer.domElement);
+
+    const onContextLost = (e: Event) => {
+      e.preventDefault();
+      console.warn('Phone3D WebGL context lost.');
+    };
+    renderer.domElement.addEventListener('webglcontextlost', onContextLost, false);
 
     // Cinematic Lighting matching floating product showcase
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
@@ -289,6 +320,7 @@ export default function Phone3D({
     // Load 3D GLTF Model (main.glb)
     const loader = new GLTFLoader();
     let isMounted = true;
+    let modelLoaded = false;
 
     loader.load(
       '/assets/images/main.glb',
@@ -313,9 +345,17 @@ export default function Phone3D({
               mat.needsUpdate = true;
             }
 
-            // Dark camera and sensor glass
+            // Dark camera and sensor glass (prevent alpha buffer draining)
             if ((mat.name || '').includes('Glass')) {
               mat.roughness = 0.06;
+              mat.depthWrite = false;
+              mat.needsUpdate = true;
+            }
+
+            // Ensure backpanel and body are solid opaque
+            if ((mat.name || '').includes('Backpanel')) {
+              mat.transparent = false;
+              mat.opacity = 1.0;
               mat.needsUpdate = true;
             }
           }
@@ -329,6 +369,7 @@ export default function Phone3D({
         model.position.z -= center.z;
 
         modelGroup.add(model);
+        modelLoaded = true;
         setLoading(false);
       },
       undefined,
@@ -352,18 +393,43 @@ export default function Phone3D({
     const resizeObserver = new ResizeObserver(onResize);
     resizeObserver.observe(container);
 
-    // Animation loop (60 FPS)
+    // Animation loop (60 FPS) with Entrance Animation
     let animId: number;
     let clock = new THREE.Clock();
+    let introStartTime: number | null = null;
+    let introCompleted = !playIntroRef.current;
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
 
       const elapsedTime = clock.getElapsedTime();
 
-      // Smooth mouse follow
-      mouse.x += (mouse.targetX - mouse.x) * 0.05;
-      mouse.y += (mouse.targetY - mouse.y) * 0.05;
+      // Intro entrance animation (rising from down to up while spinning into position)
+      let introProgress = 1;
+      if (!introCompleted && modelLoaded) {
+        if (introStartTime === null) {
+          introStartTime = elapsedTime;
+        }
+        const introDuration = 1.35; // brisk, cinematic rise
+        const rawProgress = Math.min(1, Math.max(0, (elapsedTime - introStartTime) / introDuration));
+        // Quartic ease out: rapid initial upward rush, buttery-smooth deceleration into resting pose
+        introProgress = 1 - Math.pow(1 - rawProgress, 4);
+
+        if (rawProgress >= 0.7 && !hasNotifiedIntroRef.current) {
+          hasNotifiedIntroRef.current = true;
+          onIntroCompleteRef.current?.();
+        }
+
+        if (rawProgress >= 1) {
+          introCompleted = true;
+        }
+      }
+
+      // Smooth mouse follow (only active after intro arrives)
+      if (introCompleted) {
+        mouse.x += (mouse.targetX - mouse.x) * 0.05;
+        mouse.y += (mouse.targetY - mouse.y) * 0.05;
+      }
 
       // Spring-based Haptic bounce interpolation
       const haptic = hapticOffsetRef.current;
@@ -371,31 +437,47 @@ export default function Phone3D({
       haptic.targetZ *= 0.92;
 
       // Organic 3D floating waves matching the reference pose
-      const floatY = Math.sin(elapsedTime * 1.3) * 0.007;
-      const floatX = Math.cos(elapsedTime * 0.9) * 0.002;
-      const floatRotX = Math.sin(elapsedTime * 1.1) * 0.018;
-      const floatRotY = Math.cos(elapsedTime * 0.95) * 0.022;
-      const floatRotZ = Math.sin(elapsedTime * 1.0) * 0.014;
-
-      modelGroup.position.x = floatX;
-      modelGroup.position.y = floatY;
-      modelGroup.position.z = haptic.z;
+      const floatFactor = introCompleted ? 1 : introProgress;
+      const floatY = Math.sin(elapsedTime * 1.3) * 0.007 * floatFactor;
+      const floatX = Math.cos(elapsedTime * 0.9) * 0.002 * floatFactor;
+      const floatRotX = Math.sin(elapsedTime * 1.1) * 0.018 * floatFactor;
+      const floatRotY = Math.cos(elapsedTime * 0.95) * 0.022 * floatFactor;
+      const floatRotZ = Math.sin(elapsedTime * 1.0) * 0.014 * floatFactor;
 
       // Base isometric floating diagonal pose matching reference image:
-      const baseRotX = 0.16 + floatRotX;
-      const baseRotY = -0.32 + floatRotY;
-      const baseRotZ = -0.24 + floatRotZ;
+      const targetRotX = 0.16 + floatRotX;
+      const targetRotY = -0.32 + floatRotY;
+      const targetRotZ = -0.24 + floatRotZ;
 
-      if (isDragging) {
-        modelGroup.rotation.x = baseRotX + dragRotation.x;
-        modelGroup.rotation.y = baseRotY + dragRotation.y;
-        modelGroup.rotation.z = baseRotZ;
-      } else {
-        modelGroup.rotation.x = baseRotX - mouse.y * 0.4 + dragRotation.x * 0.95;
-        modelGroup.rotation.y = baseRotY + mouse.x * 0.5 + dragRotation.y * 0.95;
-        modelGroup.rotation.z = baseRotZ;
+      // Starting pose: below screen on Y, tilted back, and rotated around Y
+      const startPosY = -0.28; // completely off-screen at bottom
+      const startRotX = 0.45;  // tilted back as it ascends
+      const startRotY = targetRotY - Math.PI * 2; // full 360° spin
+      const startRotZ = -0.05;
+
+      const currentPosY = startPosY + (0 - startPosY) * introProgress + floatY;
+      const currentRotX = startRotX + (targetRotX - startRotX) * introProgress;
+      const currentRotY = startRotY + (targetRotY - startRotY) * introProgress;
+      const currentRotZ = startRotZ + (targetRotZ - startRotZ) * introProgress;
+
+      modelGroup.position.x = floatX;
+      modelGroup.position.y = currentPosY;
+      modelGroup.position.z = haptic.z;
+
+      if (isDragging && introCompleted) {
+        modelGroup.rotation.x = currentRotX + dragRotation.x;
+        modelGroup.rotation.y = currentRotY + dragRotation.y;
+        modelGroup.rotation.z = currentRotZ;
+      } else if (introCompleted) {
+        modelGroup.rotation.x = currentRotX - mouse.y * 0.4 + dragRotation.x * 0.95;
+        modelGroup.rotation.y = currentRotY + mouse.x * 0.5 + dragRotation.y * 0.95;
+        modelGroup.rotation.z = currentRotZ;
         dragRotation.y *= 0.98;
         dragRotation.x *= 0.98;
+      } else {
+        modelGroup.rotation.x = currentRotX;
+        modelGroup.rotation.y = currentRotY;
+        modelGroup.rotation.z = currentRotZ;
       }
 
       renderer.render(scene, camera);
@@ -412,9 +494,11 @@ export default function Phone3D({
       resizeObserver.disconnect();
       canvasTexture.dispose();
       screenMaterial.dispose();
+      renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
       if (renderer.domElement && container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
+      renderer.forceContextLoss();
       renderer.dispose();
     };
   }, []);
@@ -462,7 +546,7 @@ export default function Phone3D({
       style={{ touchAction: 'pan-y' }}
     >
       {loading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 transition-opacity duration-300">
           <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
           <span className="text-xs font-semibold text-neutral-400 tracking-wider uppercase">Loading 3D Phone...</span>
         </div>

@@ -88,7 +88,7 @@ export default function Home() {
         </div>
 
         {/* Interactive 3D Floating Phone + Revolving Features Showcase */}
-        <div className="w-full mt-4 sm:mt-6 pointer-events-auto">
+        <div className="w-full mt-4 sm:mt-6 pointer-events-auto" suppressHydrationWarning>
           <FeatureShowcase />
         </div>
       </div>

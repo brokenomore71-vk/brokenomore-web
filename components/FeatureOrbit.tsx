@@ -9,6 +9,8 @@ interface FeatureOrbitProps {
   selectedFeatureId: string | null;
   onSelectFeature: (id: string) => void;
   isOrbitPaused?: boolean;
+  isIntroComplete?: boolean;
+  onDragChange?: (isDragging: boolean) => void;
 }
 
 interface FlyingCardState {
@@ -22,6 +24,8 @@ export default function FeatureOrbit({
   selectedFeatureId,
   onSelectFeature,
   isOrbitPaused = true,
+  isIntroComplete = true,
+  onDragChange,
 }: FeatureOrbitProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -120,9 +124,9 @@ export default function FeatureOrbit({
             targetAngleRef.current = null;
           }
         } else if (!isOrbitPaused) {
-          // Continuous orbit revolution if not paused
+          // Continuous orbit revolution if not paused (opposite direction)
           const baseSpeed = isHovered ? 0.0005 : 0.0018;
-          orbitAngleRef.current += baseSpeed;
+          orbitAngleRef.current -= baseSpeed;
         }
       }
 
@@ -140,6 +144,8 @@ export default function FeatureOrbit({
     startPointerXRef.current = e.clientX;
     velocityRef.current = 0;
     targetAngleRef.current = null;
+    setIsHovered(true);
+    onDragChange?.(true);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
@@ -153,6 +159,8 @@ export default function FeatureOrbit({
 
   const handlePointerUp = () => {
     isDraggingRef.current = false;
+    setIsHovered(false);
+    onDragChange?.(false);
   };
 
   // Click on a feature card triggers the flying animation into the phone
@@ -199,7 +207,14 @@ export default function FeatureOrbit({
       className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-auto select-none"
     >
       {/* 3D Orbit Track: White-grayish line connecting the feature blocks (behind phone with center cutout) */}
-      <svg
+      <motion.svg
+        initial={false}
+        animate={
+          isIntroComplete
+            ? { opacity: 1, scale: 1 }
+            : { opacity: 0, scale: 0.88 }
+        }
+        transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none overflow-visible"
         style={{
           width: (radii.rx + 60) * 2,
@@ -212,21 +227,22 @@ export default function FeatureOrbit({
           <mask id="phone-orbit-cutout">
             {/* White: reveal the orbit line */}
             <rect
-              x={-(radii.rx + 100)}
-              y={-(radii.ryTilt + 100)}
-              width={(radii.rx + 100) * 2}
-              height={(radii.ryTilt + 100) * 2}
+              x={-(radii.rx + 200)}
+              y={-(radii.ryTilt + 200)}
+              width={(radii.rx + 200) * 2}
+              height={(radii.ryTilt + 200) * 2}
               fill="white"
             />
-            {/* Black: cut out the phone silhouette so the line is NEVER visible through or across the phone */}
+            {/* Black: cut out the phone silhouette matching the tilted phone pose */}
             <rect
-              x="-150"
-              y="-290"
-              width="300"
-              height="580"
-              rx="54"
-              ry="54"
+              x="-185"
+              y="-340"
+              width="370"
+              height="680"
+              rx="64"
+              ry="64"
               fill="black"
+              transform="rotate(-13.8)"
             />
           </mask>
         </defs>
@@ -241,7 +257,7 @@ export default function FeatureOrbit({
           strokeWidth="1.5"
           mask="url(#phone-orbit-cutout)"
         />
-      </svg>
+      </motion.svg>
 
       {/* 3D Orbiting Cards */}
       {BROKENOMORE_FEATURES.map((feature, i) => {
@@ -270,17 +286,31 @@ export default function FeatureOrbit({
               transition: isDraggingRef.current ? 'none' : 'transform 0.05s linear',
             }}
           >
-            <FeatureCard
-              feature={feature}
-              isActive={isActive}
-              scale={scale}
-              opacity={opacity}
-              zIndex={zIndex}
-              isFront={isFront}
-              onClick={(e) => handleCardClick(e, feature, x, y)}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-            />
+            <motion.div
+              initial={false}
+              animate={
+                isIntroComplete
+                  ? { opacity: 1, scale: 1 }
+                  : { opacity: 0, scale: 0.45 }
+              }
+              transition={{
+                duration: 0.38,
+                delay: i * 0.04,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+            >
+              <FeatureCard
+                feature={feature}
+                isActive={isActive}
+                scale={scale}
+                opacity={opacity}
+                zIndex={zIndex}
+                isFront={isFront}
+                onClick={(e) => handleCardClick(e, feature, x, y)}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+              />
+            </motion.div>
           </div>
         );
       })}
