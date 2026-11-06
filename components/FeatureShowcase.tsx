@@ -7,27 +7,37 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Phone3D from './Phone3D';
 import FeatureOrbit from './FeatureOrbit';
 import { BROKENOMORE_FEATURES } from './featureScreens';
+import SplitStoryLayer, { SplitStoryCaptions } from './splitStory/SplitStoryLayer';
+import { CAPTIONS } from './splitStory/splitData';
+import { createSplitStoryRuntime } from './splitStory/timeline';
+import { buildJourney, createPlayhead, SCROLL_PER_UNIT } from './journey';
 
 gsap.registerPlugin(ScrollTrigger);
 
 // Height (px) the phone and orbit cards need at full size; shorter screens scale them down.
 const STAGE_DESIGN_HEIGHT = 635;
 
-// How far (px) the user scrolls while the showcase stays pinned and the phone turns.
-const PHONE_SCROLL_DISTANCE = 1400;
+// Once the journey is this far in (timeline units), the slideshow's cards have faded out.
+const ORBIT_HIDDEN_AFTER = 1.1;
 
 export default function FeatureShowcase() {
   const [selectedFeatureId, setSelectedFeatureId] = useState<string>(BROKENOMORE_FEATURES[0].id);
   const [isIntroComplete, setIsIntroComplete] = useState<boolean>(false);
-  const isDraggingRef = useRef<boolean>(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [startPhoneIntro, setStartPhoneIntro] = useState<boolean>(false);
   const sectionRef = useRef<HTMLElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
-  const scrollMotionRef = useRef({ rotY: 0 });
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const phoneRef = useRef<HTMLDivElement | null>(null);
+  const scrollMotionRef = useRef({ rotY: 0, face: 0 });
+  const [storyRuntime] = useState(createSplitStoryRuntime);
+  const screenOverrideRef = useRef(storyRuntime.screen);
+  const orbitRenderPausedRef = useRef<boolean>(false);
+  const pinRef = useRef<ScrollTrigger | null>(null);
+  const journeyStartedRef = useRef<boolean>(false);
 
   // Load sequence: the title's words rise into place one by one, then the buttons appear.
-  // Also drives the phone from scroll once the showcase is reached.
+  // Also builds the journey that scrolling plays once the showcase is reached.
   useLayoutEffect(() => {
     const title = document.querySelector<HTMLElement>('[data-hero-title]');
     const actions = document.querySelector<HTMLElement>('[data-hero-actions]');
@@ -43,12 +53,12 @@ export default function FeatureShowcase() {
     const scrollMotion = scrollMotionRef.current;
     const mm = gsap.matchMedia();
 
-    // Desktop: the section is exactly one screen tall, so shrink its contents to fit shorter screens.
-    mm.add('(min-width: 768px)', () => {
-      const fitStage = () => {
-        const stage = stageRef.current;
-        if (stage) gsap.set(stage, { scale: Math.min(1, stage.offsetHeight / STAGE_DESIGN_HEIGHT) });
-      };
+    // The section is exactly one screen tall, so shrink its contents to fit shorter screens.
+    const fitStage = () => {
+      const stage = stageRef.current;
+      if (stage) gsap.set(stage, { scale: Math.min(1, stage.offsetHeight / STAGE_DESIGN_HEIGHT) });
+    };
+    mm.add('(min-width: 1px)', () => {
       fitStage();
       window.addEventListener('resize', fitStage);
       return () => window.removeEventListener('resize', fitStage);
@@ -130,7 +140,6 @@ export default function FeatureShowcase() {
       });
     });
 
-    // Desktop: pin the showcase while scrolling turns the phone a full revolution.
     mm.add('(prefers-reduced-motion: no-preference) and (min-width: 768px)', () => {
       // Between the first page and the showcase, any scroll amount carries through: once the
       // user stops, the page glides on in the direction they were going. Even a small nudge
@@ -149,47 +158,96 @@ export default function FeatureShowcase() {
           ease: 'power2.inOut',
         },
       });
-
-      gsap
-        .timeline({
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: 'top 72px',
-            end: `+=${PHONE_SCROLL_DISTANCE}`,
-            pin: true,
-            scrub: 1,
-            invalidateOnRefresh: true,
-          },
-        })
-        .to(scrollMotion, { rotY: Math.PI * 2, ease: 'none', duration: 1 }, 0);
     });
 
-    // Phones: no pin, the phone simply turns as the section passes by.
-    mm.add('(prefers-reduced-motion: no-preference) and (max-width: 767px)', () => {
-      gsap.to(scrollMotion, {
-        rotY: Math.PI * 2,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 60%',
-          end: 'max', // finish the turn by the end of the page, so the screen ends up facing front
-          scrub: 1,
-        },
-      });
+    // Pin the showcase. From the slideshow onward, scrolling plays the features one after
+    // another, and stops or reverses with the user.
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      const section = sectionRef.current;
+      const stage = stageRef.current;
+      const header = headerRef.current;
+      const phone = phoneRef.current;
+      if (!section || !stage || !header || !phone) return;
+
+      let context: gsap.Context | null = null;
+      let playhead: ReturnType<typeof createPlayhead> | null = null;
+
+      const build = () => {
+        // Removing the pin shortens the page, so remember the user's place first
+        const place = pinRef.current?.progress ?? 0;
+        const wasPinned = !!pinRef.current && window.scrollY >= pinRef.current.start;
+        playhead?.kill();
+        context?.revert();
+        fitStage(); // only now is the section free of the pin's frozen height
+        Object.assign(scrollMotion, { rotY: 0, face: 0 });
+        context = gsap.context(() => {
+          const journey = buildJourney({ stage, section, header, phone, motion: scrollMotion, splitRuntime: storyRuntime });
+          const onUpdate = () => {
+            const time = journey.timeline.time();
+            journeyStartedRef.current = time > 0.01;
+            orbitRenderPausedRef.current = time > ORBIT_HIDDEN_AFTER;
+            journey.update();
+          };
+          journey.timeline.eventCallback('onUpdate', onUpdate);
+          onUpdate();
+          playhead = createPlayhead(journey.timeline);
+          pinRef.current = ScrollTrigger.create({
+            trigger: section,
+            start: 'top 72px',
+            end: `+=${journey.timeline.duration() * SCROLL_PER_UNIT}`,
+            pin: true,
+            onUpdate: (self) => playhead?.follow(self.progress),
+          });
+        });
+        ScrollTrigger.refresh();
+        const pin = pinRef.current;
+        if (pin && wasPinned) {
+          window.scrollTo({ top: pin.start + (pin.end - pin.start) * place, behavior: 'instant' });
+          playhead?.jump(place);
+        }
+      };
+      build();
+
+      // The pin keeps the section at its old height, so a real resize has to recreate it.
+      // Ignores the small height changes from a phone's address bar showing and hiding.
+      let lastWidth = window.innerWidth;
+      let lastHeight = window.innerHeight;
+      let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+      const onResize = () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          if (window.innerWidth === lastWidth && Math.abs(window.innerHeight - lastHeight) < 120) return;
+          lastWidth = window.innerWidth;
+          lastHeight = window.innerHeight;
+          build();
+        }, 250);
+      };
+      window.addEventListener('resize', onResize);
+
+      return () => {
+        clearTimeout(resizeTimer);
+        window.removeEventListener('resize', onResize);
+        playhead?.kill();
+        context?.revert();
+        pinRef.current = null;
+        storyRuntime.screen.active = false;
+        journeyStartedRef.current = false;
+        orbitRenderPausedRef.current = false;
+      };
     });
 
     return () => {
       mm.revert();
-      scrollMotion.rotY = 0;
+      Object.assign(scrollMotion, { rotY: 0, face: 0 });
       history.scrollRestoration = previousRestoration;
     };
-  }, []);
+  }, [storyRuntime]);
 
-  // Auto-rotate: steps through features every 3 seconds
+  // The slideshow: steps through the features every 3 seconds, until the journey takes over
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      if (isDraggingRef.current) return;
+      if (journeyStartedRef.current) return;
       setSelectedFeatureId((current) => {
         const currentIndex = BROKENOMORE_FEATURES.findIndex((f) => f.id === current);
         const nextIndex =
@@ -212,24 +270,14 @@ export default function FeatureShowcase() {
     };
   }, []);
 
-  const handleSelectFeature = useCallback((id: string) => {
-    setSelectedFeatureId(id);
-    startTimer();
-  }, [startTimer]);
-
-  const handleDragChange = useCallback((isDragging: boolean) => {
-    isDraggingRef.current = isDragging;
-    if (!isDragging) {
-      startTimer();
-    }
-  }, [startTimer]);
-
   const selectedFeature =
     BROKENOMORE_FEATURES.find((f) => f.id === selectedFeatureId) || BROKENOMORE_FEATURES[0];
 
   return (
-    <section ref={sectionRef} className="relative w-full max-md:min-h-[760px] md:h-[calc(100svh-72px)] flex flex-col items-center justify-start overflow-hidden py-6 sm:py-8 md:pt-4 md:pb-2 px-4 sm:px-6 select-none">
+    <>
+    <section ref={sectionRef} className="relative w-full h-[calc(100svh-72px)] flex flex-col items-center justify-start overflow-hidden py-6 sm:py-8 md:pt-4 md:pb-2 px-4 sm:px-6 select-none">
       {/* Dynamic Feature Header matching main title typography */}
+      <div ref={headerRef} className="relative z-30 w-full">
       <motion.div
         initial={false}
         animate={isIntroComplete ? { opacity: 1, y: 0 } : { opacity: 0, y: -16 }}
@@ -244,32 +292,27 @@ export default function FeatureShowcase() {
           {selectedFeature.tagline}
         </p>
       </motion.div>
+      </div>
+
+      <SplitStoryCaptions />
 
       {/* Main 3D Stage: Smartphone Centered + Revolving Feature Orbit */}
-      <div ref={stageRef} className="relative w-full max-w-7xl max-sm:h-[620px] sm:max-md:h-[680px] md:flex-1 md:min-h-0 flex items-center justify-center my-auto">
-        {/* Orbiting Feature Cards (smooth scroll & drag responsive) */}
+      <div ref={stageRef} className="relative w-full max-w-7xl flex-1 min-h-0 flex items-center justify-center">
+        {/* The slideshow of feature cards orbiting the phone */}
         <FeatureOrbit
           selectedFeatureId={selectedFeatureId}
-          onSelectFeature={handleSelectFeature}
-          onDragChange={handleDragChange}
-          isOrbitPaused={true}
+          renderPausedRef={orbitRenderPausedRef}
           isIntroComplete={isIntroComplete}
         />
 
+        {/* Billing machine, bill and everything else the phone moves among in the split story */}
+        <SplitStoryLayer runtime={storyRuntime} />
+
         {/* Central Floating Smartphone (z-index 20) */}
         <div
-          className="relative z-[20] w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px] h-[520px] sm:h-[600px] lg:h-[650px] flex items-center justify-center pointer-events-auto cursor-pointer"
+          ref={phoneRef}
+          className="relative z-[20] w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px] h-[520px] sm:h-[600px] lg:h-[650px] flex items-center justify-center pointer-events-auto"
           style={{ zIndex: 20 }}
-          title="Click to advance to next feature"
-          onClick={() => {
-            setSelectedFeatureId((current) => {
-              const currentIndex = BROKENOMORE_FEATURES.findIndex((f) => f.id === current);
-              const nextIndex =
-                (currentIndex - 1 + BROKENOMORE_FEATURES.length) % BROKENOMORE_FEATURES.length;
-              return BROKENOMORE_FEATURES[nextIndex].id;
-            });
-            startTimer();
-          }}
         >
           <Phone3D
             selectedFeatureId={selectedFeatureId}
@@ -277,6 +320,7 @@ export default function FeatureShowcase() {
             playIntro={true}
             startIntro={startPhoneIntro}
             scrollMotionRef={scrollMotionRef}
+            screenOverrideRef={screenOverrideRef}
             onIntroComplete={handleIntroComplete}
           />
 
@@ -290,5 +334,16 @@ export default function FeatureShowcase() {
         </div>
       </div>
     </section>
+
+    {/* Without motion, the story's steps are simply listed */}
+    <ol className="hidden motion-reduce:grid gap-6 sm:grid-cols-2 max-w-4xl mx-auto mt-16 px-4">
+      {CAPTIONS.map((caption) => (
+        <li key={caption.title}>
+          <h3 className="text-xl font-semibold text-white tracking-tight">{caption.title}</h3>
+          <p className="text-sm text-neutral-400 tracking-tight mt-1">{caption.body}</p>
+        </li>
+      ))}
+    </ol>
+    </>
   );
 }

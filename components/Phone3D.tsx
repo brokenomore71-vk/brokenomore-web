@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import type { PhoneScreenController } from './splitStory/timeline';
 
 interface Phone3DProps {
   className?: string;
@@ -12,8 +13,13 @@ interface Phone3DProps {
   /** Holds the entrance back until the page is ready for the phone to appear. */
   startIntro?: boolean;
   onIntroComplete?: () => void;
-  /** Scroll-driven rotation (radians) added on top of the resting pose. */
-  scrollMotionRef?: React.RefObject<{ rotY: number }>;
+  /**
+   * Scroll-driven pose. rotY (radians) is added on top of the resting pose; face (0 to 1)
+   * eases the phone out of its tilt until the screen looks straight at the viewer.
+   */
+  scrollMotionRef?: React.RefObject<{ rotY: number; face?: number }>;
+  /** While active, this draws the phone's screen instead of the feature screenshots. */
+  screenOverrideRef?: React.RefObject<PhoneScreenController>;
 }
 
 const FEATURE_IMAGES: Record<string, string> = {
@@ -49,6 +55,7 @@ export default function Phone3D({
   startIntro = true,
   onIntroComplete,
   scrollMotionRef,
+  screenOverrideRef,
 }: Phone3DProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,6 +74,9 @@ export default function Phone3D({
   startIntroRef.current = startIntro;
   const scrollMotionRefLatest = useRef(scrollMotionRef);
   scrollMotionRefLatest.current = scrollMotionRef;
+  const screenOverrideLatest = useRef(screenOverrideRef);
+  screenOverrideLatest.current = screenOverrideRef;
+  const redrawSelectedRef = useRef<() => void>(() => undefined);
   const hasNotifiedIntroRef = useRef(false);
 
   // Animation & spring reaction references
@@ -149,7 +159,7 @@ export default function Phone3D({
         img.onload = () => {
           imageCacheRef.current.set(src, img);
           const currentId = selectedFeatureIdRef.current;
-          if (currentId && FEATURE_IMAGES[currentId] === src) {
+          if (currentId && FEATURE_IMAGES[currentId] === src && !screenOverrideLatest.current?.current.active) {
             const canvas = displayCanvasRef.current;
             const texture = canvasTextureRef.current;
             if (canvas && texture) {
@@ -413,10 +423,27 @@ export default function Phone3D({
     let introStartTime: number | null = null;
     let introCompleted = !playIntroRef.current;
 
+    let screenWasOverridden = false;
+
     const animate = () => {
       animId = requestAnimationFrame(animate);
 
       const elapsedTime = clock.getElapsedTime();
+
+      // Story-driven screen: redraw only when something on it changed
+      const screenOverride = screenOverrideLatest.current?.current;
+      if (screenOverride?.active) {
+        const screenCtx = displayCanvas.getContext('2d');
+        if (screenCtx && (screenOverride.dirty || !screenWasOverridden)) {
+          screenOverride.dirty = false;
+          screenOverride.draw(screenCtx, screenWidth, screenHeight);
+          canvasTexture.needsUpdate = true;
+        }
+        screenWasOverridden = true;
+      } else if (screenWasOverridden) {
+        screenWasOverridden = false;
+        redrawSelectedRef.current();
+      }
 
       // Intro entrance animation (rising from down to up while spinning into position)
       let introProgress = 1;
@@ -470,9 +497,12 @@ export default function Phone3D({
       const floatRotZ = Math.sin(elapsedTime * 1.0) * 0.014 * floatFactor;
 
       // Base isometric floating diagonal pose matching reference image:
-      const targetRotX = 0.16 + floatRotX;
-      const targetRotY = -0.32 + floatRotY;
-      const targetRotZ = -0.24 + floatRotZ;
+      // (the story's "face" value straightens it out so the screen can be read)
+      const face = scrollMotionRefLatest.current?.current?.face ?? 0;
+      const posed = 1 - face;
+      const targetRotX = 0.16 * posed + floatRotX * (1 - face * 0.7);
+      const targetRotY = -0.32 * posed + floatRotY * (1 - face * 0.7);
+      const targetRotZ = -0.24 * posed + floatRotZ * (1 - face * 0.7);
 
       // Starting pose: tilted back and turned partly away; the canvas tween handles the travel
       const startPosY = 0;
@@ -495,8 +525,9 @@ export default function Phone3D({
         modelGroup.rotation.y = currentRotY + dragRotation.y;
         modelGroup.rotation.z = currentRotZ;
       } else if (introCompleted) {
-        modelGroup.rotation.x = currentRotX - mouse.y * 0.4 + dragRotation.x * 0.95;
-        modelGroup.rotation.y = currentRotY + mouse.x * 0.5 + dragRotation.y * 0.95;
+        const mouseFollow = 1 - face * 0.8;
+        modelGroup.rotation.x = currentRotX - mouse.y * 0.4 * mouseFollow + dragRotation.x * 0.95;
+        modelGroup.rotation.y = currentRotY + mouse.x * 0.5 * mouseFollow + dragRotation.y * 0.95;
         modelGroup.rotation.z = currentRotZ;
         dragRotation.y *= 0.98;
         dragRotation.x *= 0.98;
@@ -530,10 +561,10 @@ export default function Phone3D({
     };
   }, []);
 
-  // When selectedFeatureId changes, update the phone screen
-  useEffect(() => {
-    selectedFeatureIdRef.current = selectedFeatureId;
-    hapticOffsetRef.current.targetZ = 0.018; // Haptic spring pop
+  // Paints the selected feature's screenshot, unless the story currently owns the screen
+  redrawSelectedRef.current = () => {
+    const selectedFeatureId = selectedFeatureIdRef.current;
+    if (screenOverrideLatest.current?.current.active) return;
 
     const canvas = displayCanvasRef.current;
     const texture = canvasTextureRef.current;
@@ -558,12 +589,19 @@ export default function Phone3D({
         img.src = imageSrc;
         img.onload = () => {
           imageCacheRef.current.set(imageSrc, img);
-          if (selectedFeatureIdRef.current === selectedFeatureId) {
+          if (selectedFeatureIdRef.current === selectedFeatureId && !screenOverrideLatest.current?.current.active) {
             drawFeatureToCanvas(canvas, img, selectedFeatureId, texture);
           }
         };
       }
     }
+  };
+
+  // When selectedFeatureId changes, update the phone screen
+  useEffect(() => {
+    selectedFeatureIdRef.current = selectedFeatureId;
+    hapticOffsetRef.current.targetZ = 0.018; // Haptic spring pop
+    redrawSelectedRef.current();
   }, [selectedFeatureId]);
 
   return (
