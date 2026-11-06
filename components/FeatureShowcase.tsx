@@ -68,42 +68,52 @@ export default function FeatureShowcase() {
       gsap.set(title, { autoAlpha: 1 });
       gsap.set(words, { yPercent: 115, rotate: 4, transformOrigin: '0% 100%' });
       gsap.set(actions, { autoAlpha: 1, y: 0 });
-      if (btnAndroid) gsap.set(btnAndroid, { y: 16, autoAlpha: 0, force3D: true });
-      if (btnIos) gsap.set(btnIos, { y: 16, autoAlpha: 0, force3D: true });
+      if (btnAndroid) gsap.set(btnAndroid, { y: 18, autoAlpha: 0, force3D: true });
+      if (btnIos) gsap.set(btnIos, { y: 18, autoAlpha: 0, force3D: true });
 
-      // Flow: 1. Text appears -> 2. Button 1 (Android) appears -> 3. After Button 1 is completely visible, Button 2 (iOS) appears
+      // Flow: 1. Text appears -> 2. Android button glides in -> 3. iOS button glides in (silky smooth)
       const tl = gsap.timeline({ delay: 0.2 });
 
       tl.to(words, {
         yPercent: 0,
         rotate: 0,
-        duration: 0.85,
+        duration: 0.95,
         ease: 'power4.out',
         stagger: 0.08,
       });
 
       if (btnAndroid) {
-        tl.to(btnAndroid, {
-          y: 0,
-          autoAlpha: 1,
-          duration: 0.6,
-          ease: 'power3.out',
-          force3D: true,
-        });
+        tl.to(
+          btnAndroid,
+          {
+            y: 0,
+            autoAlpha: 1,
+            duration: 0.9,
+            ease: 'expo.out',
+            force3D: true,
+            onComplete: () => {
+              gsap.set(btnAndroid, { clearProps: 'transform' });
+            },
+          },
+          '-=0.15'
+        );
       }
 
       if (btnIos) {
-        tl.to(btnIos, {
-          y: 0,
-          autoAlpha: 1,
-          duration: 0.6,
-          ease: 'power3.out',
-          force3D: true,
-          onComplete: () => {
-            if (btnAndroid) gsap.set(btnAndroid, { clearProps: 'transform' });
-            if (btnIos) gsap.set(btnIos, { clearProps: 'transform' });
+        tl.to(
+          btnIos,
+          {
+            y: 0,
+            autoAlpha: 1,
+            duration: 0.9,
+            ease: 'expo.out',
+            force3D: true,
+            onComplete: () => {
+              gsap.set(btnIos, { clearProps: 'transform' });
+            },
           },
-        });
+          '-=0.72'
+        );
       }
 
       // Scrolling away lifts and fades the first page out as the showcase arrives

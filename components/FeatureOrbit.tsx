@@ -206,7 +206,7 @@ export default function FeatureOrbit({
       style={{ touchAction: 'pan-y' }}
       className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-auto select-none"
     >
-      {/* 3D Orbit Track: White-grayish line connecting the feature blocks (behind phone with center cutout) */}
+      {/* 3D Orbit Track: Complete continuous white-grayish line connecting the feature blocks */}
       <motion.svg
         initial={false}
         animate={
@@ -223,30 +223,6 @@ export default function FeatureOrbit({
         }}
         viewBox={`-${radii.rx + 60} -${radii.ryTilt + 60} ${(radii.rx + 60) * 2} ${(radii.ryTilt + 60) * 2}`}
       >
-        <defs>
-          <mask id="phone-orbit-cutout">
-            {/* White: reveal the orbit line */}
-            <rect
-              x={-(radii.rx + 200)}
-              y={-(radii.ryTilt + 200)}
-              width={(radii.rx + 200) * 2}
-              height={(radii.ryTilt + 200) * 2}
-              fill="white"
-            />
-            {/* Black: cut out the phone silhouette matching the tilted phone pose */}
-            <rect
-              x="-185"
-              y="-340"
-              width="370"
-              height="680"
-              rx="64"
-              ry="64"
-              fill="black"
-              transform="rotate(-13.8)"
-            />
-          </mask>
-        </defs>
-
         <ellipse
           cx="0"
           cy="0"
@@ -255,7 +231,6 @@ export default function FeatureOrbit({
           fill="none"
           stroke="rgba(255, 255, 255, 0.22)"
           strokeWidth="1.5"
-          mask="url(#phone-orbit-cutout)"
         />
       </motion.svg>
 
