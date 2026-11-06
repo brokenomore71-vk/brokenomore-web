@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useCallback, useLayoutEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -13,14 +13,9 @@ gsap.registerPlugin(ScrollTrigger);
 // Height (px) the phone and orbit cards need at full size; shorter screens scale them down.
 const STAGE_DESIGN_HEIGHT = 635;
 
-// How far (px) the user scrolls while the showcase stays pinned and the phone turns.
-const PHONE_SCROLL_DISTANCE = 1400;
-
 export default function FeatureShowcase() {
   const [selectedFeatureId, setSelectedFeatureId] = useState<string>(BROKENOMORE_FEATURES[0].id);
   const [isIntroComplete, setIsIntroComplete] = useState<boolean>(false);
-  const isDraggingRef = useRef<boolean>(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [startPhoneIntro, setStartPhoneIntro] = useState<boolean>(false);
   const sectionRef = useRef<HTMLElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -120,21 +115,20 @@ export default function FeatureShowcase() {
         },
       });
 
-      // The phone's flight is timed, not scrubbed, so hold it until the phone's spot is on
-      // screen. Fired any earlier, a slow scroll would play the whole flight below the fold.
+      // The phone's flight is timed, not scrubbed, so hold it until the phone's spot is coming on
+      // screen. It starts together with the turn below, so the turn is actually seen.
       ScrollTrigger.create({
         trigger: sectionRef.current,
-        start: 'top 20%',
+        start: 'top 60%',
         once: true,
         onEnter: () => setStartPhoneIntro(true),
       });
     });
 
-    // Desktop: pin the showcase while scrolling turns the phone a full revolution.
+    // Desktop: between the first page and the showcase, any scroll amount carries through: once
+    // the user stops, the page glides on in the direction they were going. Even a small nudge
+    // brings the showcase up in time to see the phone's complete flight in.
     mm.add('(prefers-reduced-motion: no-preference) and (min-width: 768px)', () => {
-      // Between the first page and the showcase, any scroll amount carries through: once the
-      // user stops, the page glides on in the direction they were going. Even a small nudge
-      // brings the showcase up in time to see the phone's complete flight in.
       ScrollTrigger.create({
         start: 0,
         endTrigger: sectionRef.current,
@@ -149,31 +143,19 @@ export default function FeatureShowcase() {
           ease: 'power2.inOut',
         },
       });
-
-      gsap
-        .timeline({
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: 'top 72px',
-            end: `+=${PHONE_SCROLL_DISTANCE}`,
-            pin: true,
-            scrub: 1,
-            invalidateOnRefresh: true,
-          },
-        })
-        .to(scrollMotion, { rotY: Math.PI * 2, ease: 'none', duration: 1 }, 0);
     });
 
-    // Phones: no pin, the phone simply turns as the section passes by.
-    mm.add('(prefers-reduced-motion: no-preference) and (max-width: 767px)', () => {
+    // The phone turns only while the section scrolls into view, and lands facing front
+    // once the section is fully visible. The page itself is never held back.
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
       gsap.to(scrollMotion, {
         rotY: Math.PI * 2,
         ease: 'none',
         scrollTrigger: {
           trigger: sectionRef.current,
           start: 'top 60%',
-          end: 'max', // finish the turn by the end of the page, so the screen ends up facing front
-          scrub: 1,
+          end: 'top 72px',
+          scrub: 0.6,
         },
       });
     });
@@ -185,44 +167,9 @@ export default function FeatureShowcase() {
     };
   }, []);
 
-  // Auto-rotate: steps through features every 3 seconds
-  const startTimer = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      if (isDraggingRef.current) return;
-      setSelectedFeatureId((current) => {
-        const currentIndex = BROKENOMORE_FEATURES.findIndex((f) => f.id === current);
-        const nextIndex =
-          (currentIndex - 1 + BROKENOMORE_FEATURES.length) % BROKENOMORE_FEATURES.length;
-        return BROKENOMORE_FEATURES[nextIndex].id;
-      });
-    }, 3000);
-  }, []);
-
-  // When intro animation finishes and feature blocks appear, start 3s timer immediately
   const handleIntroComplete = useCallback(() => {
     setIsIntroComplete(true);
-    startTimer();
-  }, [startTimer]);
-
-  // Clean up timer on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
   }, []);
-
-  const handleSelectFeature = useCallback((id: string) => {
-    setSelectedFeatureId(id);
-    startTimer();
-  }, [startTimer]);
-
-  const handleDragChange = useCallback((isDragging: boolean) => {
-    isDraggingRef.current = isDragging;
-    if (!isDragging) {
-      startTimer();
-    }
-  }, [startTimer]);
 
   const selectedFeature =
     BROKENOMORE_FEATURES.find((f) => f.id === selectedFeatureId) || BROKENOMORE_FEATURES[0];
@@ -250,8 +197,7 @@ export default function FeatureShowcase() {
         {/* Orbiting Feature Cards (smooth scroll & drag responsive) */}
         <FeatureOrbit
           selectedFeatureId={selectedFeatureId}
-          onSelectFeature={handleSelectFeature}
-          onDragChange={handleDragChange}
+          onSelectFeature={setSelectedFeatureId}
           isOrbitPaused={true}
           isIntroComplete={isIntroComplete}
         />
@@ -268,7 +214,6 @@ export default function FeatureShowcase() {
                 (currentIndex - 1 + BROKENOMORE_FEATURES.length) % BROKENOMORE_FEATURES.length;
               return BROKENOMORE_FEATURES[nextIndex].id;
             });
-            startTimer();
           }}
         >
           <Phone3D
