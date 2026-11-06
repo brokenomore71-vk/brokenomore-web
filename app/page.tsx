@@ -62,8 +62,9 @@ export default function Home() {
         <div data-hero-actions className="hero-intro-pending flex flex-wrap items-center justify-center gap-4 mt-7 pointer-events-auto">
           {/* Download Android Button */}
           <button
+            data-hero-btn-android
             type="button"
-            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border border-white text-white text-sm font-medium hover:bg-white/10 active:scale-95 transition-all duration-200 cursor-pointer backdrop-blur-[2px]"
+            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border border-white text-white text-sm font-medium hover:bg-white/10 active:scale-95 transition-colors duration-200 cursor-pointer backdrop-blur-[2px]"
           >
             <svg
               className="w-4 h-4 fill-current"
@@ -78,8 +79,9 @@ export default function Home() {
 
           {/* Download iOS Button */}
           <button
+            data-hero-btn-ios
             type="button"
-            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-white text-black text-sm font-medium hover:bg-neutral-200 active:scale-95 transition-all duration-200 shadow-md cursor-pointer"
+            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-white text-black text-sm font-medium hover:bg-neutral-200 active:scale-95 transition-colors duration-200 shadow-md cursor-pointer"
           >
             <svg
               className="w-4 h-4 fill-current"

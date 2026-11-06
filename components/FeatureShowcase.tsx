@@ -33,6 +33,9 @@ export default function FeatureShowcase() {
     const actions = document.querySelector<HTMLElement>('[data-hero-actions]');
     if (!title || !actions) return;
 
+    const btnAndroid = actions.querySelector<HTMLElement>('[data-hero-btn-android]');
+    const btnIos = actions.querySelector<HTMLElement>('[data-hero-btn-ios]');
+
     const previousRestoration = history.scrollRestoration;
     history.scrollRestoration = 'manual';
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -53,6 +56,8 @@ export default function FeatureShowcase() {
 
     mm.add('(prefers-reduced-motion: reduce)', () => {
       gsap.set([title, actions], { autoAlpha: 1 });
+      if (btnAndroid) gsap.set(btnAndroid, { autoAlpha: 1, y: 0, scale: 1 });
+      if (btnIos) gsap.set(btnIos, { autoAlpha: 1, y: 0, scale: 1 });
       setStartPhoneIntro(true);
     });
 
@@ -62,12 +67,44 @@ export default function FeatureShowcase() {
 
       gsap.set(title, { autoAlpha: 1 });
       gsap.set(words, { yPercent: 115, rotate: 4, transformOrigin: '0% 100%' });
-      gsap.set(actions, { y: 24, autoAlpha: 0 });
+      gsap.set(actions, { autoAlpha: 1, y: 0 });
+      if (btnAndroid) gsap.set(btnAndroid, { y: 16, autoAlpha: 0, force3D: true });
+      if (btnIos) gsap.set(btnIos, { y: 16, autoAlpha: 0, force3D: true });
 
-      gsap
-        .timeline({ delay: 0.2 })
-        .to(words, { yPercent: 0, rotate: 0, duration: 1, ease: 'power4.out', stagger: 0.09 })
-        .to(actions, { y: 0, autoAlpha: 1, duration: 0.7, ease: 'power2.out' }, '-=0.45');
+      // Flow: 1. Text appears -> 2. Button 1 (Android) appears -> 3. After Button 1 is completely visible, Button 2 (iOS) appears
+      const tl = gsap.timeline({ delay: 0.2 });
+
+      tl.to(words, {
+        yPercent: 0,
+        rotate: 0,
+        duration: 0.85,
+        ease: 'power4.out',
+        stagger: 0.08,
+      });
+
+      if (btnAndroid) {
+        tl.to(btnAndroid, {
+          y: 0,
+          autoAlpha: 1,
+          duration: 0.6,
+          ease: 'power3.out',
+          force3D: true,
+        });
+      }
+
+      if (btnIos) {
+        tl.to(btnIos, {
+          y: 0,
+          autoAlpha: 1,
+          duration: 0.6,
+          ease: 'power3.out',
+          force3D: true,
+          onComplete: () => {
+            if (btnAndroid) gsap.set(btnAndroid, { clearProps: 'transform' });
+            if (btnIos) gsap.set(btnIos, { clearProps: 'transform' });
+          },
+        });
+      }
 
       // Scrolling away lifts and fades the first page out as the showcase arrives
       gsap.to(panel, {
