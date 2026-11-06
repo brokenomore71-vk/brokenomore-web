@@ -120,10 +120,11 @@ export default function FeatureShowcase() {
         },
       });
 
-      // The phone only flies in once the user scrolls the showcase into view
+      // The phone's flight is timed, not scrubbed, so hold it until the phone's spot is on
+      // screen. Fired any earlier, a slow scroll would play the whole flight below the fold.
       ScrollTrigger.create({
         trigger: sectionRef.current,
-        start: 'top 85%',
+        start: 'top 20%',
         once: true,
         onEnter: () => setStartPhoneIntro(true),
       });
@@ -131,6 +132,24 @@ export default function FeatureShowcase() {
 
     // Desktop: pin the showcase while scrolling turns the phone a full revolution.
     mm.add('(prefers-reduced-motion: no-preference) and (min-width: 768px)', () => {
+      // Between the first page and the showcase, any scroll amount carries through: once the
+      // user stops, the page glides on in the direction they were going. Even a small nudge
+      // brings the showcase up in time to see the phone's complete flight in.
+      ScrollTrigger.create({
+        start: 0,
+        endTrigger: sectionRef.current,
+        end: 'top 72px',
+        invalidateOnRefresh: true,
+        snap: {
+          snapTo: 1,
+          directional: true,
+          inertia: false,
+          delay: 0.08,
+          duration: { min: 0.5, max: 0.9 },
+          ease: 'power2.inOut',
+        },
+      });
+
       gsap
         .timeline({
           scrollTrigger: {
