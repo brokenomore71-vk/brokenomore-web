@@ -405,7 +405,7 @@ export default function FeatureShowcase() {
         {/* Tickers, fundamentals, answers and the report around the phone in the stock story */}
         <StockStoryLayer runtime={stockRuntime} />
 
-        {/* 24K bullion bar, minted gold coins, doorstep delivery seal, and instant UPI payout */}
+        {/* The vault bar, the gold poured into it, and the coin shipped out of it in the gold story */}
         <GoldStoryLayer runtime={goldRuntime} />
 
         {/* Central Floating Smartphone (z-index 20) */}

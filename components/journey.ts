@@ -34,11 +34,7 @@ export interface Chapter {
 
 // The website's order of features. Each chapter starts where the last one ended, so a new
 // feature joins the journey by being added to this list.
-const CHAPTERS: ((context: ChapterContext) => Chapter)[] = [
-  createSplitChapter,
-  createStockChapter,
-  createGoldChapter,
-];
+const CHAPTERS: ((context: ChapterContext) => Chapter)[] = [createSplitChapter, createStockChapter, createGoldChapter];
 
 // Strings the chapters into one timeline for scrolling to drive, forwards and backwards.
 export function buildJourney(context: ChapterContext) {
