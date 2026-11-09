@@ -9,7 +9,10 @@ import FeatureOrbit from './FeatureOrbit';
 import { BROKENOMORE_FEATURES } from './featureScreens';
 import SplitStoryLayer, { SplitStoryCaptions } from './splitStory/SplitStoryLayer';
 import { CAPTIONS } from './splitStory/splitData';
-import { createSplitStoryRuntime } from './splitStory/timeline';
+import { createSplitStoryRuntime, type PhoneScreenController } from './splitStory/timeline';
+import StockStoryLayer, { StockStoryCaptions } from './stockStory/StockStoryLayer';
+import { STOCK_CAPTIONS } from './stockStory/stockData';
+import { createStockStoryRuntime } from './stockStory/timeline';
 import { buildJourney, createPlayhead, SCROLL_PER_UNIT } from './journey';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -30,7 +33,26 @@ export default function FeatureShowcase() {
   const phoneRef = useRef<HTMLDivElement | null>(null);
   const scrollMotionRef = useRef({ rotY: 0, face: 0 });
   const [storyRuntime] = useState(createSplitStoryRuntime);
-  const screenOverrideRef = useRef(storyRuntime.screen);
+  const [stockRuntime] = useState(createStockStoryRuntime);
+  // The phone's screen belongs to whichever story has taken it over most recently
+  const [journeyScreen] = useState<PhoneScreenController>(() => ({
+    get active() {
+      return storyRuntime.screen.active || stockRuntime.screen.active;
+    },
+    set active(value: boolean) {
+      storyRuntime.screen.active = value;
+      stockRuntime.screen.active = value;
+    },
+    get dirty() {
+      return storyRuntime.screen.dirty || stockRuntime.screen.dirty;
+    },
+    set dirty(value: boolean) {
+      storyRuntime.screen.dirty = value;
+      stockRuntime.screen.dirty = value;
+    },
+    draw: (ctx, width, height) => (stockRuntime.screen.active ? stockRuntime.screen : storyRuntime.screen).draw(ctx, width, height),
+  }));
+  const screenOverrideRef = useRef(journeyScreen);
   const orbitRenderPausedRef = useRef<boolean>(false);
   const pinRef = useRef<ScrollTrigger | null>(null);
   const journeyStartedRef = useRef<boolean>(false);
@@ -194,7 +216,7 @@ export default function FeatureShowcase() {
         fitStage(); // only now is the section free of the pin's frozen height
         Object.assign(scrollMotion, { rotY: 0, face: 0 });
         context = gsap.context(() => {
-          const journey = buildJourney({ stage, section, header, phone, motion: scrollMotion, splitRuntime: storyRuntime });
+          const journey = buildJourney({ stage, section, header, phone, motion: scrollMotion, splitRuntime: storyRuntime, stockRuntime });
           const onUpdate = () => {
             const time = journey.timeline.time();
             journeyStartedRef.current = time > 0.01;
@@ -261,7 +283,7 @@ export default function FeatureShowcase() {
         playhead?.kill();
         context?.revert();
         pinRef.current = null;
-        storyRuntime.screen.active = false;
+        journeyScreen.active = false;
         journeyStartedRef.current = false;
         orbitRenderPausedRef.current = false;
       };
@@ -272,7 +294,7 @@ export default function FeatureShowcase() {
       Object.assign(scrollMotion, { rotY: 0, face: 0 });
       history.scrollRestoration = previousRestoration;
     };
-  }, [storyRuntime]);
+  }, [storyRuntime, stockRuntime, journeyScreen]);
 
   // The slideshow: steps through the features every 3 seconds, until the journey takes over
   const startTimer = useCallback(() => {
@@ -325,6 +347,7 @@ export default function FeatureShowcase() {
       </div>
 
       <SplitStoryCaptions />
+      <StockStoryCaptions />
 
       {/* Main 3D Stage: Smartphone Centered + Revolving Feature Orbit */}
       <div ref={stageRef} className="relative w-full max-w-7xl flex-1 min-h-0 flex items-center justify-center">
@@ -339,6 +362,9 @@ export default function FeatureShowcase() {
 
         {/* Billing machine, bill and everything else the phone moves among in the split story */}
         <SplitStoryLayer runtime={storyRuntime} />
+
+        {/* Tickers, fundamentals, answers and the report around the phone in the stock story */}
+        <StockStoryLayer runtime={stockRuntime} />
 
         {/* Central Floating Smartphone (z-index 20) */}
         <div
@@ -378,7 +404,7 @@ export default function FeatureShowcase() {
 
     {/* Without motion, the story's steps are simply listed */}
     <ol className="hidden motion-reduce:grid gap-6 sm:grid-cols-2 max-w-4xl mx-auto mt-16 px-4">
-      {CAPTIONS.map((caption) => (
+      {[...CAPTIONS, ...STOCK_CAPTIONS].map((caption) => (
         <li key={caption.title}>
           <h3 className="text-xl font-semibold text-white tracking-tight">{caption.title}</h3>
           <p className="text-sm text-neutral-400 tracking-tight mt-1">{caption.body}</p>

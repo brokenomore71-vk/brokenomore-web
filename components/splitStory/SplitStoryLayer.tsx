@@ -74,7 +74,7 @@ function loadStoryAssets(runtime: SplitStoryRuntime, sceneCanvas: HTMLCanvasElem
 // Captions sit outside the stage so they line up with the section's normal heading.
 export function SplitStoryCaptions() {
   return (
-    <div className="absolute inset-x-0 top-6 sm:top-8 md:top-4 z-30 px-4 pointer-events-none" aria-hidden="true">
+    <div data-split-captions className="absolute inset-x-0 top-6 sm:top-8 md:top-4 z-30 px-4 pointer-events-none" aria-hidden="true">
       <div className="relative mx-auto max-w-3xl">
         {/* The feature's name, announced as its chapter begins */}
         <div data-s="chapter-opening" style={HIDDEN} className="absolute inset-x-0 top-0 text-center">
