@@ -46,7 +46,7 @@ export default function Home() {
         />
       </div>
 
-      {/* Fades in on scroll to turn the background plain black behind the credit cards */}
+      {/* Fades in on scroll to turn the background plain black behind the showcase and credit cards */}
       <div data-bg-fade className="fixed inset-0 bg-black opacity-0 pointer-events-none" aria-hidden="true" />
 
       {/* Sticky/Fixed Animated Navbar */}

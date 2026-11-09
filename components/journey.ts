@@ -1,6 +1,7 @@
 import gsap from 'gsap';
 import { createSplitChapter, type SplitStoryRuntime } from './splitStory/timeline';
 import { createStockChapter, type StockStoryRuntime } from './stockStory/timeline';
+import { createGoldChapter, type GoldStoryRuntime } from './goldStory/timeline';
 
 // How far the user scrolls, in pixels, per unit of chapter timeline.
 export const SCROLL_PER_UNIT = 280;
@@ -22,6 +23,7 @@ export interface ChapterContext {
   motion: { rotY: number; face: number };
   splitRuntime: SplitStoryRuntime;
   stockRuntime: StockStoryRuntime;
+  goldRuntime: GoldStoryRuntime;
 }
 
 export interface Chapter {
@@ -32,7 +34,11 @@ export interface Chapter {
 
 // The website's order of features. Each chapter starts where the last one ended, so a new
 // feature joins the journey by being added to this list.
-const CHAPTERS: ((context: ChapterContext) => Chapter)[] = [createSplitChapter, createStockChapter];
+const CHAPTERS: ((context: ChapterContext) => Chapter)[] = [
+  createSplitChapter,
+  createStockChapter,
+  createGoldChapter,
+];
 
 // Strings the chapters into one timeline for scrolling to drive, forwards and backwards.
 export function buildJourney(context: ChapterContext) {

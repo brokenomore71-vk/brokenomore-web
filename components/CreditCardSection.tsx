@@ -84,31 +84,8 @@ export default function CreditCardSection() {
       });
     });
 
-    // The reactive background melts into plain black as this section arrives
-    const scanner = document.querySelector<HTMLElement>('[data-bg-scanner]');
-    const backgroundFade = gsap.fromTo(
-      '[data-bg-fade]',
-      { opacity: 0 },
-      {
-        opacity: 1,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 95%',
-          end: 'top 25%',
-          scrub: 0.6,
-          onUpdate: (self) => {
-            if (scanner) scanner.style.visibility = self.progress === 1 ? 'hidden' : '';
-          },
-        },
-      }
-    );
-
     return () => {
       mm.revert();
-      backgroundFade.scrollTrigger?.kill();
-      backgroundFade.kill();
-      if (scanner) scanner.style.visibility = '';
     };
   }, []);
 

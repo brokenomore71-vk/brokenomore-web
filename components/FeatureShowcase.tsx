@@ -13,6 +13,9 @@ import { createSplitStoryRuntime, type PhoneScreenController } from './splitStor
 import StockStoryLayer, { StockStoryCaptions } from './stockStory/StockStoryLayer';
 import { STOCK_CAPTIONS } from './stockStory/stockData';
 import { createStockStoryRuntime } from './stockStory/timeline';
+import GoldStoryLayer, { GoldStoryCaptions } from './goldStory/GoldStoryLayer';
+import { GOLD_CAPTIONS } from './goldStory/goldData';
+import { createGoldStoryRuntime } from './goldStory/timeline';
 import { buildJourney, createPlayhead, SCROLL_PER_UNIT } from './journey';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -34,23 +37,30 @@ export default function FeatureShowcase() {
   const scrollMotionRef = useRef({ rotY: 0, face: 0 });
   const [storyRuntime] = useState(createSplitStoryRuntime);
   const [stockRuntime] = useState(createStockStoryRuntime);
+  const [goldRuntime] = useState(createGoldStoryRuntime);
   // The phone's screen belongs to whichever story has taken it over most recently
   const [journeyScreen] = useState<PhoneScreenController>(() => ({
     get active() {
-      return storyRuntime.screen.active || stockRuntime.screen.active;
+      return storyRuntime.screen.active || stockRuntime.screen.active || goldRuntime.screen.active;
     },
     set active(value: boolean) {
       storyRuntime.screen.active = value;
       stockRuntime.screen.active = value;
+      goldRuntime.screen.active = value;
     },
     get dirty() {
-      return storyRuntime.screen.dirty || stockRuntime.screen.dirty;
+      return storyRuntime.screen.dirty || stockRuntime.screen.dirty || goldRuntime.screen.dirty;
     },
     set dirty(value: boolean) {
       storyRuntime.screen.dirty = value;
       stockRuntime.screen.dirty = value;
+      goldRuntime.screen.dirty = value;
     },
-    draw: (ctx, width, height) => (stockRuntime.screen.active ? stockRuntime.screen : storyRuntime.screen).draw(ctx, width, height),
+    draw: (ctx, width, height) => {
+      if (goldRuntime.screen.active) return goldRuntime.screen.draw(ctx, width, height);
+      if (stockRuntime.screen.active) return stockRuntime.screen.draw(ctx, width, height);
+      return storyRuntime.screen.draw(ctx, width, height);
+    },
   }));
   const screenOverrideRef = useRef(journeyScreen);
   const orbitRenderPausedRef = useRef<boolean>(false);
@@ -91,6 +101,12 @@ export default function FeatureShowcase() {
       if (btnAndroid) gsap.set(btnAndroid, { autoAlpha: 1, y: 0, scale: 1 });
       if (btnIos) gsap.set(btnIos, { autoAlpha: 1, y: 0, scale: 1 });
       setStartPhoneIntro(true);
+      ScrollTrigger.create({
+        trigger: sectionRef.current,
+        start: 'top 72px',
+        onEnter: () => gsap.set('[data-bg-fade]', { opacity: 1 }),
+        onLeaveBack: () => gsap.set('[data-bg-fade]', { opacity: 0 }),
+      });
     });
 
     mm.add('(prefers-reduced-motion: no-preference)', () => {
@@ -162,6 +178,26 @@ export default function FeatureShowcase() {
         },
       });
 
+      // The reactive background melts into plain black as the showcase arrives
+      const scanner = document.querySelector<HTMLElement>('[data-bg-scanner]');
+      gsap.fromTo(
+        '[data-bg-fade]',
+        { opacity: 0 },
+        {
+          opacity: 1,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: 'top bottom',
+            end: 'top 35%',
+            scrub: 0.6,
+            onUpdate: (self) => {
+              if (scanner) scanner.style.visibility = self.progress === 1 ? 'hidden' : '';
+            },
+          },
+        }
+      );
+
       // The phone's flight is timed, not scrubbed, so hold it until the phone's spot is coming on
       // screen.
       ScrollTrigger.create({
@@ -216,7 +252,7 @@ export default function FeatureShowcase() {
         fitStage(); // only now is the section free of the pin's frozen height
         Object.assign(scrollMotion, { rotY: 0, face: 0 });
         context = gsap.context(() => {
-          const journey = buildJourney({ stage, section, header, phone, motion: scrollMotion, splitRuntime: storyRuntime, stockRuntime });
+          const journey = buildJourney({ stage, section, header, phone, motion: scrollMotion, splitRuntime: storyRuntime, stockRuntime, goldRuntime });
           const onUpdate = () => {
             const time = journey.timeline.time();
             journeyStartedRef.current = time > 0.01;
@@ -293,8 +329,10 @@ export default function FeatureShowcase() {
       mm.revert();
       Object.assign(scrollMotion, { rotY: 0, face: 0 });
       history.scrollRestoration = previousRestoration;
+      const scanner = document.querySelector<HTMLElement>('[data-bg-scanner]');
+      if (scanner) scanner.style.visibility = '';
     };
-  }, [storyRuntime, stockRuntime, journeyScreen]);
+  }, [storyRuntime, stockRuntime, goldRuntime, journeyScreen]);
 
   // The slideshow: steps through the features every 3 seconds, until the journey takes over
   const startTimer = useCallback(() => {
@@ -348,6 +386,7 @@ export default function FeatureShowcase() {
 
       <SplitStoryCaptions />
       <StockStoryCaptions />
+      <GoldStoryCaptions />
 
       {/* Main 3D Stage: Smartphone Centered + Revolving Feature Orbit */}
       <div ref={stageRef} className="relative w-full max-w-7xl flex-1 min-h-0 flex items-center justify-center">
@@ -365,6 +404,9 @@ export default function FeatureShowcase() {
 
         {/* Tickers, fundamentals, answers and the report around the phone in the stock story */}
         <StockStoryLayer runtime={stockRuntime} />
+
+        {/* 24K bullion bar, minted gold coins, doorstep delivery seal, and instant UPI payout */}
+        <GoldStoryLayer runtime={goldRuntime} />
 
         {/* Central Floating Smartphone (z-index 20) */}
         <div
@@ -404,7 +446,7 @@ export default function FeatureShowcase() {
 
     {/* Without motion, the story's steps are simply listed */}
     <ol className="hidden motion-reduce:grid gap-6 sm:grid-cols-2 max-w-4xl mx-auto mt-16 px-4">
-      {[...CAPTIONS, ...STOCK_CAPTIONS].map((caption) => (
+      {[...CAPTIONS, ...STOCK_CAPTIONS, ...GOLD_CAPTIONS].map((caption) => (
         <li key={caption.title}>
           <h3 className="text-xl font-semibold text-white tracking-tight">{caption.title}</h3>
           <p className="text-sm text-neutral-400 tracking-tight mt-1">{caption.body}</p>
