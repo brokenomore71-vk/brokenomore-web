@@ -73,6 +73,8 @@ export const WEIGHTS = [
 ] as const;
 
 export const SCORE = 6;
+// Circumference of the verdict's score ring (radius 17 in its 40×40 box)
+export const VERDICT_RING = 2 * Math.PI * 17;
 export const PILLARS = [
   { name: 'Valuation', score: 73, verdict: 'Fairly Valued', color: '#e5b85c' },
   { name: 'Quality', score: 56, verdict: 'Moderate', color: '#e5b85c' },

@@ -1,7 +1,7 @@
 import gsap from 'gsap';
 import type { Chapter, ChapterContext } from '../journey';
 import type { PhoneScreenController } from '../splitStory/timeline';
-import { SEARCH, WEIGHTS } from './stockData';
+import { SCORE, SEARCH, VERDICT_RING, WEIGHTS } from './stockData';
 import { drawStockScreen, initialStockState, type StockAssets, type StockState } from './stockScreen';
 
 // Timeline positions are in units, which journey.ts turns into scroll distance.
@@ -16,7 +16,16 @@ const READABLE = 0.92;
 // How much of the phone's box its screen fills, measured off the model
 const SCREEN_OF_BOX = { width: 0.526, height: 0.806 };
 // Degrees the beam tips for each weight's worth of difference between the pans
-const TILT_PER_WEIGHT = 6;
+const TILT_PER_WEIGHT = 7;
+// The beam is a damped spring: how fast it swings (radians per timeline unit) and how quickly it
+// settles. It overshoots a little each time a fact lands, then comes to rest.
+const SWING = 8;
+const DAMPING = 3.4;
+// How long each fact takes to fly from the phone to its pan, and when the first one leaves
+const FLIGHT = 0.6;
+const FIRST_WEIGHT_AT = 3.9;
+const WEIGHT_GAP = 0.5;
+const VERDICT_AT = 7.5;
 
 export interface StockStoryRuntime {
   state: StockState;
@@ -98,18 +107,16 @@ function addStockStory({ tl, stage, section, phone, runtime }: StoryOptions) {
   const state = runtime.state;
   Object.assign(state, initialStockState());
   // The scale's own numbers: how far in it is, and how far each weight has travelled
-  const scale = { shown: 0, weights: WEIGHTS.map(() => ({ t: 0 })) };
+  const scale = { shown: 0, verdict: 0, weights: WEIGHTS.map(() => ({ t: 0 })) };
 
   const captions = Array.from(section.querySelectorAll<HTMLElement>('[data-stock-captions] [data-k="caption"]'));
   const svg = one<SVGSVGElement>('scale');
-  const stand = one<SVGPathElement>('stand');
-  const strings = one<SVGPathElement>('strings');
-  const beam = one<SVGLineElement>('beam');
-  const pivot = one<SVGCircleElement>('pivot');
-  const pans = [one<SVGPathElement>('pan-left'), one<SVGPathElement>('pan-right')];
   const panLabels = all('pan-label');
   const weights = all('weight');
   const verdict = one('verdict');
+  const verdictRing = one<SVGCircleElement>('verdict-ring');
+  const verdictNum = one('verdict-num');
+  const verdictText = one('verdict-text');
 
   // ---- Helpers ----
   const caption = (i: number, inAt: number, outAt?: number) => {
@@ -126,6 +133,7 @@ function addStockStory({ tl, stage, section, phone, runtime }: StoryOptions) {
   // ---- Starting positions ----
   gsap.set(captions, { autoAlpha: 0, y: 18 });
   gsap.set([...weights, ...panLabels, verdict], { xPercent: -50, yPercent: -50, x: 0, y: 0, autoAlpha: 0 });
+  gsap.set(verdictText, { clipPath: 'inset(0% 100% 0% 0%)', autoAlpha: 0 });
   gsap.set(svg, { autoAlpha: 0 });
 
   // ================= Find it =================
@@ -140,15 +148,17 @@ function addStockStory({ tl, stage, section, phone, runtime }: StoryOptions) {
   screen({ chart: 1 }, 2.3, 0.8, 'none');
 
   // ================= Weighed: the facts go on the scale =================
+  // The scale builds itself: the pillar rises, the beam unfolds, the pans drop onto their chains
   tl.to(phone, { ...L.phone, duration: 0.6, ease: 'power2.inOut' }, 3);
-  tl.to(scale, { shown: 1, duration: 0.6, ease: 'power2.out' }, 3.2);
-  tl.to(svg, { autoAlpha: 1, duration: 0.3 }, 3.2);
-  tl.to(panLabels, { autoAlpha: 1, duration: 0.3 }, 3.5);
+  tl.to(svg, { autoAlpha: 1, duration: 0.2 }, 3.1);
+  tl.to(scale, { shown: 1, duration: 0.8, ease: 'power1.out' }, 3.1);
+  tl.to(panLabels, { autoAlpha: 1, duration: 0.3 }, 3.6);
   caption(1, 3.4, 6.6);
   screen({ scroll: 0.36 }, 3.5, 0.6, 'power2.inOut');
   weights.forEach((el, i) => {
-    tl.to(el, { autoAlpha: 1, duration: 0.12 }, 3.9 + i * 0.5);
-    tl.to(scale.weights[i], { t: 1, duration: 0.6, ease: 'none' }, 3.9 + i * 0.5);
+    const leave = FIRST_WEIGHT_AT + i * WEIGHT_GAP;
+    tl.to(el, { autoAlpha: 1, duration: 0.12 }, leave);
+    tl.to(scale.weights[i], { t: 1, duration: FLIGHT, ease: 'none' }, leave);
   });
 
   // ================= The verdict =================
@@ -157,61 +167,196 @@ function addStockStory({ tl, stage, section, phone, runtime }: StoryOptions) {
   caption(2, 6.9);
   screen({ dial: 1 }, 6.9, 0.9, 'power1.out');
   screen({ pillars: 1 }, 7.1, 1, 'none');
-  tl.set(verdict, { x: S.pivot.x, y: S.pivot.y - (L.narrow ? 32 : 44), scale: 0.6 }, 7.5);
-  tl.to(verdict, { autoAlpha: 1, scale: 1, duration: 0.4, ease: 'back.out(1.8)' }, 7.5);
+  // The needle locks, a ring of light spreads from the pivot, and the score rises out of it
+  tl.to(scale, { verdict: 1, duration: 1, ease: 'power2.out' }, VERDICT_AT);
+  tl.set(verdict, { x: S.pivot.x, y: S.pivot.y - S.arm * 0.24 - (L.narrow ? 34 : 46), scale: 0.4 }, VERDICT_AT + 0.1);
+  tl.to(verdict, { autoAlpha: 1, scale: 1, duration: 0.45, ease: 'back.out(2.2)' }, VERDICT_AT + 0.1);
+  tl.to(verdictText, { autoAlpha: 1, clipPath: 'inset(0% 0% 0% 0%)', duration: 0.45, ease: 'power2.out' }, VERDICT_AT + 0.4);
   tl.to({}, { duration: 0.01 }, 8.6);
 
-  // ---- Every update: lay out the scale from how much weight has landed ----
+  // ---- The scale's fixed geometry, drawn once around the pivot ----
+  const f = S.arm / 170; // everything is designed at the desktop size and scaled from it
+  const pillarH = S.foot - S.pivot.y;
+  const panW = S.pan / 2;
+  const bowl = panW * 0.34;
+  const rimRy = panW * 0.16;
+  const gaugeR = S.arm * 0.24;
+  const set = (el: Element, attrs: Record<string, string | number>) => {
+    for (const k in attrs) el.setAttribute(k, typeof attrs[k] === 'number' ? (attrs[k] as number).toFixed(2) : (attrs[k] as string));
+  };
+  set(one('pillar'), { d: `M${-3.5 * f} 10 L${3.5 * f} 10 L${7 * f} ${pillarH - 18 * f} L${-7 * f} ${pillarH - 18 * f} Z` });
+  set(one('plinth'), {
+    d: `M${-16 * f} ${pillarH - 18 * f} L${16 * f} ${pillarH - 18 * f} L${50 * f} ${pillarH - 4 * f} L${50 * f} ${pillarH + 2 * f} L${-50 * f} ${pillarH + 2 * f} L${-50 * f} ${pillarH - 4 * f} Z`,
+  });
+  set(one('plinth-top'), { cx: 0, cy: pillarH - 18 * f, rx: 16 * f, ry: 3.5 * f });
+  set(one('core'), { x1: 0, y1: 16, x2: 0, y2: pillarH - 24 * f });
+  set(one('shadow'), { cx: 0, cy: pillarH + 6 * f, rx: 70 * f, ry: 8 * f });
+  const arcPoint = (deg: number, r: number) => {
+    const t = (deg * Math.PI) / 180;
+    return `${(Math.sin(t) * r).toFixed(2)} ${(-Math.cos(t) * r).toFixed(2)}`;
+  };
+  set(one('gauge-arc'), { d: `M${arcPoint(-60, gaugeR)} A${gaugeR} ${gaugeR} 0 0 1 ${arcPoint(60, gaugeR)}` });
+  set(one('gauge-ticks'), {
+    d: [-60, -40, -20, 0, 20, 40, 60].map((deg) => `M${arcPoint(deg, gaugeR + 3)} L${arcPoint(deg, gaugeR + (deg === 0 ? 10 : 7))}`).join(' '),
+  });
+  set(one('needle-line'), { x1: 0, y1: -6, x2: 0, y2: -(gaugeR - 5) });
+  set(one('needle-tip'), { cx: 0, cy: -(gaugeR - 5), r: 2.2 });
+  set(one('beam-bar'), {
+    d: `M${-S.arm} ${-2.2 * f} Q0 ${-7 * f} ${S.arm} ${-2.2 * f} L${S.arm} ${2.2 * f} Q0 ${7 * f} ${-S.arm} ${2.2 * f} Z`,
+  });
+  all('finial').forEach((el, i) => set(el, { cx: (i === 0 ? -1 : 1) * S.arm, cy: 0, r: 5 * f }));
+  set(one('hub'), { cx: 0, cy: 0, r: 11 * f });
+  set(one('hub-dot'), { cx: 0, cy: 0, r: 3.5 * f });
+  set(one('spot'), { cx: 0, cy: 0, r: S.arm * 1.9 });
+  const pans = all<SVGGElement>('pan');
+  pans.forEach((pan) => {
+    const q = (name: string) => pan.querySelector(`[data-k="${name}"]`)!;
+    set(q('chains'), { d: `M0 0 L${-panW + 8 * f} ${S.string} M0 0 L0 ${S.string - rimRy} M0 0 L${panW - 8 * f} ${S.string}` });
+    set(q('hook'), { cx: 0, cy: 0, r: 3 * f });
+    set(q('pan-inner'), { cx: 0, cy: S.string, rx: panW, ry: rimRy });
+    set(q('pan-bowl'), {
+      d: `M${-panW} ${S.string} A${panW} ${rimRy} 0 0 0 ${panW} ${S.string} Q${panW * 0.82} ${S.string + bowl} 0 ${S.string + bowl} Q${-panW * 0.82} ${S.string + bowl} ${-panW} ${S.string} Z`,
+    });
+    set(q('pan-shine'), { d: `M${-panW * 0.62} ${S.string + bowl * 0.45} Q${-panW * 0.3} ${S.string + bowl * 0.85} 0 ${S.string + bowl * 0.88}` });
+  });
+  const rig = one<SVGGElement>('rig');
+  const stand = one<SVGGElement>('stand');
+  const gauge = one<SVGGElement>('gauge');
+  const needle = one<SVGGElement>('needle');
+  const beamGroup = one<SVGGElement>('beam');
+  const hub = [one('hub'), one('hub-dot')];
+  const shockwave = one<SVGCircleElement>('shockwave');
+  const spot = one('spot');
+  const pools = all<SVGEllipseElement>('pool');
+  const ripples = all<SVGEllipseElement>('ripple');
+  const trails = all<SVGGElement>('trail').map((g) => ({
+    g,
+    glow: g.querySelector<SVGPathElement>('[data-k="trail-glow"]')!,
+    core: g.querySelector<SVGPathElement>('[data-k="trail-core"]')!,
+  }));
+
+  // ---- Every update: the scale's motion, worked out from the story's time ----
   const phoneEdge = { x: L.phone.x + L.half.w - 20, y: L.phone.y - L.half.h * 0.2 };
   const phoneTop = { x: L.phone.x, y: L.phone.y - L.half.h + 10 };
   const sideOf = (i: number) => (WEIGHTS[i].side === 'strength' ? 0 : 1);
   const slotOf = WEIGHTS.map((_, i) => WEIGHTS.slice(0, i).filter((w) => w.side === WEIGHTS[i].side).length);
+  const landAt = WEIGHTS.map((_, i) => FIRST_WEIGHT_AT + i * WEIGHT_GAP + FLIGHT);
   const smooth = (t: number) => t * t * (3 - 2 * t);
   const clamp01 = (t: number) => Math.max(0, Math.min(1, t));
+  const seg = (t: number, a: number, b: number) => clamp01((t - a) / (b - a));
+  const easeOutBack = (t: number) => 1 + 2.4 * (t - 1) ** 3 + 1.4 * (t - 1) ** 2;
+  // A damped spring's response to a step, and how fast it is moving
+  const step = (tau: number) => (tau <= 0 ? 0 : 1 - Math.exp(-DAMPING * tau) * (Math.cos(SWING * tau) + (DAMPING / SWING) * Math.sin(SWING * tau)));
+  const stepSpeed = (tau: number) => (tau <= 0 ? 0 : Math.exp(-DAMPING * tau) * (DAMPING ** 2 / SWING + SWING) * Math.sin(SWING * tau));
+  const arc = L.narrow ? 60 : 110;
 
   return () => {
-    const rise = (1 - scale.shown) * 40;
-    const P = { x: S.pivot.x, y: S.pivot.y + rise };
-    // Landed weight on each side tips the beam: the heavier side goes down
-    let torque = 0;
-    scale.weights.forEach(({ t }, i) => {
-      torque += (sideOf(i) === 0 ? -1 : 1) * smooth(clamp01((t - 0.8) / 0.2));
-    });
-    const angle = (torque * TILT_PER_WEIGHT * Math.PI) / 180;
-    const ends = [-1, 1].map((d) => ({ x: P.x + d * S.arm * Math.cos(angle), y: P.y + d * S.arm * Math.sin(angle) }));
-    const panTop = ends.map((e) => ({ x: e.x, y: e.y + S.string }));
+    const T = tl.time();
+    if (T < 3) return; // nothing of the scale is on screen yet
 
-    beam.setAttribute('x1', ends[0].x.toFixed(1));
-    beam.setAttribute('y1', ends[0].y.toFixed(1));
-    beam.setAttribute('x2', ends[1].x.toFixed(1));
-    beam.setAttribute('y2', ends[1].y.toFixed(1));
-    pivot.setAttribute('cx', P.x.toFixed(1));
-    pivot.setAttribute('cy', P.y.toFixed(1));
-    const foot = S.foot + rise;
-    stand.setAttribute('d', `M${P.x - 4} ${P.y} L${P.x + 4} ${P.y} L${P.x + 6} ${foot - 12} L${P.x + 46} ${foot} L${P.x - 46} ${foot} L${P.x - 6} ${foot - 12} Z`);
-    const w = S.pan / 2;
-    strings.setAttribute(
-      'd',
-      panTop.map((p, i) => `M${ends[i].x} ${ends[i].y} L${p.x - w + 8} ${p.y} M${ends[i].x} ${ends[i].y} L${p.x + w - 8} ${p.y}`).join(' ')
-    );
-    pans.forEach((pan, i) => {
-      const p = panTop[i];
-      pan.setAttribute('d', `M${p.x - w} ${p.y} L${p.x + w} ${p.y} Q${p.x + w - 10} ${p.y + 18} ${p.x} ${p.y + 18} Q${p.x - w + 10} ${p.y + 18} ${p.x - w} ${p.y} Z`);
-      gsap.set(panLabels[i], { x: p.x, y: p.y + 34 });
-    });
+    // ---- Building itself ----
+    const shown = scale.shown;
+    const pillarP = easeOutBack(seg(shown, 0, 0.5));
+    const beamP = smooth(seg(shown, 0.3, 0.75));
+    const panP = seg(shown, 0.55, 1);
+    const P = S.pivot;
+    rig.setAttribute('transform', `translate(${P.x.toFixed(1)} ${P.y.toFixed(1)})`);
+    stand.setAttribute('transform', `translate(0 ${pillarH}) scale(1 ${Math.max(0.001, pillarP).toFixed(3)}) translate(0 ${-pillarH})`);
+    gsap.set([gauge, ...hub], { opacity: seg(shown, 0.4, 0.7) });
+    spot.setAttribute('opacity', (shown * (0.8 + 0.4 * scale.verdict)).toFixed(3));
 
-    // Each weight leaves the phone and arcs onto its pan, then rides it
-    weights.forEach((el, i) => {
-      const pan = panTop[sideOf(i)];
-      const target = { x: pan.x, y: pan.y - (slotOf[i] + 0.5) * (S.weightH + 4) };
-      const from = L.narrow ? phoneTop : { x: phoneEdge.x, y: phoneEdge.y + i * 24 };
-      const k = smooth(clamp01(scale.weights[i].t));
-      gsap.set(el, {
-        x: from.x + (target.x - from.x) * k,
-        y: from.y + (target.y - from.y) * k - Math.sin(Math.PI * k) * (L.narrow ? 50 : 90),
-        scale: 0.7 + 0.3 * k,
+    // ---- The beam: each landed fact nudges it, and it springs towards its new balance ----
+    let deg = 0;
+    let speed = 0;
+    WEIGHTS.forEach((_, i) => {
+      const dir = sideOf(i) === 0 ? -1 : 1;
+      deg += dir * TILT_PER_WEIGHT * step(T - landAt[i]);
+      speed += dir * TILT_PER_WEIGHT * stepSpeed(T - landAt[i]);
+    });
+    const angle = (deg * Math.PI) / 180;
+    beamGroup.setAttribute('transform', `rotate(${deg.toFixed(2)}) scale(${Math.max(0.001, beamP).toFixed(3)} 1)`);
+    const needleDeg = Math.max(-58, Math.min(58, deg * 4.5));
+    needle.setAttribute('transform', `rotate(${needleDeg.toFixed(2)})`);
+
+    // ---- The pans: hanging from the beam's ends, swaying behind its movement ----
+    const sway = Math.max(-14, Math.min(14, -speed * 0.16));
+    const panTops = [-1, 1].map((d, side) => {
+      const end = { x: P.x + d * S.arm * beamP * Math.cos(angle), y: P.y + d * S.arm * beamP * Math.sin(angle) };
+      // The pan that just took a fact dips under it and bobs back
+      let dip = 0;
+      let glow = 0;
+      WEIGHTS.forEach((_, i) => {
+        if (sideOf(i) !== side) return;
+        const tau = T - landAt[i];
+        if (tau > 0) {
+          dip += 7 * f * Math.exp(-5 * tau) * Math.sin(12 * tau);
+          glow += 0.22 + 0.5 * Math.exp(-4 * tau);
+        }
       });
+      const drop = (1 - smooth(panP)) * -40;
+      const pan = pans[side];
+      pan.setAttribute('transform', `translate(${end.x.toFixed(1)} ${(end.y + drop).toFixed(1)}) rotate(${sway.toFixed(2)}) translate(0 ${dip.toFixed(2)})`);
+      pan.setAttribute('opacity', panP.toFixed(3));
+      const t = (sway * Math.PI) / 180;
+      const top = { x: end.x - Math.sin(t) * (S.string + dip), y: end.y + drop + Math.cos(t) * (S.string + dip) };
+      set(pools[side], { cx: top.x, cy: S.foot + 4, rx: panW * 1.3, ry: 16 * f, opacity: Math.min(1, glow + scale.verdict * (side === 0 ? 0.3 : 0)) * panP });
+      gsap.set(panLabels[side], { x: top.x, y: top.y + bowl + 20 * f });
+      return top;
     });
+
+    // ---- The facts: flying from the phone on a light trail, landing in their pans ----
+    const fromOf = (i: number) => (L.narrow ? phoneTop : { x: phoneEdge.x, y: phoneEdge.y + i * 24 });
+    const pathAt = (i: number, k: number) => {
+      const pan = panTops[sideOf(i)];
+      const target = { x: pan.x, y: pan.y - rimRy * 0.4 - (slotOf[i] + 0.5) * (S.weightH + 4) };
+      const from = fromOf(i);
+      return { x: from.x + (target.x - from.x) * k, y: from.y + (target.y - from.y) * k - Math.sin(Math.PI * k) * arc };
+    };
+    weights.forEach((el, i) => {
+      const t = clamp01(scale.weights[i].t);
+      const k = smooth(t);
+      const p = pathAt(i, k);
+      const tau = T - landAt[i];
+      // A small squash as it lands
+      const squash = tau > 0 ? 0.1 * Math.exp(-7 * tau) * Math.sin(16 * tau + Math.PI / 2) : 0;
+      const spin = Math.sin(Math.PI * k) * (sideOf(i) === 0 ? -14 : 12);
+      gsap.set(el, {
+        x: p.x,
+        y: p.y,
+        rotation: spin + (t >= 1 ? sway : 0),
+        scaleX: (0.6 + 0.4 * k) * (1 + squash),
+        scaleY: (0.6 + 0.4 * k) * (1 - squash),
+      });
+
+      // The trail: the last stretch of the flight path, fading as the fact settles
+      const { g, glow, core } = trails[i];
+      const fade = t <= 0 ? 0 : 1 - smooth(seg(t, 0.78, 1));
+      g.setAttribute('opacity', fade.toFixed(3));
+      if (fade > 0) {
+        const k0 = Math.max(0, k - 0.32);
+        const pts: string[] = [];
+        for (let n = 0; n <= 12; n++) {
+          const q = pathAt(i, k0 + ((k - k0) * n) / 12);
+          pts.push(`${q.x.toFixed(1)} ${q.y.toFixed(1)}`);
+        }
+        const d = `M${pts.join(' L')}`;
+        glow.setAttribute('d', d);
+        core.setAttribute('d', d);
+      }
+
+      // The ring that spreads across the pan where it landed
+      const u = seg(tau, 0, 0.55);
+      const pan = panTops[sideOf(i)];
+      set(ripples[i], { cx: pan.x, cy: pan.y, rx: panW * (0.35 + 0.95 * u), ry: rimRy * (0.35 + 0.95 * u) + 2, opacity: tau > 0 && u < 1 ? (1 - u) * 0.9 : 0 });
+    });
+
+    // ---- The verdict: a ring of light from the pivot, and the score counting up ----
+    const v = scale.verdict;
+    const wave = seg(v, 0, 0.55);
+    set(shockwave, { cx: 0, cy: 0, r: 11 * f + S.arm * 1.3 * smooth(wave), opacity: v > 0 && wave < 1 ? (1 - wave) * 0.9 : 0, 'stroke-width': 2 + 6 * (1 - wave) });
+    const fill = smooth(seg(v, 0.15, 0.85));
+    verdictRing.setAttribute('stroke-dashoffset', (VERDICT_RING * (1 - (fill * SCORE) / 10)).toFixed(2));
+    verdictNum.textContent = String(Math.round(fill * SCORE));
   };
 }
 
