@@ -1,6 +1,7 @@
 import Scanner from '@/components/Scanner';
 import Navbar from './components/Navbar';
 import FeatureShowcase from '@/components/FeatureShowcase';
+import CreditCardSection from '@/components/CreditCardSection';
 
 export default function Home() {
   return (
@@ -10,7 +11,7 @@ export default function Home() {
       </noscript>
 
       {/* Background Interactive Scanner */}
-      <div className="fixed inset-0 w-full h-full pointer-events-auto">
+      <div data-bg-scanner className="fixed inset-0 w-full h-full pointer-events-auto">
         <Scanner
           color1="#5227FF"
           color2="#FF9FFC"
@@ -44,6 +45,9 @@ export default function Home() {
           lightMode={false}
         />
       </div>
+
+      {/* Fades in on scroll to turn the background plain black behind the credit cards */}
+      <div data-bg-fade className="fixed inset-0 bg-black opacity-0 pointer-events-none" aria-hidden="true" />
 
       {/* Sticky/Fixed Animated Navbar */}
       <Navbar />
@@ -101,6 +105,9 @@ export default function Home() {
         <div className="w-full mt-4 sm:mt-6 pointer-events-auto" suppressHydrationWarning>
           <FeatureShowcase />
         </div>
+
+        {/* Credit cards coming out of the wallet */}
+        <CreditCardSection />
       </div>
     </main>
   );

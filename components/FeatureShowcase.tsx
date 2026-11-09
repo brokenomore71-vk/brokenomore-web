@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useCallback, useLayoutEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -23,7 +23,6 @@ const ORBIT_HIDDEN_AFTER = 1.1;
 export default function FeatureShowcase() {
   const [selectedFeatureId, setSelectedFeatureId] = useState<string>(BROKENOMORE_FEATURES[0].id);
   const [isIntroComplete, setIsIntroComplete] = useState<boolean>(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [startPhoneIntro, setStartPhoneIntro] = useState<boolean>(false);
   const sectionRef = useRef<HTMLElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -130,20 +129,20 @@ export default function FeatureShowcase() {
         },
       });
 
-      // The phone's flight is timed, not scrubbed, so hold it until the phone's spot is on
-      // screen. Fired any earlier, a slow scroll would play the whole flight below the fold.
+      // The phone's flight is timed, not scrubbed, so hold it until the phone's spot is coming on
+      // screen. It starts together with the turn below, so the turn is actually seen.
       ScrollTrigger.create({
         trigger: sectionRef.current,
-        start: 'top 20%',
+        start: 'top 60%',
         once: true,
         onEnter: () => setStartPhoneIntro(true),
       });
     });
 
+    // Desktop: between the first page and the showcase, any scroll amount carries through: once
+    // the user stops, the page glides on in the direction they were going. Even a small nudge
+    // brings the showcase up in time to see the phone's complete flight in.
     mm.add('(prefers-reduced-motion: no-preference) and (min-width: 768px)', () => {
-      // Between the first page and the showcase, any scroll amount carries through: once the
-      // user stops, the page glides on in the direction they were going. Even a small nudge
-      // brings the showcase up in time to see the phone's complete flight in.
       ScrollTrigger.create({
         start: 0,
         endTrigger: sectionRef.current,
@@ -156,6 +155,21 @@ export default function FeatureShowcase() {
           delay: 0.08,
           duration: { min: 0.5, max: 0.9 },
           ease: 'power2.inOut',
+        },
+      });
+    });
+
+    // The phone turns only while the section scrolls into view, and lands facing front
+    // once the section is fully visible. The page itself is never held back.
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.to(scrollMotion, {
+        rotY: Math.PI * 2,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 60%',
+          end: 'top 72px',
+          scrub: 0.6,
         },
       });
     });
@@ -260,14 +274,6 @@ export default function FeatureShowcase() {
   // When intro animation finishes and feature blocks appear, start 3s timer immediately
   const handleIntroComplete = useCallback(() => {
     setIsIntroComplete(true);
-    startTimer();
-  }, [startTimer]);
-
-  // Clean up timer on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
   }, []);
 
   const selectedFeature =
@@ -301,7 +307,8 @@ export default function FeatureShowcase() {
         {/* The slideshow of feature cards orbiting the phone */}
         <FeatureOrbit
           selectedFeatureId={selectedFeatureId}
-          renderPausedRef={orbitRenderPausedRef}
+          onSelectFeature={setSelectedFeatureId}
+          isOrbitPaused={true}
           isIntroComplete={isIntroComplete}
         />
 
@@ -313,6 +320,15 @@ export default function FeatureShowcase() {
           ref={phoneRef}
           className="relative z-[20] w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px] h-[520px] sm:h-[600px] lg:h-[650px] flex items-center justify-center pointer-events-auto"
           style={{ zIndex: 20 }}
+          title="Click to advance to next feature"
+          onClick={() => {
+            setSelectedFeatureId((current) => {
+              const currentIndex = BROKENOMORE_FEATURES.findIndex((f) => f.id === current);
+              const nextIndex =
+                (currentIndex - 1 + BROKENOMORE_FEATURES.length) % BROKENOMORE_FEATURES.length;
+              return BROKENOMORE_FEATURES[nextIndex].id;
+            });
+          }}
         >
           <Phone3D
             selectedFeatureId={selectedFeatureId}
