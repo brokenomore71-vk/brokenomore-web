@@ -2,14 +2,14 @@ import gsap from 'gsap';
 import { createSplitChapter, type SplitStoryRuntime } from './splitStory/timeline';
 
 // How far the user scrolls, in pixels, per unit of chapter timeline.
-export const SCROLL_PER_UNIT = 400;
+export const SCROLL_PER_UNIT = 280;
 
-// However hard the user scrolls, the animation plays no faster than this: one unit per 0.85
+// However hard the user scrolls, the animation plays no faster than this: one unit per 0.6
 // seconds, the pace the story was designed to be watched at.
-const WATCHING_SPEED = 1 / 0.85;
+const WATCHING_SPEED = 1 / 0.6;
 // Except that a long fling across the page catches up within about this many seconds, rather
 // than playing on for ages after the user has stopped.
-const LONGEST_CATCH_UP = 2.5;
+const LONGEST_CATCH_UP = 1.8;
 // How gently it eases to a stop as it reaches the scroll position. Higher stops more abruptly.
 const SETTLE = 8;
 

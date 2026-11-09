@@ -115,6 +115,7 @@ export default function CreditCardSection() {
   return (
     <section
       ref={sectionRef}
+      data-credit-cards
       className="relative w-full max-w-7xl mx-auto mt-16 lg:mt-24 lg:min-h-[calc(100svh-72px)] grid grid-cols-1 lg:grid-cols-[minmax(0,350px)_minmax(0,1fr)_minmax(0,240px)] items-center gap-6 lg:gap-4 pointer-events-auto select-none"
     >
       {/* Copy and card finder */}

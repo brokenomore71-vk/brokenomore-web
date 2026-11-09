@@ -141,12 +141,15 @@ export default function FeatureShowcase() {
       });
 
       // The phone's flight is timed, not scrubbed, so hold it until the phone's spot is coming on
-      // screen. It starts together with the turn below, so the turn is actually seen.
+      // screen.
       ScrollTrigger.create({
         trigger: sectionRef.current,
         start: 'top 60%',
         once: true,
         onEnter: () => setStartPhoneIntro(true),
+        onRefresh: (self) => {
+          if (self.progress > 0) setStartPhoneIntro(true);
+        },
       });
     });
 
@@ -166,21 +169,6 @@ export default function FeatureShowcase() {
           delay: 0.08,
           duration: { min: 0.5, max: 0.9 },
           ease: 'power2.inOut',
-        },
-      });
-    });
-
-    // The phone turns only while the section scrolls into view, and lands facing front
-    // once the section is fully visible. The page itself is never held back.
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
-      gsap.to(scrollMotion, {
-        rotY: Math.PI * 2,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 60%',
-          end: 'top 72px',
-          scrub: 0.6,
         },
       });
     });
@@ -223,6 +211,24 @@ export default function FeatureShowcase() {
             pin: true,
             onUpdate: (self) => playhead?.follow(self.progress),
           });
+          // Once the story's last frame is up, any scroll on carries the page down to the credit
+          // cards, and any scroll back up returns to that last frame
+          const creditCards = document.querySelector<HTMLElement>('[data-credit-cards]');
+          if (creditCards) {
+            ScrollTrigger.create({
+              start: () => pinRef.current?.end ?? 0,
+              endTrigger: creditCards,
+              end: 'top 72px',
+              snap: {
+                snapTo: 1,
+                directional: true,
+                inertia: false,
+                delay: 0.08,
+                duration: { min: 0.5, max: 0.9 },
+                ease: 'power2.inOut',
+              },
+            });
+          }
         });
         ScrollTrigger.refresh();
         const pin = pinRef.current;

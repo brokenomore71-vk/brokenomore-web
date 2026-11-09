@@ -4,7 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import { IBM_Plex_Mono, Poppins } from 'next/font/google';
 import { PaymentScene } from './paymentScene';
 import { renderReceipt } from './receipt';
-import { BILL, CAPTIONS, PEOPLE, inr } from './splitData';
+import { BILL, CAPTIONS, EQUAL, PEOPLE, inr } from './splitData';
 import { BROKENOMORE_FEATURES } from '../featureScreens';
 import type { SplitStoryRuntime } from './timeline';
 
@@ -111,7 +111,7 @@ export default function SplitStoryLayer({ runtime }: { runtime: SplitStoryRuntim
 
   return (
     <div data-split-story className="absolute inset-0 pointer-events-none" aria-hidden="true">
-      {/* Orbit ring and request lines */}
+      {/* Scanner light */}
       <svg data-s="lines" style={{ ...HIDDEN, zIndex: 5 }} className={`${CENTERED} overflow-visible`} width="1" height="1">
         <defs>
           <linearGradient id="split-cone" x1="1" y1="0" x2="0" y2="0">
@@ -120,20 +120,6 @@ export default function SplitStoryLayer({ runtime }: { runtime: SplitStoryRuntim
           </linearGradient>
         </defs>
         <polygon data-s="cone" fill="url(#split-cone)" style={HIDDEN} />
-        <ellipse data-s="ring" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.5" style={HIDDEN} />
-        {PEOPLE.slice(1).map((person) => (
-          <path
-            key={person.id}
-            data-s="arc"
-            fill="none"
-            stroke="#818cf8"
-            strokeWidth="2"
-            strokeLinecap="round"
-            pathLength={1}
-            strokeDasharray="1"
-            strokeDashoffset="1"
-          />
-        ))}
       </svg>
 
       {/* The payment machine and its paper. Oversized, so they can swing in from off the stage */}
@@ -142,6 +128,30 @@ export default function SplitStoryLayer({ runtime }: { runtime: SplitStoryRuntim
         style={{ ...HIDDEN, zIndex: 11, left: -160, top: -160, width: 'calc(100% + 320px)', height: 'calc(100% + 320px)' }}
         className="absolute block"
       />
+
+      {/* Who paid: the whole amount going in from your card */}
+      <div
+        data-s="paid-pill"
+        style={{ ...HIDDEN, zIndex: 30 }}
+        className={`${CENTERED} flex items-center gap-2 whitespace-nowrap rounded-full border border-emerald-400/50 bg-[#10231d]/95 py-1.5 pl-1.5 pr-3.5 text-xs font-semibold text-emerald-300 shadow-[0_8px_24px_rgba(0,0,0,0.55)]`}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={PEOPLE[0].avatar} alt="" width={22} height={22} className="h-[22px] w-[22px] rounded-full" />
+        <span>{inr(EQUAL.amount, 0)} paid</span>
+      </div>
+
+      {/* Each person's equal share, flying out of the receipt to them */}
+      {EQUAL.shares.map((share, i) => (
+        <div
+          key={i}
+          data-s="coin"
+          style={{ ...HIDDEN, zIndex: 30 }}
+          className={`${CENTERED} flex items-center gap-1.5 whitespace-nowrap rounded-full border border-indigo-300/60 bg-indigo-500 py-1 pl-1 pr-3 text-xs font-semibold text-white shadow-[0_0_24px_rgba(99,102,241,0.7)]`}
+        >
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-[11px] font-bold text-indigo-600">₹</span>
+          <span>{inr(share)}</span>
+        </div>
+      ))}
 
       {/* Line items travelling from the paper into the phone */}
       {CHIP_LABELS.map((chip) => (
@@ -156,7 +166,7 @@ export default function SplitStoryLayer({ runtime }: { runtime: SplitStoryRuntim
         </div>
       ))}
 
-      {/* The people splitting, on the same ring the feature cards orbit */}
+      {/* The people splitting, around the phone */}
       {PEOPLE.map((person) => (
         <div
           key={person.id}

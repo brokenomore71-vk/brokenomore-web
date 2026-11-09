@@ -504,10 +504,10 @@ export default function Phone3D({
       const targetRotY = -0.32 * posed + floatRotY * (1 - face * 0.7);
       const targetRotZ = -0.24 * posed + floatRotZ * (1 - face * 0.7);
 
-      // Starting pose: tilted back and turned partly away; the canvas tween handles the travel
+      // Starting pose: tilted back and turned towards the left as it flies in from the left
       const startPosY = 0;
       const startRotX = 0.45;  // tilted back as it ascends
-      const startRotY = targetRotY - 0.9;
+      const startRotY = targetRotY - 0.9; // rotates in from the left towards the viewer
       const startRotZ = -0.05;
 
       const currentPosY = startPosY + (0 - startPosY) * introProgress + floatY;
