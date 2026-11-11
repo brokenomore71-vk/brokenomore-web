@@ -431,7 +431,8 @@ export function createSplitChapter({ stage, section, header, phone, motion, spli
   gsap.set(name, { yPercent: 110 });
   gsap.set(tagline, { autoAlpha: 0, y: 14 });
 
-  timeline.to(orbitPieces, { autoAlpha: 0, scale: 0.86, duration: 0.8, ease: 'power2.in' }, 0);
+  // Only the orbit part of the showcase has these
+  if (orbitPieces.length) timeline.to(orbitPieces, { autoAlpha: 0, scale: 0.86, duration: 0.8, ease: 'power2.in' }, 0);
   timeline.to(header, { autoAlpha: 0, y: -16, duration: 0.5, ease: 'power2.in' }, 0);
   timeline.to(motion, { rotY: FRONT_ROT_Y, duration: 2.6, ease: 'power2.inOut' }, 0);
   timeline.to(phone, { y: 24, scale: 0.9, duration: 1.2, ease: 'power2.inOut' }, 0);

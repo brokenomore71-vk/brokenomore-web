@@ -362,7 +362,7 @@ function addStockStory({ tl, stage, section, phone, runtime }: StoryOptions) {
 
 // The Stock Analysis chapter: the split story clears, the phone turns once more and comes round
 // showing the stock planner, and its story follows.
-export function createStockChapter({ stage, section, phone, motion, stockRuntime }: ChapterContext): Chapter {
+export function createStockChapter({ stage, section, phone, motion, stockRuntime }: ChapterContext & { stockRuntime: StockStoryRuntime }): Chapter {
   const timeline = gsap.timeline({ defaults: { ease: 'none' } });
 
   const splitPieces = [

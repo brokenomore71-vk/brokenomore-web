@@ -2,6 +2,7 @@ import Scanner from '@/components/Scanner';
 import Navbar from './components/Navbar';
 import FeatureShowcase from '@/components/FeatureShowcase';
 import CreditCardSection from '@/components/CreditCardSection';
+import SafeGoldSection from '@/components/safeGold/SafeGoldSection';
 
 export default function Home() {
   return (
@@ -103,11 +104,21 @@ export default function Home() {
 
         {/* Interactive 3D Floating Phone + Revolving Features Showcase */}
         <div className="w-full mt-4 sm:mt-6 pointer-events-auto" suppressHydrationWarning>
-          <FeatureShowcase />
+          <FeatureShowcase part="orbit" />
+        </div>
+
+        {/* SafeGold: the gold piggy bank's scroll story */}
+        <div className="w-full mt-10 pointer-events-auto">
+          <SafeGoldSection />
         </div>
 
         {/* Credit cards coming out of the wallet */}
         <CreditCardSection />
+
+        {/* The phone again, playing the split story inside it */}
+        <div className="w-full mt-16 lg:mt-24 pointer-events-auto" suppressHydrationWarning>
+          <FeatureShowcase part="split" />
+        </div>
       </div>
     </main>
   );

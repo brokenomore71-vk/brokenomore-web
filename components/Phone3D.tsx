@@ -425,8 +425,16 @@ export default function Phone3D({
 
     let screenWasOverridden = false;
 
+    // Two phones live on the page, so each one only draws while it is on screen
+    let onScreen = true;
+    const visibility = new IntersectionObserver((entries) => {
+      onScreen = entries.some((entry) => entry.isIntersecting);
+    });
+    visibility.observe(container);
+
     const animate = () => {
       animId = requestAnimationFrame(animate);
+      if (!onScreen) return;
 
       const elapsedTime = clock.getElapsedTime();
 
@@ -545,6 +553,7 @@ export default function Phone3D({
     return () => {
       isMounted = false;
       cancelAnimationFrame(animId);
+      visibility.disconnect();
       gsap.killTweensOf(renderer.domElement);
       container.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);

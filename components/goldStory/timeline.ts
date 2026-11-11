@@ -235,7 +235,7 @@ function addGoldStory({ tl, stage, section, phone, runtime }: StoryOptions) {
 }
 
 // The Gold Savings chapter: the stock story clears, the phone turns once more, and its story follows.
-export function createGoldChapter({ stage, section, phone, motion, goldRuntime }: ChapterContext): Chapter {
+export function createGoldChapter({ stage, section, phone, motion, goldRuntime }: ChapterContext & { goldRuntime: GoldStoryRuntime }): Chapter {
   const timeline = gsap.timeline({ defaults: { ease: 'none' } });
 
   const before = [stage.querySelector<HTMLElement>('[data-stock-story]'), section.querySelector<HTMLElement>('[data-stock-captions]')].filter(
