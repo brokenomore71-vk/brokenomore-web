@@ -15,18 +15,8 @@ const ORBIT_COINS = 6;
 const EXTENT = { side: 2.6, up: 1.75, down: 1.45 };
 const PARTICLES = 520;
 // Where the slot sits on the piggy bank, in its own space
-const SLOT = new THREE.Vector3(-0.05, 1.04, 0);
+const SLOT = new THREE.Vector3(-0.05, 0.99, 0);
 
-// A short, sturdy leg with a rounded foot, turned on a lathe
-const LEG_PROFILE = [
-  [0, -0.24],
-  [0.17, -0.24],
-  [0.22, -0.225],
-  [0.245, -0.19],
-  [0.25, -0.13],
-  [0.225, 0.22],
-  [0, 0.22],
-].map(([r, h]) => new THREE.Vector2(r, h));
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
 const clamp01 = (t: number) => Math.max(0, Math.min(1, t));
@@ -157,16 +147,19 @@ function rupeePoints(count: number) {
 
 // A dark studio with a few softboxes. Polished gold looks like gold because of what it reflects:
 // deep shadows with bright, clean highlights, rather than an evenly lit room.
-function studioEnvironment() {
+// The studio the metal reflects. `room` is the colour of everything that isn't a light, and `boost`
+// brightens the lights. The piggy bank gets a warmer, brighter one than the coins, so its shadowed
+// side reads as deep amber gold rather than black.
+function studioEnvironment(room = '#060504', boost = 1) {
   const scene = new THREE.Scene();
   const disposables: { dispose: () => void }[] = [];
   const roomGeometry = new THREE.BoxGeometry(24, 24, 24);
-  const roomMaterial = new THREE.MeshBasicMaterial({ color: '#060504', side: THREE.BackSide });
+  const roomMaterial = new THREE.MeshBasicMaterial({ color: room, side: THREE.BackSide });
   scene.add(new THREE.Mesh(roomGeometry, roomMaterial));
   disposables.push(roomGeometry, roomMaterial);
   const panel = (w: number, h: number, intensity: number, tint: string, x: number, y: number, z: number) => {
     const geometry = new THREE.PlaneGeometry(w, h);
-    const material = new THREE.MeshBasicMaterial({ color: new THREE.Color(tint).multiplyScalar(intensity), side: THREE.DoubleSide });
+    const material = new THREE.MeshBasicMaterial({ color: new THREE.Color(tint).multiplyScalar(intensity * boost), side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(x, y, z);
     mesh.lookAt(0, 0, 0);
@@ -179,7 +172,38 @@ function studioEnvironment() {
   panel(7, 2.5, 2.2, '#fff8ee', 0, 2, 10); // low front fill
   panel(8, 3, 2.6, '#ffe2a8', 2, 3, -10); // warm back rim
   panel(14, 4, 0.35, '#8c6b20', 0, -10, 0); // faint warm floor bounce
+  if (boost > 1) {
+    // Extra soft fills around the sides and below, so no side of the piggy bank goes dark
+    panel(12, 8, 0.9, '#ffd98a', 0, -6, 8); // warm bounce from the front floor
+    panel(6, 10, 1.2, '#fff0d0', 10, 2, 6); // side fill, front right
+    panel(6, 10, 0.9, '#ffe6b0', -9, -1, -7); // side fill, back left
+  }
   return { scene, dispose: () => disposables.forEach((d) => d.dispose()) };
+}
+
+// A fine brushed grain: thin streaks of slightly varying roughness, so the gold looks like polished
+// metal with a satin finish rather than plastic. Used as a roughness map (mid grey = the material's
+// own roughness).
+function brushedTexture() {
+  const texture = canvasTexture(512, 512, (ctx) => {
+    ctx.fillStyle = '#9a9a9a';
+    ctx.fillRect(0, 0, 512, 512);
+    for (let i = 0; i < 2600; i++) {
+      const y = Math.random() * 512;
+      const shade = 120 + Math.floor(Math.random() * 70);
+      ctx.strokeStyle = `rgba(${shade},${shade},${shade},${0.25 + Math.random() * 0.35})`;
+      ctx.lineWidth = 0.5 + Math.random() * 1.2;
+      const x = Math.random() * 512;
+      const len = 40 + Math.random() * 220;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + len, y + (Math.random() - 0.5) * 2);
+      ctx.stroke();
+    }
+  });
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(3, 2);
+  return texture;
 }
 
 function ringTexture() {
@@ -238,7 +262,7 @@ export class GoldScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.15;
+    this.renderer.toneMappingExposure = 1.05;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     // A studio's reflections, so the metal has something to mirror
@@ -247,13 +271,17 @@ export class GoldScene {
     const env = pmrem.fromScene(studio.scene, 0.02).texture;
     this.scene.environment = env;
     studio.dispose();
+    const pigStudio = studioEnvironment('#3a2a10', 1.35);
+    const pigEnv = pmrem.fromScene(pigStudio.scene, 0.04).texture;
+    pigStudio.dispose();
+    this.disposables.push(pigEnv);
     pmrem.dispose();
     this.disposables.push(env);
 
     this.scene.add(new THREE.AmbientLight(0xfff3dc, 0.15));
-    const key = new THREE.DirectionalLight(0xfff1d6, 2.4);
+    const key = new THREE.DirectionalLight(0xfff1d6, 1.9);
     key.position.set(-4, 6, 6);
-    const rim = new THREE.DirectionalLight(0xffe2a0, 2.2);
+    const rim = new THREE.DirectionalLight(0xffe2a0, 1.5);
     rim.position.set(5, 3, -5);
     const under = new THREE.DirectionalLight(0x8c6b20, 0.6);
     under.position.set(0, -5, 3);
@@ -261,15 +289,20 @@ export class GoldScene {
     this.scene.add(key, rim, under, this.sheen);
 
     // ---- Materials ----
+    const brushed = brushedTexture();
+    this.disposables.push(brushed);
     this.pigGold = new THREE.MeshPhysicalMaterial({
-      color: GOLD.primary,
-      metalness: 1,
-      roughness: 0.22,
-      clearcoat: 0.12,
-      clearcoatRoughness: 0.2,
-      envMapIntensity: 1.25,
+      color: '#E6B93F',
+      metalness: 0.94,
+      roughness: 0.3,
+      roughnessMap: brushed,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.12,
+      envMap: pigEnv,
+      envMapIntensity: 1.35,
     });
-    const darkGold = new THREE.MeshStandardMaterial({ color: '#4a3510', metalness: 0.9, roughness: 0.45 });
+    // The hollows of the ears: a deeper, bronzier gold (lit by the piggy bank's warm studio, so never black)
+    const darkGold = new THREE.MeshStandardMaterial({ color: '#a8782a', metalness: 0.9, roughness: 0.4, envMap: pigEnv, envMapIntensity: 0.9 });
     const slotDark = new THREE.MeshStandardMaterial({ color: '#0b0803', metalness: 0.4, roughness: 0.8 });
     this.disposables.push(this.pigGold, darkGold, slotDark);
 
@@ -349,8 +382,9 @@ export class GoldScene {
     this.disposables.push(particleGeometry, sprite, particleMat);
   }
 
-  // A piggy bank modelled from rounded solids: a slightly pear-shaped body, snout, ears, legs and
-  // a curled tail, with a slot on its back.
+  // A piggy bank modelled on the classic polished-gold one: a round, chubby body; a big flat
+  // snout with two nostrils; glossy black eyes; pointed ears with a hollow; short tapered legs; a
+  // curly tail; and a slot on its back. Its front faces +x.
   private buildPig(darkGold: THREE.Material, slotDark: THREE.Material) {
     const gold = this.pigGold;
     const add = (geometry: THREE.BufferGeometry, material: THREE.Material, setup: (m: THREE.Mesh) => void) => {
@@ -360,89 +394,117 @@ export class GoldScene {
       this.disposables.push(geometry);
       return mesh;
     };
+    // The body's half-widths: a little longer than it is tall
+    const BODY = { x: 1.16, y: 1.0, z: 1.02 };
+    // The point on the body's surface in a given direction, pushed out (or in) by `out`
+    const onBody = (x: number, y: number, z: number, out = 0) => {
+      const d = new THREE.Vector3(x, y, z).normalize();
+      return new THREE.Vector3(d.x * (BODY.x + out), d.y * (BODY.y + out), d.z * (BODY.z + out));
+    };
 
+    // Body: round and full, a touch flatter underneath
     const bodyGeometry = new THREE.SphereGeometry(1, 96, 64);
     const p = bodyGeometry.attributes.position as THREE.BufferAttribute;
     for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i);
       const y = p.getY(i);
-      const z = p.getZ(i);
-      // Fuller at the back, a touch flatter underneath, a little narrower towards the head
-      const taper = 1 - 0.08 * Math.max(0, x);
-      p.setXYZ(i, x * 1.28, (y < 0 ? y * 0.92 : y) * 1.04 * taper, z * 1.0 * taper);
+      p.setXYZ(i, p.getX(i) * BODY.x, (y < 0 ? y * 0.94 : y) * BODY.y, p.getZ(i) * BODY.z);
     }
     bodyGeometry.computeVertexNormals();
     add(bodyGeometry, gold, () => undefined);
 
-    // Snout: turned like a lathe, flaring into the body with a rounded rim at the front
+    // Snout: a short, wide drum with a softly rounded rim and a flat face
     const snoutProfile = [
-      [0, 0.37],
-      [0.24, 0.37],
-      [0.31, 0.358],
-      [0.35, 0.33],
-      [0.365, 0.29],
-      [0.37, 0.12],
-      [0.4, -0.02],
-      [0.47, -0.16],
+      [0.42, -0.2],
+      [0.39, 0.0],
+      [0.375, 0.14],
+      [0.365, 0.2],
+      [0.34, 0.245],
+      [0.29, 0.26],
+      [0, 0.26],
     ].map(([r, h]) => new THREE.Vector2(r, h));
     add(new THREE.LatheGeometry(snoutProfile, 72), gold, (m) => {
       m.rotation.z = -Math.PI / 2;
-      m.position.set(1.08, 0.02, 0);
+      m.position.set(1.02, -0.06, 0);
     });
-    [-0.11, 0.11].forEach((z) =>
-      add(new THREE.CylinderGeometry(0.055, 0.055, 0.04, 24), darkGold, (m) => {
+    // Nostrils: two dark ovals set into the snout's face
+    [-0.12, 0.12].forEach((z) =>
+      add(new THREE.CylinderGeometry(0.062, 0.062, 0.05, 32), slotDark, (m) => {
         m.rotation.z = Math.PI / 2;
-        m.scale.set(1, 1, 1.35);
-        m.position.set(1.45, 0.02, z);
+        m.scale.set(1, 1, 0.78);
+        m.position.set(1.265, -0.06, z);
       })
     );
 
-    // Eyes: small polished domes
-    [-0.36, 0.36].forEach((z) =>
-      add(new THREE.SphereGeometry(0.07, 24, 16), darkGold, (m) => {
-        m.position.set(1.0, 0.42, z);
-      })
-    );
-
-    // Ears: soft teardrops, narrowing to a rounded tip and folded slightly forward
-    const earGeometry = new THREE.SphereGeometry(0.3, 48, 32);
-    const ep = earGeometry.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < ep.count; i++) {
-      const up = Math.max(0, ep.getY(i) / 0.3);
-      ep.setX(i, ep.getX(i) * (1 - 0.62 * up * up));
-      ep.setZ(i, ep.getZ(i) * (1 - 0.4 * up));
-    }
-    earGeometry.computeVertexNormals();
+    // Eyes: glossy black beads above the snout
+    const eye = new THREE.MeshPhysicalMaterial({ color: '#060606', metalness: 0, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.05 });
+    this.disposables.push(eye);
     [-1, 1].forEach((side) =>
-      add(side < 0 ? earGeometry : earGeometry.clone(), gold, (m) => {
-        m.scale.set(0.85, 1.15, 0.22);
-        m.position.set(0.66, 0.98, side * 0.5);
-        m.rotation.set(side * -0.42, side * 0.35, -0.55);
+      add(new THREE.SphereGeometry(0.075, 32, 24), eye, (m) => {
+        m.position.copy(onBody(0.8, 0.36, side * 0.36, -0.015));
+        m.scale.set(0.7, 1, 1);
       })
     );
 
-    // Legs
+    // Ears: rounded triangular flaps standing up from the head, each with a darker hollow facing
+    // forward, tipped out to the side and leaning a little towards the snout
+    const earShape = (k: number) => {
+      const shape = new THREE.Shape();
+      shape.moveTo(-0.27 * k, 0);
+      shape.quadraticCurveTo(-0.22 * k, 0.3 * k, -0.04 * k, 0.5 * k);
+      shape.quadraticCurveTo(0, 0.54 * k, 0.04 * k, 0.5 * k);
+      shape.quadraticCurveTo(0.22 * k, 0.3 * k, 0.27 * k, 0);
+      shape.lineTo(-0.27 * k, 0);
+      return shape;
+    };
+    const outerEar = new THREE.ExtrudeGeometry(earShape(1), { depth: 0.03, bevelEnabled: true, bevelThickness: 0.035, bevelSize: 0.035, bevelSegments: 5, curveSegments: 32 });
+    outerEar.translate(0, 0, -0.015);
+    const innerEar = new THREE.ExtrudeGeometry(earShape(0.66), { depth: 0.01, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.02, bevelSegments: 3, curveSegments: 32 });
+    this.disposables.push(outerEar, innerEar);
+    [-1, 1].forEach((side) => {
+      const ear = new THREE.Group();
+      ear.position.copy(onBody(0.4, 0.8, side * 0.5, -0.08));
+      ear.rotation.set(side * -0.42, 0, -0.28);
+      const face = new THREE.Group();
+      face.rotation.y = Math.PI / 2; // the flap's front (+z) turns to face the snout (+x)
+      const outer = new THREE.Mesh(outerEar, gold);
+      const inner = new THREE.Mesh(innerEar, darkGold);
+      inner.position.set(0, 0.07, 0.045);
+      face.add(outer, inner);
+      ear.add(face);
+      this.pigBody.add(ear);
+    });
+
+    // Legs: short stumps, wider where they meet the body, with a rounded foot
+    const legProfile = [
+      [0, -0.17],
+      [0.12, -0.17],
+      [0.155, -0.158],
+      [0.168, -0.125],
+      [0.2, 0.14],
+      [0, 0.14],
+    ].map(([r, h]) => new THREE.Vector2(r, h));
     [
-      [0.62, 0.48],
-      [0.62, -0.48],
-      [-0.66, 0.48],
-      [-0.66, -0.48],
+      [0.55, 0.5],
+      [0.55, -0.5],
+      [-0.58, 0.5],
+      [-0.58, -0.5],
     ].forEach(([x, z]) =>
-      add(new THREE.LatheGeometry(LEG_PROFILE, 56), gold, (m) => {
+      add(new THREE.LatheGeometry(legProfile, 56), gold, (m) => {
         m.position.set(x, -0.86, z);
+        m.rotation.set(z * 0.12, 0, -x * 0.08);
       })
     );
 
-    // Curled tail
-    const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-1.24, 0.12, 0),
-      new THREE.Vector3(-1.42, 0.22, 0.04),
-      new THREE.Vector3(-1.5, 0.38, -0.06),
-      new THREE.Vector3(-1.38, 0.46, -0.1),
-      new THREE.Vector3(-1.33, 0.34, 0.02),
-      new THREE.Vector3(-1.46, 0.3, 0.08),
+    // Tail: a short stem curling into a little loop
+    const stem = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-1.1, 0.18, 0),
+      new THREE.Vector3(-1.22, 0.22, 0),
+      new THREE.Vector3(-1.3, 0.2, 0),
     ]);
-    add(new THREE.TubeGeometry(curve, 64, 0.045, 16, false), gold, () => undefined);
+    add(new THREE.TubeGeometry(stem, 24, 0.032, 12, false), gold, () => undefined);
+    add(new THREE.TorusGeometry(0.1, 0.032, 16, 48), gold, (m) => {
+      m.position.set(-1.33, 0.3, 0);
+    });
 
     // The slot: a raised lip with a dark opening
     add(new RoundedBoxGeometry(0.2, 0.06, 0.82, 4, 0.03), gold, (m) => {
@@ -591,9 +653,9 @@ export class GoldScene {
     this.pigBody.scale.set(1 + squash * 0.5, 1 - squash, 1 + squash * 0.5);
 
     // It grows richer as the gold builds up
-    this.pigGold.roughness = lerp(0.26, 0.14, f.pig.value);
-    this.pigGold.envMapIntensity = lerp(1.15, 1.6, f.pig.value);
-    this.pigGold.clearcoat = lerp(0.08, 0.3, f.pig.value);
+    this.pigGold.roughness = lerp(0.34, 0.24, f.pig.value);
+    this.pigGold.envMapIntensity = lerp(1.3, 1.55, f.pig.value);
+    this.pigGold.clearcoat = lerp(0.3, 0.5, f.pig.value);
 
     const tau = f.time - lastLanding;
     const u = seg(tau, 0, 0.8);

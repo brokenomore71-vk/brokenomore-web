@@ -1,19 +1,18 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { Plus_Jakarta_Sans } from 'next/font/google';
+import { brand } from '@/app/fonts';
 import { STOCK_CAPTIONS, VERDICT_RING, WEIGHTS } from './stockData';
 import type { StockStoryRuntime } from './timeline';
 
 // The app's own typeface, for the phone's screen and the pieces around it
-const jakarta = Plus_Jakarta_Sans({ weight: ['400', '500', '600', '700', '800'], subsets: ['latin', 'latin-ext'] });
 
 const HIDDEN = { visibility: 'hidden' } as const;
 const CENTERED = 'absolute left-1/2 top-1/2';
 
 function loadStockAssets(runtime: StockStoryRuntime) {
   const { assets, screen } = runtime;
-  assets.sans = jakarta.style.fontFamily;
+  assets.sans = brand.style.fontFamily;
   const logo = new Image();
   logo.src = '/assets/images/logo_white.png';
   logo.onload = () => {
@@ -22,7 +21,7 @@ function loadStockAssets(runtime: StockStoryRuntime) {
   assets.logo = logo;
 
   let cancelled = false;
-  Promise.all([400, 500, 600, 700, 800].map((w) => document.fonts.load(`${w} 40px ${jakarta.style.fontFamily}`, 'Aa0')))
+  Promise.all([400, 500, 600, 700, 800].map((w) => document.fonts.load(`${w} 40px ${brand.style.fontFamily}`, 'Aa0')))
     .catch(() => undefined)
     .then(() => {
       if (!cancelled) screen.dirty = true;
@@ -72,7 +71,7 @@ export default function StockStoryLayer({ runtime }: { runtime: StockStoryRuntim
   useEffect(() => loadStockAssets(runtime), [runtime]);
 
   return (
-    <div data-stock-story className={`absolute inset-0 pointer-events-none ${jakarta.className}`} aria-hidden="true">
+    <div data-stock-story className={`absolute inset-0 pointer-events-none ${brand.className}`} aria-hidden="true">
       <svg data-k="scale" style={{ ...HIDDEN, zIndex: 30 }} className={`${CENTERED} overflow-visible`} width="1" height="1">
         <defs>
           <linearGradient id="stk-metal" x1="0" y1="0" x2="1" y2="0">

@@ -3,7 +3,7 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { createPlayhead } from '../journey';
+import { createPlayhead, holdPinUntilPlayed } from '../journey';
 import { CHART, GOLD, PORTFOLIO, SALE, SCENES, type GoldFrame, type Room, type ScreenPoint } from './goldData';
 import type { GoldScene } from './goldScene';
 
@@ -246,20 +246,16 @@ function buildTimeline(root: HTMLElement, S: GoldState, narrow: boolean) {
   return whole;
 }
 
-// The SafeGold logo builds itself in the middle, once, as the section arrives
+// The title rises in, letter by letter, in the middle, once, as the section arrives
 function playLogoIntro(root: HTMLElement) {
   const q = (k: string) => Array.from(root.querySelectorAll<HTMLElement>(`[data-g="${k}"]`));
   const bigLogo = q('big-logo')[0];
   gsap.set(bigLogo, { xPercent: -50, yPercent: -50, x: 0, y: 0, scale: 1 });
-  gsap.set(q('g-arc'), { strokeDashoffset: 1 });
-  gsap.set(q('g-bar'), { scaleX: 0, transformOrigin: '0% 50%' });
   gsap.set(q('g-letter'), { yPercent: 110, autoAlpha: 0 });
   gsap.set(q('g-shine'), { xPercent: -120 });
   const intro = gsap.timeline({ paused: true });
   intro
-    .to(q('g-arc'), { strokeDashoffset: 0, duration: 0.8, ease: 'power3.inOut', stagger: 0.12 })
-    .to(q('g-bar'), { scaleX: 1, duration: 0.4, ease: 'power3.out' }, '-=0.25')
-    .to(q('g-letter'), { yPercent: 0, autoAlpha: 1, duration: 0.7, ease: 'power4.out', stagger: 0.06 }, '-=0.3')
+    .to(q('g-letter'), { yPercent: 0, autoAlpha: 1, duration: 0.7, ease: 'power4.out', stagger: 0.06 })
     .to(q('g-shine'), { xPercent: 120, duration: 1.2, ease: 'power2.inOut' }, '-=0.25');
   return intro;
 }
@@ -286,6 +282,7 @@ export default function SafeGoldSection() {
       let context: gsap.Context | null = null;
       let playhead: ReturnType<typeof createPlayhead> | null = null;
       let pin: ScrollTrigger | null = null;
+      let story: gsap.core.Timeline | null = null;
 
       const build = () => {
         const place = pin?.progress ?? 0;
@@ -307,6 +304,7 @@ export default function SafeGoldSection() {
             onUpdate();
             timeRef.current = tl.time();
           });
+          story = tl;
           playhead = createPlayhead(tl, PACE);
           // Scroll is split evenly between the beats; within a beat it maps onto that beat's stretch
           // of the timeline
@@ -343,6 +341,12 @@ export default function SafeGoldSection() {
         }
       };
       build();
+      // The story always finishes before the page moves on to the next section
+      const releaseHold = holdPinUntilPlayed(
+        () => pin,
+        () => story?.progress() ?? 0,
+        (toEnd) => playhead?.jump(toEnd ? 1 : 0)
+      );
 
       let lastWidth = window.innerWidth;
       let lastHeight = window.innerHeight;
@@ -360,6 +364,7 @@ export default function SafeGoldSection() {
       return () => {
         clearTimeout(timer);
         window.removeEventListener('resize', onResize);
+        releaseHold();
         playhead?.kill();
         context?.revert();
       };
@@ -564,10 +569,10 @@ export default function SafeGoldSection() {
 
         <canvas ref={canvasRef} className="absolute inset-0 z-10 block h-full w-full" aria-hidden="true" />
 
-        {/* SafeGold's logo: big in the middle at first, then it flies up into the corner */}
+        {/* The title: big in the middle at first, then it flies up into the corner */}
         <div data-g="big-logo" className="pointer-events-none absolute left-1/2 top-[45%] z-30" style={{ transform: 'translate(-50%, -50%)' }}>
           <div className="relative overflow-hidden">
-            <SafeGoldLogo animated className="text-[40px] sm:text-[76px]" />
+            <SafeGoldLogo animated className="text-[28px] sm:text-[56px] lg:text-[72px]" />
             <span data-g="g-shine" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-[#FFE9A3]/40 to-transparent mix-blend-overlay" />
           </div>
         </div>
@@ -790,23 +795,16 @@ function IconPackage() {
   );
 }
 
-// SafeGold's mark and name: a G drawn as two arcs with a crossbar, then the letters, in gold
+// The section's title in gold, set letter by letter so it can rise in
 function SafeGoldLogo({ animated = false, className = '' }: { animated?: boolean; className?: string }) {
   const k = (name: string) => (animated ? name : undefined);
   return (
-    <span className={`flex items-center gap-[0.4em] font-bold leading-none tracking-[0.18em] text-[#D4AF37] ${className}`} aria-label="SafeGold" role="img">
-      <svg viewBox="0 0 48 48" className="h-[1.1em] w-[1.1em] shrink-0" fill="none" stroke="#D4AF37" strokeLinecap="round" aria-hidden="true">
-        {/* Outer G */}
-        <path data-g={k('g-arc')} d="M40 14 A19 19 0 1 0 43 26 H25" strokeWidth="5.5" pathLength={1} strokeDasharray="1" />
-        {/* Inner stroke, echoing it */}
-        <path data-g={k('g-arc')} d="M31 17.5 A10 10 0 1 0 33.5 26" strokeWidth="4.5" pathLength={1} strokeDasharray="1" />
-        <path data-g={k('g-bar')} d="M12 26 H20" strokeWidth="4.5" />
-      </svg>
+    <span className={`flex items-center font-bold leading-none tracking-[0.18em] text-[#D4AF37] ${className}`} aria-label="Digital Gold" role="img">
       <span className="flex" aria-hidden="true">
-        {'SAFEGOLD'.split('').map((letter, i) => (
+        {'DIGITAL GOLD'.split('').map((letter, i) => (
           <span key={i} className="inline-block overflow-hidden pb-[0.08em]">
             <span data-g={k('g-letter')} className="inline-block">
-              {letter}
+              {letter === ' ' ? '\u00A0' : letter}
             </span>
           </span>
         ))}

@@ -5,14 +5,28 @@ import { motion } from 'motion/react';
 import FeatureCard from './FeatureCard';
 import { BROKENOMORE_FEATURES } from './featureScreens';
 
-// Preserves original desktop web orbit exactly while providing spacious responsive limits on mobile
+// Orbit size per viewport width. On phones it keeps the desktop's wide, flat shape: the back
+// cards peek out from behind the phone, the side cards sit beside it, the front card crosses it.
 function getOrbitRadii(viewportWidth: number) {
-  if (viewportWidth < 380) return { rx: 160, rz: 95, ryTilt: 115 };
-  if (viewportWidth < 480) return { rx: 185, rz: 110, ryTilt: 130 };
-  if (viewportWidth < 640) return { rx: 220, rz: 130, ryTilt: 150 };
-  if (viewportWidth < 1024) return { rx: 360, rz: 190, ryTilt: 180 };
+  if (viewportWidth < 640) return { rx: 140, rz: 85, ryTilt: 100 };
+  if (viewportWidth < 1024) return { rx: 340, rz: 180, ryTilt: 180 };
   if (viewportWidth < 1440) return { rx: 480, rz: 230, ryTilt: 200 };
   return { rx: 530, rz: 250, ryTilt: 220 };
+}
+
+// Card widths, matching FeatureCard's sm / md / lg classes
+function getCardWidth(viewportWidth: number) {
+  if (viewportWidth < 640) return 136;
+  if (viewportWidth < 768) return 200;
+  if (viewportWidth < 1024) return 230;
+  return 260;
+}
+
+/** Width (unscaled px) the orbit and its side cards cover, so the stage can shrink to fit it. */
+export function getOrbitStageWidth(viewportWidth: number) {
+  const { rx } = getOrbitRadii(viewportWidth);
+  // The widest cards sit at about 0.95 rx and are drawn at about 1.05x
+  return Math.round(2 * (0.95 * rx + 0.55 * getCardWidth(viewportWidth)));
 }
 
 // Deterministic baseline radii matching the original desktop design for server rendering
@@ -134,51 +148,29 @@ export default function FeatureOrbit({
       className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none select-none"
       suppressHydrationWarning
     >
-      {/* 3D Orbit Track: Seamless, contained elliptical line looping through the feature blocks on all devices */}
+      {/* 3D Orbit Track: Encompassing elliptical line looping completely around the phone on both web and mobile */}
       <div
         data-orbit-fade
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
         style={{ zIndex: 1 }}
         suppressHydrationWarning
       >
-        <motion.svg
+        {/* Motion only fades and scales the wrapper; the svg's size lives in plain attributes so it
+            follows the radii when they change after mount (Motion keeps its first inline style) */}
+        <motion.div
           initial={false}
           animate={isIntroComplete ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.88 }}
           transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 overflow-visible"
-          style={{
-            width: (radii.rx + 30) * 2,
-            height: (radii.ryTilt + 30) * 2,
-            maxWidth: '100%',
-            zIndex: 1,
-          }}
-          viewBox={`-${radii.rx + 30} -${radii.ryTilt + 30} ${(radii.rx + 30) * 2} ${(radii.ryTilt + 30) * 2}`}
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          style={{ zIndex: 1 }}
+        >
+        <svg
+          className="shrink-0 overflow-visible pointer-events-none"
+          width={(radii.rx + 40) * 2}
+          height={(radii.ryTilt + 40) * 2}
+          viewBox={`-${radii.rx + 40} -${radii.ryTilt + 40} ${(radii.rx + 40) * 2} ${(radii.ryTilt + 40) * 2}`}
           suppressHydrationWarning
         >
-          <defs>
-            <mask id="phone-orbit-cutout">
-              {/* White: reveal the orbit line */}
-              <rect
-                x={-(radii.rx + 100)}
-                y={-(radii.ryTilt + 100)}
-                width={(radii.rx + 100) * 2}
-                height={(radii.ryTilt + 100) * 2}
-                fill="white"
-              />
-              {/* Black: cut out only the central phone silhouette matching the tilted phone pose */}
-              <rect
-                x={radii.rx < 250 ? -85 : -185}
-                y={radii.rx < 250 ? -170 : -340}
-                width={radii.rx < 250 ? 170 : 370}
-                height={radii.rx < 250 ? 340 : 680}
-                rx={radii.rx < 250 ? 32 : 64}
-                ry={radii.rx < 250 ? 32 : 64}
-                fill="black"
-                transform="rotate(-13.8)"
-              />
-            </mask>
-          </defs>
-
           <ellipse
             cx="0"
             cy="0"
@@ -186,10 +178,10 @@ export default function FeatureOrbit({
             ry={radii.ryTilt}
             fill="none"
             stroke="rgba(255, 255, 255, 0.22)"
-            strokeWidth="1.5"
-            mask="url(#phone-orbit-cutout)"
+            strokeWidth="1.3"
           />
-        </motion.svg>
+        </svg>
+        </motion.div>
       </div>
 
       {/* 3D Orbiting Cards - Centered at (50%, 50%) and translated via GPU translate3d */}

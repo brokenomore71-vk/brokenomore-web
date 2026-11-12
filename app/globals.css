@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Tailwind's font-sans is the site's typeface too */
+@theme {
+  --font-sans: var(--font-brand), ui-sans-serif, system-ui, sans-serif;
+}
+
 :root {
   --background: #121212;
   --foreground: #ffffff;
@@ -13,7 +18,8 @@ html,
 body {
   background-color: #121212 !important;
   color: #ffffff;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: var(--font-brand), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-optical-sizing: auto;
   min-height: 100vh;
   width: 100%;
   margin: 0;

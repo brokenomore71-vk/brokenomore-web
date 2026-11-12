@@ -83,7 +83,7 @@ export default function Phone3D({
   screenOverrideRef,
 }: Phone3DProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [loading, setLoading] = useState(() => phoneModelCache === null);
+  const [loading, setLoading] = useState(true);
 
   const canvasTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const displayCanvasRef = useRef<HTMLCanvasElement | null>(null);

@@ -5,7 +5,7 @@ import { motion } from 'motion/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Phone3D from './Phone3D';
-import FeatureOrbit from './FeatureOrbit';
+import FeatureOrbit, { getOrbitStageWidth } from './FeatureOrbit';
 import { BROKENOMORE_FEATURES } from './featureScreens';
 import SplitStoryLayer, { SplitStoryCaptions } from './splitStory/SplitStoryLayer';
 import { CAPTIONS } from './splitStory/splitData';
@@ -24,7 +24,6 @@ gsap.registerPlugin(ScrollTrigger);
 
 // Height (px) the phone and orbit cards need at full size; shorter screens scale them down.
 const STAGE_DESIGN_HEIGHT = 635;
-
 // Once the journey is this far in (timeline units), the slideshow's cards have faded out.
 const ORBIT_HIDDEN_AFTER = 1.1;
 
@@ -92,11 +91,17 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
     const fitStage = () => {
       const stage = stageRef.current;
       if (stage) {
-        const stageH = stage.offsetHeight || STAGE_DESIGN_HEIGHT;
-        const heightScale = Math.min(1, Math.max(0.72, stageH / STAGE_DESIGN_HEIGHT));
-        const availW = Math.max(300, window.innerWidth - 32);
-        const targetW = window.innerWidth < 640 ? 440 : 760;
-        const widthScale = Math.min(1, Math.max(0.72, availW / targetW));
+        const vw = window.innerWidth;
+        const mobile = vw < 640;
+        // On phones the stage is just the phone plus the front card below it; elsewhere it is
+        // the full desktop design. Either way the whole orbit, cards included, has to fit across.
+        const designH = hasOrbit && mobile ? (phoneRef.current?.offsetHeight ?? 360) + 60 : STAGE_DESIGN_HEIGHT;
+        const stageH = stage.offsetHeight || designH;
+        const heightScale = Math.min(1, Math.max(0.6, stageH / designH));
+        // The section's own side padding (and a little air) has to come out of the width too
+        const availW = Math.max(280, vw - (mobile ? 32 : 72));
+        const targetW = hasOrbit ? getOrbitStageWidth(vw) : mobile ? 440 : 760;
+        const widthScale = Math.min(1, Math.max(0.6, availW / targetW));
         const scale = Math.min(heightScale, widthScale);
         gsap.set(stage, { scale });
       }
@@ -408,7 +413,7 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
 
   return (
     <>
-    <section ref={sectionRef} data-showcase={part} id={storyOnly ? undefined : 'features'} className="scroll-mt-[72px] relative w-full min-h-[580px] sm:min-h-[640px] h-[calc(100svh-72px)] flex flex-col items-center justify-start overflow-hidden pt-16 xs:pt-20 sm:pt-6 md:pt-4 pb-4 sm:pb-8 px-4 sm:px-6 select-none" suppressHydrationWarning>
+    <section ref={sectionRef} data-showcase={part} id={storyOnly ? undefined : 'features'} className="scroll-mt-[72px] relative w-full sm:min-h-[640px] sm:h-[calc(100svh-72px)] flex flex-col items-center justify-start overflow-hidden pt-6 xs:pt-8 sm:pt-6 md:pt-4 pb-6 sm:pb-6 px-4 sm:px-6 select-none" suppressHydrationWarning>
       {/* Dynamic Feature Header matching main title typography */}
       <div ref={headerRef} className="relative z-30 w-full">
       {/* In the split part it is invisible but still takes up its space, so the phone sits below
@@ -420,11 +425,11 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className={`relative z-30 flex flex-col items-center text-center max-w-2xl mx-auto mb-2 sm:mb-4 ${storyOnly ? 'invisible pointer-events-none' : 'pointer-events-auto'}`}
       >
-        <h2 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-semibold text-white text-center tracking-tight leading-[1.2] drop-shadow-sm mt-1 transition-all duration-300">
+        <h2 className="min-h-[1.2em] text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-semibold text-white text-center tracking-tight leading-[1.2] drop-shadow-sm mt-1 transition-all duration-300">
           {selectedFeature.name}
         </h2>
 
-        <p className="text-xs xs:text-sm sm:text-base text-neutral-400 text-center tracking-tight max-w-lg mt-1.5 sm:mt-2 transition-all duration-300 px-2">
+        <p className="min-h-[2.6em] sm:min-h-0 text-sm sm:text-base text-neutral-400 text-center tracking-tight max-w-xs sm:max-w-lg mt-1.5 sm:mt-2 transition-all duration-300 px-2">
           {selectedFeature.tagline}
         </p>
       </motion.div>
@@ -435,7 +440,7 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
       {/* <GoldStoryCaptions /> */}
 
       {/* Main 3D Stage: Smartphone Centered + Revolving Feature Orbit */}
-      <div ref={stageRef} className="relative w-full max-w-7xl flex-1 min-h-0 flex items-center justify-center">
+      <div ref={stageRef} className="relative w-full max-w-7xl flex-1 min-h-0 flex items-center justify-center py-8 sm:py-0">
         {/* The slideshow of feature cards orbiting the phone */}
         {hasOrbit && (
           <FeatureOrbit
@@ -459,7 +464,7 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
         {/* Central Floating Smartphone (z-index 20) */}
         <div
           ref={phoneRef}
-          className="relative z-[20] w-[260px] xs:w-[300px] sm:w-[360px] md:w-[420px] lg:w-[460px] h-[430px] xs:h-[490px] sm:h-[580px] lg:h-[650px] flex items-center justify-center pointer-events-auto"
+          className="relative z-[20] w-[200px] xs:w-[220px] sm:w-[320px] md:w-[380px] lg:w-[460px] h-[330px] xs:h-[360px] sm:h-[490px] md:h-[580px] lg:h-[650px] flex items-center justify-center pointer-events-auto"
           style={{ zIndex: 20 }}
           title={storyOnly ? undefined : 'Click to advance to next feature'}
           onPointerDown={(e) => {
@@ -498,10 +503,11 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
             initial={false}
             animate={isIntroComplete || storyOnly ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.3 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
-            className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-56 h-8 -rotate-6 bg-black/40 rounded-full blur-xl pointer-events-none"
+            className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-44 xs:w-52 sm:w-56 h-7 sm:h-8 -rotate-6 bg-black/40 rounded-full blur-xl pointer-events-none"
           />
         </div>
       </div>
+
     </section>
 
     {/* Without motion, the story's steps are simply listed */}

@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { IBM_Plex_Mono, Poppins } from 'next/font/google';
+import { IBM_Plex_Mono } from 'next/font/google';
+import { brand } from '@/app/fonts';
 import { PaymentScene } from './paymentScene';
 import { renderReceipt } from './receipt';
 import { BILL, CAPTIONS, EQUAL, PEOPLE, inr } from './splitData';
 import { BROKENOMORE_FEATURES } from '../featureScreens';
 import type { SplitStoryRuntime } from './timeline';
 
-const poppins = Poppins({ weight: ['400', '500', '600', '700'], subsets: ['latin', 'latin-ext'] });
 const plexMono = IBM_Plex_Mono({ weight: ['400', '500', '600'], subsets: ['latin', 'latin-ext'] });
 
 const FEATURE = BROKENOMORE_FEATURES.find((f) => f.id === 'split')!;
@@ -27,7 +27,7 @@ function loadStoryAssets(runtime: SplitStoryRuntime, sceneCanvas: HTMLCanvasElem
     };
     return img;
   };
-  assets.sans = poppins.style.fontFamily;
+  assets.sans = brand.style.fontFamily;
   assets.hero = load('/assets/images/features/splitshare.jpeg');
   assets.logo = load('/assets/images/logo_white.png');
   PEOPLE.forEach((person) => {
@@ -54,7 +54,7 @@ function loadStoryAssets(runtime: SplitStoryRuntime, sceneCanvas: HTMLCanvasElem
   let cancelled = false;
   const glyphs = 'Aa0₹';
   Promise.all([
-    ...[400, 500, 600, 700].map((w) => document.fonts.load(`${w} 40px ${poppins.style.fontFamily}`, glyphs)),
+    ...[400, 500, 600, 700].map((w) => document.fonts.load(`${w} 40px ${brand.style.fontFamily}`, glyphs)),
     ...[400, 500, 600].map((w) => document.fonts.load(`${w} 20px ${plexMono.style.fontFamily}`, glyphs)),
   ])
     .catch(() => undefined)

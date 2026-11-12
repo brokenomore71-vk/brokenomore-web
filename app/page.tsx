@@ -8,6 +8,8 @@ import SafeGoldSection from '@/components/safeGold/SafeGoldSection';
 // import HubbleSection from '@/components/hubble/HubbleSection';
 import HubbleOffers from '@/components/hubble/HubbleOffers';
 import QuickoSection from '@/components/quicko/QuickoSection';
+import SponsorshipSection from '@/components/SponsorshipSection';
+import ContactSection from '@/components/ContactSection';
 
 export default function Home() {
   return (
@@ -136,6 +138,16 @@ export default function Home() {
         {/* File ITR with Quicko: the tax jobs slide past, right to left, as the page scrolls */}
         <div className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] pointer-events-auto">
           <QuickoSection />
+        </div>
+
+        {/* Partner with Us: sponsorships and affiliations */}
+        <div className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] pointer-events-auto">
+          <SponsorshipSection />
+        </div>
+
+        {/* Get in Touch: a support ticket that opens in the visitor's mail app */}
+        <div className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] pointer-events-auto">
+          <ContactSection />
         </div>
 
 

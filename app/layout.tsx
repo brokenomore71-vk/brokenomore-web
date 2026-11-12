@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { brand } from "./fonts";
 
 export const metadata: Metadata = {
   title: "BrokeNoMore",
@@ -19,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark bg-[#121212]">
+    <html lang="en" className={`dark bg-[#121212] ${brand.variable}`}>
       <body className="bg-[#121212] min-h-screen text-white antialiased m-0 p-0 overflow-x-hidden">
         {children}
       </body>

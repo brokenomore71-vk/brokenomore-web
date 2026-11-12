@@ -1,18 +1,17 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { Poppins } from 'next/font/google';
+import { brand } from '@/app/fonts';
 import { GOLD, GOLD_CAPTIONS } from './goldData';
 import type { GoldStoryRuntime } from './timeline';
 
-const poppins = Poppins({ weight: ['400', '500', '600', '700', '800'], subsets: ['latin', 'latin-ext'] });
 
 const HIDDEN = { visibility: 'hidden' } as const;
 const CENTERED = 'absolute left-1/2 top-1/2';
 
 function loadGoldAssets(runtime: GoldStoryRuntime) {
   const { assets, screen } = runtime;
-  assets.sans = poppins.style.fontFamily;
+  assets.sans = brand.style.fontFamily;
   const hero = new Image();
   hero.src = '/assets/images/features/goldsavings.jpeg';
   hero.onload = () => {
@@ -21,7 +20,7 @@ function loadGoldAssets(runtime: GoldStoryRuntime) {
   assets.hero = hero;
 
   let cancelled = false;
-  Promise.all([400, 500, 600, 700, 800].map((w) => document.fonts.load(`${w} 40px ${poppins.style.fontFamily}`, 'Aa0₹')))
+  Promise.all([400, 500, 600, 700, 800].map((w) => document.fonts.load(`${w} 40px ${brand.style.fontFamily}`, 'Aa0₹')))
     .catch(() => undefined)
     .then(() => {
       if (!cancelled) screen.dirty = true;
@@ -63,7 +62,7 @@ export default function GoldStoryLayer({ runtime }: { runtime: GoldStoryRuntime 
   useEffect(() => loadGoldAssets(runtime), [runtime]);
 
   return (
-    <div data-gold-story className={`absolute inset-0 pointer-events-none ${poppins.className}`} aria-hidden="true">
+    <div data-gold-story className={`absolute inset-0 pointer-events-none ${brand.className}`} aria-hidden="true">
       <svg data-g="props" style={{ ...HIDDEN, zIndex: 30 }} className={`${CENTERED} overflow-visible`} width="1" height="1">
         <defs>
           <clipPath id="gold-bar-clip">

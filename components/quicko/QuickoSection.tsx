@@ -1,13 +1,12 @@
 'use client';
 
 import React, { useLayoutEffect, useRef } from 'react';
-import { Poppins } from 'next/font/google';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { holdPinUntilPlayed } from '../journey';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const poppins = Poppins({ weight: ['400', '500', '600', '700'], subsets: ['latin'] });
 
 // File ITR with Quicko. Quicko's logo builds itself in the middle of the screen; scrolling then
 // flies it up into the top-left corner, brings the heading in, and slides a row of flat cards from
@@ -43,36 +42,34 @@ export default function QuickoSection() {
     mm.add('(prefers-reduced-motion: no-preference)', () => {
       const bigLogo = q('big-logo');
       const slot = q('logo-slot');
-      const ring = q('q-ring');
-      const tail = q('q-tail');
       const letters = qa('q-letter');
+      // The letters of "Income Tax Return" that aren't I, T or R: they fold away on the flight up
+      const rests = qa('q-rest');
       const shine = q('q-shine');
       const intro = qa('intro');
       const counter = q('counter');
       const progressBar = q('progress');
       const footer = q('footer');
       const cards = qa('card');
-      // How far the row has to travel: up to where its last element ends (scrollWidth leaves out
-      // the trailing space)
+      // The row's side padding, which lines its first and last cards up with the heading
+      const pad = () => parseFloat(getComputedStyle(track).paddingRight) || 0;
+      // How far the row has to travel: until the last card sits at the right-hand edge, lined up
+      // with the heading. The row (and the pin) ends there, with no empty space after it.
       const distance = () => {
-        const end = track.lastElementChild as HTMLElement | null;
-        const width = end ? end.offsetLeft + end.offsetWidth : track.scrollWidth;
+        const last = cards[cards.length - 1];
+        const width = last ? last.offsetLeft + last.offsetWidth + pad() : track.scrollWidth;
         return Math.max(0, width - viewport.clientWidth);
       };
 
       // Centred on its spot by GSAP, so its later moves don't undo the centring
       gsap.set(bigLogo, { xPercent: -50, yPercent: -50, x: 0, y: 0 });
 
-      // ---- 1. The logo builds itself in the middle, once, as the section arrives ----
-      gsap.set(ring, { strokeDashoffset: 1, rotate: -90, transformOrigin: '50% 50%' });
-      gsap.set(tail, { scale: 0, transformOrigin: '20% 20%' });
+      // ---- 1. The title rises in, letter by letter, in the middle, once, as the section arrives ----
       gsap.set(letters, { yPercent: 110, autoAlpha: 0 });
       gsap.set(shine, { xPercent: -120 });
       const build = gsap.timeline({ paused: true });
       build
-        .to(ring, { strokeDashoffset: 0, rotate: 0, duration: 0.9, ease: 'power3.inOut' })
-        .to(tail, { scale: 1, duration: 0.45, ease: 'back.out(3)' }, '-=0.2')
-        .to(letters, { yPercent: 0, autoAlpha: 1, duration: 0.7, ease: 'power4.out', stagger: 0.07 }, '-=0.3')
+        .to(letters, { yPercent: 0, autoAlpha: 1, duration: 0.7, ease: 'power4.out', stagger: 0.045 })
         .to(shine, { xPercent: 120, duration: 1.1, ease: 'power2.inOut' }, '-=0.25');
       const arrival = ScrollTrigger.create({ trigger: section, start: 'top 75%', once: true, onEnter: () => build.play() });
 
@@ -114,6 +111,14 @@ export default function QuickoSection() {
       });
       // The logo glides up to the corner, shrinking as it goes
       tl.to(bigLogo, { x: () => toSlot().x, y: () => toSlot().y, scale: () => toSlot().scale, duration: 1, ease: 'power2.inOut' }, 0);
+      // ...and "Income Tax Return" closes up into "ITR" on the way: every letter but the initials
+      // narrows to nothing and fades
+      tl.fromTo(
+        rests,
+        { width: (_: number, el: HTMLElement) => el.scrollWidth, autoAlpha: 1 },
+        { width: 0, autoAlpha: 0, duration: 0.8, ease: 'power2.inOut' },
+        0.1
+      );
       // The heading rises in beside it, line by line
       tl.to(intro, { autoAlpha: 1, y: 0, duration: 0.5, stagger: 0.12, ease: 'power2.out' }, 0.75);
       tl.to([footer, counter.parentElement], { autoAlpha: 1, duration: 0.4 }, 1.1);
@@ -131,12 +136,17 @@ export default function QuickoSection() {
       const syncCards = () => {
         const vw = viewport.clientWidth;
         const left = viewport.getBoundingClientRect().left;
+        // Where the last card comes to rest. Every card is fully in and filled by the time it gets
+        // there, so the last one finishes exactly as the row stops.
+        const last = cards[cards.length - 1];
+        const rest = vw - pad() - (last?.offsetWidth ?? 0);
         let current = 1;
         parts.forEach(({ card, fills, ticks }, i) => {
           const x = card.getBoundingClientRect().left - left;
-          const seen = clamp01((vw * 0.95 - x) / (vw * 0.4));
-          const filled = clamp01((vw * 0.75 - x) / (vw * 0.4));
-          if (x < vw * 0.5) current = i + 1;
+          const seen = clamp01((rest + vw * 0.42 - x) / (vw * 0.3));
+          const filled = clamp01((rest + vw * 0.25 - x) / (vw * 0.25));
+          // The counter shows how many cards have reached the resting line
+          if (x <= rest + 2) current = i + 1;
           gsap.set(card, { opacity: 0.4 + 0.6 * seen, y: 18 * (1 - seen) });
           fills.forEach((f, k) => gsap.set(f, { scaleX: clamp01(filled * 1.3 - k * 0.15) }));
           ticks.forEach((t, k) => gsap.set(t, { autoAlpha: 0.2 + 0.8 * clamp01(filled * 1.6 - k * 0.25) }));
@@ -148,7 +158,15 @@ export default function QuickoSection() {
       ScrollTrigger.sort();
       document.fonts?.ready.then(() => ScrollTrigger.refresh());
 
+      // The row always finishes sliding before the page moves on
+      const releaseHold = holdPinUntilPlayed(
+        () => tl.scrollTrigger,
+        () => tl.progress(),
+        (toEnd) => tl.progress(toEnd ? 1 : 0)
+      );
+
       return () => {
+        releaseHold();
         arrival.kill();
         build.kill();
       };
@@ -162,16 +180,17 @@ export default function QuickoSection() {
       id="file-itr"
       data-quicko
       aria-label="File ITR with Quicko"
-      className={`relative flex w-full flex-col overflow-hidden bg-black text-[#F5F5F5] select-none motion-safe:h-[calc(100svh-72px)] ${poppins.className}`}
+      className={`relative flex w-full flex-col overflow-hidden bg-black text-[#F5F5F5] select-none motion-safe:h-[calc(100svh-72px)]`}
     >
-      {/* Quicko's logo: big in the middle at first, then it flies up into the corner */}
+      {/* The title: "Income Tax Return", big in the middle at first, then it flies up into the corner
+          and closes up into "ITR" */}
       <div
         data-q="big-logo"
         className="pointer-events-none absolute left-1/2 top-[45%] z-30 motion-reduce:hidden"
         style={{ transform: 'translate(-50%, -50%)' }}
       >
         <div className="relative overflow-hidden px-3 py-2">
-          <QuickoLogo animated className="text-[48px] sm:text-[84px]" />
+          <ItrTitle animated className="text-[34px] sm:text-[64px] lg:text-[84px]" />
           <span data-q="q-shine" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent mix-blend-overlay" />
         </div>
       </div>
@@ -180,13 +199,9 @@ export default function QuickoSection() {
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-end justify-between gap-4 px-4 pt-8 sm:px-6 sm:pt-12">
         <div>
           <div className="flex items-center gap-3 text-sm text-neutral-400">
-            {/* The logo lands here (shown as is when motion is reduced) */}
+            {/* The title lands here as "ITR" (shown as is when motion is reduced) */}
             <span data-q="logo-slot" className="inline-flex px-3 py-2 motion-safe:invisible">
-              <QuickoLogo className="text-[24px] sm:text-[28px]" />
-            </span>
-            <span data-q="intro" className="flex items-center gap-3">
-              <span className="h-4 w-px bg-neutral-700" aria-hidden="true" />
-              <span>File ITR</span>
+              <ItrTitle className="text-[24px] sm:text-[28px]" />
             </span>
           </div>
           <h2 data-q="intro" className="mt-3 sm:mt-4 text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight">
@@ -226,8 +241,6 @@ export default function QuickoSection() {
               </div>
             </article>
           ))}
-          {/* Room at the end, so the last card can slide in to the middle */}
-          <div className="w-px shrink-0 motion-safe:w-[max(1px,calc(50vw-240px))]" aria-hidden="true" />
         </div>
       </div>
 
@@ -242,23 +255,40 @@ export default function QuickoSection() {
   );
 }
 
-// Quicko's wordmark: a Q drawn as a ring with a short tail, then the rest of the letters
-function QuickoLogo({ animated = false, className = '' }: { animated?: boolean; className?: string }) {
+// The section's title. Big, it reads "Income Tax Return", set letter by letter so it can rise in;
+// the letters after each initial sit in their own group so they can fold away, leaving "ITR".
+// Small (in the corner), it is just "ITR".
+const ITR_WORDS = [
+  ['I', 'ncome'],
+  ['T', 'ax'],
+  ['R', 'eturn'],
+];
+function ItrTitle({ animated = false, className = '' }: { animated?: boolean; className?: string }) {
   const k = (name: string) => (animated ? name : undefined);
+  const letter = (ch: string, key: React.Key) => (
+    <span key={key} className="inline-block overflow-hidden pb-[0.1em]">
+      <span data-q={k('q-letter')} className="inline-block">
+        {ch === ' ' ? '\u00A0' : ch}
+      </span>
+    </span>
+  );
   return (
-    <span className={`flex items-center gap-[0.06em] font-semibold leading-none tracking-[0.08em] text-white ${className}`} aria-label="Quicko" role="img">
-      <svg viewBox="0 0 40 40" className="h-[1.15em] w-[1.15em] shrink-0" aria-hidden="true">
-        <circle data-q={k('q-ring')} cx="20" cy="20" r="14.5" fill="none" stroke="#fff" strokeWidth="5" pathLength={1} strokeDasharray="1" />
-        <path data-q={k('q-tail')} d="M25 25 L33 33" stroke="#fff" strokeWidth="5.5" strokeLinecap="round" />
-      </svg>
-      <span className="flex items-center" aria-hidden="true">
-        {'UICKO'.split('').map((letter, i) => (
-          <span key={i} className="inline-block overflow-hidden">
-            <span data-q={k('q-letter')} className="inline-block">
-              {letter}
-            </span>
-          </span>
-        ))}
+    <span
+      className={`flex items-center font-semibold leading-none tracking-[0.02em] text-white whitespace-nowrap ${className}`}
+      aria-label={animated ? 'Income Tax Return' : 'ITR'}
+      role="img"
+    >
+      <span className="flex" aria-hidden="true">
+        {animated
+          ? ITR_WORDS.map(([initial, rest], w) => (
+              <span key={w} className="inline-flex">
+                {letter(initial, 'i')}
+                <span data-q="q-rest" className="inline-flex overflow-hidden">
+                  {(rest + (w < ITR_WORDS.length - 1 ? ' ' : '')).split('').map((ch, i) => letter(ch, i))}
+                </span>
+              </span>
+            ))
+          : 'ITR'.split('').map((ch, i) => letter(ch, i))}
       </span>
     </span>
   );

@@ -1,4 +1,5 @@
 import gsap from 'gsap';
+import type { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { createSplitChapter, type SplitStoryRuntime } from './splitStory/timeline';
 // The stock and gold phone chapters are switched off for now (SafeGold has its own section).
 // import { createStockChapter, type StockStoryRuntime } from './stockStory/timeline';
@@ -100,4 +101,32 @@ export function createPlayhead(
     },
     kill: () => gsap.ticker.remove(tick),
   };
+}
+
+// Holds the page at a pinned section's edge until its animation has caught up with the scroll,
+// so a section always finishes before the next one starts (and, scrolling back up, before the
+// one above returns). `played` is how far the animation has actually got, 0 to 1. A big jump
+// past the section (a link to somewhere further down, say) is let through, and `finish` snaps
+// the animation to that end instead of making the visitor wait.
+export function holdPinUntilPlayed(
+  getPin: () => ScrollTrigger | null | undefined,
+  played: () => number,
+  finish: (toEnd: boolean) => void
+) {
+  const tick = () => {
+    const pin = getPin();
+    if (!pin) return;
+    const y = window.scrollY;
+    const p = played();
+    const jump = window.innerHeight * 1.5;
+    if (y > pin.end + 1 && p < 0.999) {
+      if (y - pin.end > jump) finish(true);
+      else window.scrollTo({ top: pin.end, behavior: 'instant' });
+    } else if (y < pin.start - 1 && p > 0.001) {
+      if (pin.start - y > jump) finish(false);
+      else window.scrollTo({ top: pin.start, behavior: 'instant' });
+    }
+  };
+  gsap.ticker.add(tick);
+  return () => gsap.ticker.remove(tick);
 }
