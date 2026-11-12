@@ -4,7 +4,7 @@ import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { createPlayhead } from '../journey';
-import { CHART, GOLD, PORTFOLIO, SALE, SCENES, type GoldFrame, type ScreenPoint } from './goldData';
+import { CHART, GOLD, PORTFOLIO, SALE, SCENES, type GoldFrame, type Room, type ScreenPoint } from './goldData';
 import type { GoldScene } from './goldScene';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -42,23 +42,29 @@ type GoldState = ReturnType<typeof createState>;
 // the rest as the gold builds up. When each one starts, and how long its trip lasts (timeline units).
 const DEPOSITS = [
   { at: 0.9, dur: 1.4 },
-  { at: 3.8, dur: 1.1 },
-  { at: 4.15, dur: 1.1 },
-  { at: 4.5, dur: 1.1 },
-  { at: 4.85, dur: 1.1 },
-  { at: 5.2, dur: 1.1 },
+  { at: 4.2, dur: 1.1 },
+  { at: 4.55, dur: 1.1 },
+  { at: 4.9, dur: 1.1 },
+  { at: 5.25, dur: 1.1 },
+  { at: 5.6, dur: 1.1 },
 ];
 // The four steps, and where each one starts and ends on the timeline
 export const STEPS = [
-  { label: 'Buy', from: 0.4, to: 3.4 },
-  { label: 'Grow', from: 3.6, to: 6.4 },
-  { label: 'Withdraw', from: 6.5, to: 10.3 },
-  { label: 'Sell', from: 10.5, to: 13 },
+  { label: 'Buy', from: 0.4, to: 3.8 },
+  { label: 'Grow', from: 4.0, to: 9.0 },
+  { label: 'Withdraw', from: 9.2, to: 14.4 },
+  { label: 'Sell', from: 14.8, to: 17.6 },
 ];
-// Scroll distance per timeline unit: short, so one scroll carries the whole story
-const SCROLL_PER_STEP_UNIT = 120;
-// Whatever the scroll, the story plays at this pace: about ten seconds from first coin to last sale
-const PACE = { watchingSpeed: 1 / 0.7, longestCatchUp: 10 };
+// Scroll distance per beat. Every beat gets the same distance, however long its animation, so one
+// scroll always moves exactly one beat on
+const SCROLL_PER_BEAT = 220;
+// Whatever the scroll, the story plays at this pace (a medium one: each step takes 2 to 3 seconds)
+const PACE = { watchingSpeed: 1 / 0.65, longestCatchUp: 6 };
+// Where each scroll comes to rest (story time). One beat per scroll: either coins moving or one
+// card showing, never both: the first coin goes in, the purchase card; the rest of the coins go
+// in, the portfolio card; a coin rises out into the portfolio, it comes out as a boxed bar, the
+// withdraw card; a coin streams into a ₹, the sold card; then the closing frame
+const STOPS = [2.6, 3.5, 6.9, 8.8, 10.7, 12.95, 14.25, 16.6, 17.4];
 // The moment each coin passes through the slot
 // Before the story, the SafeGold logo flies from the middle up to the corner (timeline units)
 const LOGO_UNITS = 1.2;
@@ -122,7 +128,7 @@ function buildTimeline(root: HTMLElement, S: GoldState, narrow: boolean) {
   });
   gsap.set(one('steps'), { autoAlpha: 0 });
   tl.to(one('steps'), { autoAlpha: 1, duration: 0.3 }, 0.3);
-  tl.to(one('steps'), { autoAlpha: 0, duration: 0.3 }, 13.1);
+  tl.to(one('steps'), { autoAlpha: 0, duration: 0.3 }, 17.8);
 
   // ============ The coins come out from behind the piggy bank, one by one, into orbit ============
   S.appears.forEach((a, i) => tl.to(a, { t: 1, duration: 0.8 }, i * 0.18));
@@ -131,71 +137,80 @@ function buildTimeline(root: HTMLElement, S: GoldState, narrow: boolean) {
   tl.to(S.sheen, { v: 1, duration: 1.6, ease: 'power1.inOut' }, 0.6);
   pigY(0.4, 1.2);
 
-  // ============ Step 1. Buy: the first coin leaves its orbit for the slot ============
+  // ============ Step 1. Buy ============
+  // The first coin leaves its orbit for the slot...
   captionIn(captions[1], 0.4);
   tl.to(S.deposits[0], { t: 1, duration: DEPOSITS[0].dur }, DEPOSITS[0].at);
-  cardIn(txn, STORY_LANDINGS[0] + 0.05);
-  tl.to(one('check'), { strokeDashoffset: 0, duration: 0.4, ease: 'power2.out' }, STORY_LANDINGS[0] + 0.2);
-  cardOut(txn, 3.3);
-  captionOut(captions[1], 3.3);
+  // ...then, once it is in, the purchase card
+  cardIn(txn, 2.7);
+  tl.to(one('check'), { strokeDashoffset: 0, duration: 0.4, ease: 'power2.out' }, 2.85);
+  cardOut(txn, 3.7);
+  captionOut(captions[1], 3.7);
 
-  // ============ Step 2. Grow: the rest follow, and the gold builds up ============
-  captionIn(captions[2], 3.6);
-  cardIn(dash, 3.7);
+  // ============ Step 2. Grow ============
+  // The rest of the coins follow, and the gold builds up...
+  captionIn(captions[2], 4.0);
   DEPOSITS.slice(1).forEach((d, i) => tl.to(S.deposits[i + 1], { t: 1, duration: d.dur }, d.at));
-  tl.to(S.pig, { value: 1, duration: 2.6, ease: 'power1.inOut' }, 3.7);
-  tl.to(S.count, { v: 1, duration: 2.4, ease: 'power1.inOut' }, 3.9);
-  tl.to(one('chart-line'), { strokeDashoffset: 0, duration: 2, ease: 'power1.inOut' }, 4);
-  tl.to(one('chart-area'), { autoAlpha: 1, duration: 0.8 }, 5.5);
-  tl.to(S.sheen, { v: -1, duration: 1.4, ease: 'power1.inOut' }, 5);
-  cardOut(dash, 6.3);
-  captionOut(captions[2], 6.3);
+  tl.to(S.pig, { value: 1, duration: 2.8, ease: 'power1.inOut' }, 4.1);
+  tl.to(S.sheen, { v: -1, duration: 1.4, ease: 'power1.inOut' }, 5.4);
+  // ...then the portfolio card, counting up
+  cardIn(dash, 7.0);
+  tl.to(S.count, { v: 1, duration: 1.4, ease: 'power1.inOut' }, 7.1);
+  tl.to(one('chart-line'), { strokeDashoffset: 0, duration: 1.4, ease: 'power1.inOut' }, 7.1);
+  tl.to(one('chart-area'), { autoAlpha: 1, duration: 0.6 }, 8.0);
+  cardOut(dash, 9.0);
+  captionOut(captions[2], 9.0);
 
-  // ============ Step 3. Withdraw: a coin rises into the portfolio, then out as a bar ============
-  captionIn(captions[4], 6.7);
-  tl.to(S.cam, { z: 9.8, y: 0.7, duration: 0.8, ease: 'power2.inOut' }, 6.5);
-  tl.to(S.pig, { rotY: -1.0, duration: 0.8, ease: 'power2.inOut' }, 6.5);
-  pigY(0.32, 6.5);
-  tl.to(S.emerge, { t: 1, duration: 1.2 }, 6.5);
-  tl.set(portfolio, { clipPath: 'circle(0% at 50% 50%)', scale: 1 }, 7.35);
-  tl.to(portfolio, { autoAlpha: 1, duration: 0.01 }, 7.4);
-  tl.to(portfolio, { clipPath: 'circle(75% at 50% 50%)', duration: 0.4, ease: 'power2.out' }, 7.4);
-  press('withdraw', 7.8, 10.1);
-  tl.to(S.withdraw, { coin: 1, duration: 0.7 }, 7.9);
-  tl.to(portfolio, { autoAlpha: 0, duration: 0.3 }, 8.3);
-  cardIn(withdrawCard, 8.4);
-  tl.to(S.withdraw, { morph: 1, duration: 0.6, ease: 'power1.inOut' }, 8.5);
-  tl.to(S.withdraw, { pack: 1, duration: 0.4 }, 8.9);
-  tl.to(S.withdraw, { drop: 1, duration: 0.4 }, 9.2);
-  tl.to(S.withdraw, { lid: 1, duration: 0.3 }, 9.55);
-  tl.to(one('route'), { strokeDashoffset: 0, duration: 0.7, ease: 'power1.inOut' }, 9.6);
-  tl.to(S.withdraw, { away: 1, duration: 0.7, ease: 'power1.in' }, 9.8);
-  cardOut(withdrawCard, 10.2);
-  captionOut(captions[4], 10.2);
-  tl.to(portfolio, { autoAlpha: 1, duration: 0.3 }, 10.4);
-
-  // ============ Step 4. Sell: a coin streams into a ₹ ============
-  captionIn(captions[5], 10.6);
-  press('sell', 10.6, 13);
-  tl.to(S.sell, { coin: 1, duration: 0.7 }, 10.8);
+  // ============ Step 3. Withdraw ============
+  // A coin rises out of the piggy bank and becomes the portfolio...
+  captionIn(captions[4], 9.3);
+  tl.to(S.cam, { z: 9.8, y: 0.7, duration: 0.8, ease: 'power2.inOut' }, 9.2);
+  tl.to(S.pig, { rotY: -1.0, duration: 0.8, ease: 'power2.inOut' }, 9.2);
+  pigY(0.32, 9.2);
+  tl.to(S.emerge, { t: 1, duration: 1.2 }, 9.2);
+  tl.set(portfolio, { clipPath: 'circle(0% at 50% 50%)', scale: 1 }, 10.05);
+  tl.to(portfolio, { autoAlpha: 1, duration: 0.01 }, 10.1);
+  tl.to(portfolio, { clipPath: 'circle(75% at 50% 50%)', duration: 0.4, ease: 'power2.out' }, 10.1);
+  // ...Withdraw is pressed and a coin comes out of it, turns into a bar and is boxed...
+  press('withdraw', 10.8, 14.4);
+  tl.to(S.withdraw, { coin: 1, duration: 0.7 }, 10.9);
   tl.to(portfolio, { autoAlpha: 0, duration: 0.3 }, 11.3);
-  tl.to(S.sell, { burst: 1, duration: 0.9 }, 11.4);
-  cardIn(sold, 12);
-  tl.to(one('sold-check'), { strokeDashoffset: 0, duration: 0.4, ease: 'power2.out' }, 12.2);
-  tl.to(S.sell, { fade: 1, duration: 0.4 }, 12.4);
-  cardOut(sold, 12.9);
-  captionOut(captions[5], 12.9);
+  tl.to(S.withdraw, { morph: 1, duration: 0.6, ease: 'power1.inOut' }, 11.5);
+  tl.to(S.withdraw, { pack: 1, duration: 0.4 }, 11.9);
+  tl.to(S.withdraw, { drop: 1, duration: 0.4 }, 12.2);
+  tl.to(S.withdraw, { lid: 1, duration: 0.3 }, 12.55);
+  // ...then the withdraw card, as the box is sent on its way
+  cardIn(withdrawCard, 13.05);
+  tl.to(one('route'), { strokeDashoffset: 0, duration: 0.7, ease: 'power1.inOut' }, 13.25);
+  tl.to(S.withdraw, { away: 1, duration: 0.7, ease: 'power1.in' }, 13.45);
+  cardOut(withdrawCard, 14.4);
+  captionOut(captions[4], 14.4);
+  tl.to(portfolio, { autoAlpha: 1, duration: 0.3 }, 14.6);
+
+  // ============ Step 4. Sell ============
+  // Sell is pressed and a coin streams into a ₹...
+  captionIn(captions[5], 14.8);
+  press('sell', 14.8, 17.6);
+  tl.to(S.sell, { coin: 1, duration: 0.7 }, 15.0);
+  tl.to(portfolio, { autoAlpha: 0, duration: 0.3 }, 15.5);
+  tl.to(S.sell, { burst: 1, duration: 0.9 }, 15.6);
+  // ...then the sold card
+  cardIn(sold, 16.7);
+  tl.to(one('sold-check'), { strokeDashoffset: 0, duration: 0.4, ease: 'power2.out' }, 16.9);
+  tl.to(S.sell, { fade: 1, duration: 0.4 }, 17.0);
+  cardOut(sold, 17.6);
+  captionOut(captions[5], 17.6);
 
   // ============ The finished picture: the coins rise back out into orbit ============
-  tl.to(S.pig, { rotY: -1.18, duration: 1.2, ease: 'power2.inOut' }, 13.1);
-  pigY(0.5, 13.1);
-  tl.to(S.cam, { z: 10.8, y: 0.6, duration: 1.4, ease: 'power2.inOut' }, 13.1);
-  S.returns.forEach((r, i) => tl.to(r, { t: 1, duration: 0.9 }, 13.2 + i * 0.15));
-  tl.to(portfolio, { ...faint, duration: 0.7, ease: 'power2.inOut' }, 13.5);
-  captionIn(closing, 13.6);
-  tl.to(cta, { autoAlpha: 1, y: 0, duration: 0.4, ease: 'power2.out' }, 13.8);
-  tl.to(S.sheen, { v: 1, duration: 1.2, ease: 'power1.inOut' }, 13.9);
-  tl.to({}, { duration: 0.01 }, 15);
+  tl.to(S.pig, { rotY: -1.18, duration: 1.2, ease: 'power2.inOut' }, 17.8);
+  pigY(0.5, 17.8);
+  tl.to(S.cam, { z: 10.8, y: 0.6, duration: 1.4, ease: 'power2.inOut' }, 17.8);
+  S.returns.forEach((r, i) => tl.to(r, { t: 1, duration: 0.9 }, 17.9 + i * 0.15));
+  tl.to(portfolio, { ...faint, duration: 0.7, ease: 'power2.inOut' }, 18.2);
+  captionIn(closing, 18.3);
+  tl.to(cta, { autoAlpha: 1, y: 0, duration: 0.4, ease: 'power2.out' }, 18.5);
+  tl.to(S.sheen, { v: 1, duration: 1.2, ease: 'power1.inOut' }, 18.6);
+  tl.to({}, { duration: 0.01 }, 19.8);
 
   // Numbers on the cards that count up
   const balance = one('dash-grams');
@@ -274,10 +289,12 @@ export default function SafeGoldSection() {
 
       const build = () => {
         const place = pin?.progress ?? 0;
+        let toStory = (progress: number) => progress;
         const wasPinned = !!pin && window.scrollY >= pin.start;
         playhead?.kill();
         context?.revert();
-        narrowRef.current = window.innerWidth < 768;
+        // Below lg the cards sit under the piggy bank instead of beside it (matches the lg: classes)
+        narrowRef.current = window.innerWidth < 1024;
         const state = createState(narrowRef.current);
         stateRef.current = state;
         context = gsap.context(() => {
@@ -291,20 +308,38 @@ export default function SafeGoldSection() {
             timeRef.current = tl.time();
           });
           playhead = createPlayhead(tl, PACE);
+          // Scroll is split evenly between the beats; within a beat it maps onto that beat's stretch
+          // of the timeline
+          const marks = [0, ...STOPS.map((t) => LOGO_UNITS + t), tl.duration()];
+          const beats = marks.length - 1;
+          toStory = (progress: number) => {
+            const at = Math.min(Math.max(progress, 0), 1) * beats;
+            const k = Math.min(Math.floor(at), beats - 1);
+            return (marks[k] + (marks[k + 1] - marks[k]) * (at - k)) / tl.duration();
+          };
           pin = ScrollTrigger.create({
             trigger: section,
             start: 'top 72px',
-            end: `+=${tl.duration() * SCROLL_PER_STEP_UNIT}`,
+            end: `+=${beats * SCROLL_PER_BEAT}`,
             pin: true,
             refreshPriority: 2,
-            onUpdate: (self) => playhead?.follow(self.progress),
+            onUpdate: (self) => playhead?.follow(toStory(self.progress)),
+            // Any scroll, however small, carries on to the next step in that direction
+            snap: {
+              snapTo: marks.map((_, k) => k / beats),
+              directional: true,
+              delay: 0.05,
+              duration: { min: 0.25, max: 0.6 },
+              ease: 'power1.inOut',
+              inertia: false,
+            },
           });
         }, section);
         ScrollTrigger.sort();
         ScrollTrigger.refresh();
         if (pin && wasPinned) {
           window.scrollTo({ top: pin.start + (pin.end - pin.start) * place, behavior: 'instant' });
-          playhead?.jump(place);
+          playhead?.jump(toStory(place));
         }
       };
       build();
@@ -360,14 +395,62 @@ export default function SafeGoldSection() {
     let visible = false;
     let cancelled = false;
     let resizeObserver: ResizeObserver | null = null;
+    // Wall-clock seconds, so the piggy bank and its coins keep floating once the story has stopped
+    let drift = 0;
+    let frameSeconds = 0;
+    let cardsTop: number | null = null;
 
-    const tick = () => {
+    const q = (k: string) => section.querySelector<HTMLElement>(`[data-g="${k}"]`);
+    const all = (k: string) => Array.from(section.querySelectorAll<HTMLElement>(`[data-g="${k}"]`));
+    // The captions the story actually shows (see buildTimeline)
+    const shownCaptions = all('caption').filter((_, i) => i !== 0 && i !== 3);
+    const cardEls = ['txn', 'dash', 'withdraw-card', 'sold', 'portfolio'].map(q).filter((el): el is HTMLElement => !!el);
+
+    // The parts of the canvas that no text or card ever covers, for the piggy bank to fit inside
+    const measureRoom = (origin: DOMRect, narrow: boolean): Room[] => {
+      const gap = 16;
+      const W = origin.width;
+      const H = origin.height;
+      const captions = q('captions');
+      const headlines = q('headlines');
+      const cards = q('cards');
+      if (!captions || !headlines || !cards) return [];
+      const capTop = captions.getBoundingClientRect().top - origin.top;
+      const textBottom = shownCaptions.reduce((b, c) => Math.max(b, capTop + c.offsetTop + c.offsetHeight), capTop);
+      const cardsRect = cards.getBoundingClientRect();
+      if (narrow) {
+        // The cards sit under the piggy bank only while one is showing; it eases into the space
+        // they leave, and back out of their way before the next one fades in
+        const showingH = cardEls
+          .filter((el) => el.style.visibility !== 'hidden' && Number(el.style.opacity || 1) > 0.02)
+          .reduce((h, el) => Math.max(h, el.offsetHeight), 0);
+        const target = showingH > 0 ? cardsRect.bottom - origin.top - showingH : H;
+        cardsTop = cardsTop === null ? target : cardsTop + (target - cardsTop) * Math.min(1, frameSeconds / 0.18);
+        return [{ left: gap, top: textBottom + gap, right: W - gap, bottom: cardsTop - gap }];
+      }
+      const steps = q('steps')?.getBoundingClientRect();
+      const bottom = (steps && steps.height > 0 ? steps.top - origin.top : H) - gap;
+      const cardsRight = cardsRect.right - origin.left;
+      const textRight = headlines.getBoundingClientRect().right - origin.left;
+      return [
+        // Beside the cards, under the headline
+        { left: cardsRight + gap * 2, top: textBottom + gap, right: W - gap, bottom },
+        // Beside both, full height
+        { left: Math.max(cardsRight, textRight) + gap * 2, top: gap, right: W - gap, bottom },
+      ];
+    };
+
+    const tick = (_time: number, deltaMs: number) => {
+      frameSeconds = Math.min(deltaMs, 100) / 1000;
+      drift += frameSeconds;
       if (!scene || !visible) return;
       const S = stateRef.current;
       const origin = canvas.getBoundingClientRect();
       const narrow = narrowRef.current;
       const frame: GoldFrame = {
         time: timeRef.current,
+        drift,
+        room: measureRoom(origin, narrow),
         appears: S.appears.map((a) => a.t),
         cam: S.cam,
         pig: S.pig,
@@ -446,7 +529,7 @@ export default function SafeGoldSection() {
         }}
       >
         {/* The portfolio sits behind the 3D scene, so the coin can rise out of it */}
-        <div className="absolute z-0 bottom-4 left-1/2 -translate-x-1/2 w-[min(340px,calc(100%-32px))] md:bottom-auto md:left-[5%] md:translate-x-0 md:top-1/2 md:-translate-y-1/2 md:w-[320px]">
+        <div className="absolute z-0 bottom-4 left-1/2 -translate-x-1/2 w-[min(340px,calc(100%-32px))] lg:bottom-auto lg:left-[5%] lg:translate-x-0 lg:top-1/2 lg:-translate-y-1/2 lg:w-[320px]">
           <div data-g="portfolio" style={HIDDEN} className={`${CARD} pointer-events-auto`}>
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -490,11 +573,11 @@ export default function SafeGoldSection() {
         </div>
 
         {/* Headlines, down the left under the logo */}
-        <div className="absolute left-4 right-4 top-6 sm:top-8 md:left-[5%] md:right-auto md:top-6 md:w-[min(42rem,58vw)] z-20 pointer-events-none">
+        <div data-g="headlines" className="absolute left-4 right-4 top-6 sm:top-8 lg:left-[5%] lg:right-auto lg:top-6 lg:w-[min(42rem,58vw)] z-20 pointer-events-none">
           <span data-g="logo-slot" className="inline-flex invisible">
             <SafeGoldLogo className="text-[20px] sm:text-[24px]" />
           </span>
-          <div className="relative mt-2">
+          <div data-g="captions" className="relative mt-2">
             {SCENES.map((scene, i) => (
               <div key={scene.title} data-g="caption" className="absolute inset-x-0 top-0 text-left">
                 <h2 className="text-[26px] sm:text-4xl font-semibold text-[#F5F5F5] tracking-tight leading-[1.15]">{scene.title}</h2>
@@ -518,9 +601,9 @@ export default function SafeGoldSection() {
         </div>
 
         {/* Cards to the left of the piggy bank on desktop, below it on phones */}
-        <div className="absolute z-20 bottom-4 left-1/2 -translate-x-1/2 w-[min(340px,calc(100%-32px))] md:bottom-auto md:left-[5%] md:translate-x-0 md:top-1/2 md:-translate-y-1/2 md:w-[320px] pointer-events-none">
+        <div data-g="cards" className="absolute z-20 bottom-4 left-1/2 -translate-x-1/2 w-[min(340px,calc(100%-32px))] lg:bottom-auto lg:left-[5%] lg:translate-x-0 lg:top-1/2 lg:-translate-y-1/2 lg:w-[320px] pointer-events-none">
           <div className="relative">
-            <div data-g="txn" style={HIDDEN} className={`${CARD} absolute inset-x-0 bottom-0 md:bottom-auto md:top-1/2 md:-translate-y-1/2`}>
+            <div data-g="txn" style={HIDDEN} className={`${CARD} absolute inset-x-0 bottom-0 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2`}>
               <div className="flex items-center gap-3">
                 <svg viewBox="0 0 40 40" className="h-10 w-10 shrink-0" aria-hidden="true">
                   <circle cx="20" cy="20" r="18" fill="none" stroke={GOLD.primary} strokeOpacity="0.45" strokeWidth="1.5" />
@@ -537,7 +620,7 @@ export default function SafeGoldSection() {
               </div>
             </div>
 
-            <div data-g="dash" style={HIDDEN} className={`${CARD} absolute inset-x-0 bottom-0 md:bottom-auto md:top-1/2 md:-translate-y-1/2`}>
+            <div data-g="dash" style={HIDDEN} className={`${CARD} absolute inset-x-0 bottom-0 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2`}>
               <p className="text-[15px] font-semibold tracking-tight text-[#F5F5F5]">Your Gold Portfolio</p>
               <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-[13px]">
                 <div>
@@ -557,7 +640,7 @@ export default function SafeGoldSection() {
                   <dd className="font-semibold text-[#F5D76E]">{PORTFOLIO.status}</dd>
                 </div>
               </dl>
-              <svg viewBox="0 0 260 64" className="mt-3 h-14 w-full overflow-visible" preserveAspectRatio="none" aria-hidden="true">
+              <svg viewBox="0 0 260 64" className="mt-3 h-14 w-full overflow-visible max-lg:[@media(max-height:720px)]:hidden" preserveAspectRatio="none" aria-hidden="true">
                 <defs>
                   <linearGradient id="sg-area" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0" stopColor={GOLD.primary} stopOpacity="0.28" />
@@ -567,10 +650,10 @@ export default function SafeGoldSection() {
                 <path data-g="chart-area" d={CHART_AREA} fill="url(#sg-area)" />
                 <path data-g="chart-line" d={CHART_LINE} fill="none" stroke={GOLD.champagne} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray="1" vectorEffect="non-scaling-stroke" />
               </svg>
-              <p className="mt-2 text-[10px] text-[#A3A3A3]/70">Illustrative values, not live data</p>
+              <p className="mt-2 text-[10px] text-[#A3A3A3]/70 max-lg:[@media(max-height:720px)]:hidden">Illustrative values, not live data</p>
             </div>
 
-            <div data-g="withdraw-card" style={HIDDEN} className={`${CARD} absolute inset-x-0 bottom-0 md:bottom-auto md:top-1/2 md:-translate-y-1/2`}>
+            <div data-g="withdraw-card" style={HIDDEN} className={`${CARD} absolute inset-x-0 bottom-0 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2`}>
               <p className="text-[15px] font-semibold tracking-tight text-[#F5F5F5]">Withdraw Physical Gold</p>
               <p className="mt-1 text-[13px] text-[#A3A3A3]">Convert your digital gold into physical gold.</p>
               <ul className="mt-3 space-y-2.5 text-[13px] text-[#F5F5F5]">
@@ -594,7 +677,7 @@ export default function SafeGoldSection() {
               </div>
             </div>
 
-            <div data-g="sold" style={HIDDEN} className={`${CARD} absolute inset-x-0 bottom-0 md:bottom-auto md:top-1/2 md:-translate-y-1/2`}>
+            <div data-g="sold" style={HIDDEN} className={`${CARD} absolute inset-x-0 bottom-0 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2`}>
               <div className="flex items-center gap-3">
                 <span data-g="sold-icon" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#D4AF37]/50 text-xl font-semibold text-[#F5D76E]">
                   ₹
@@ -625,7 +708,7 @@ export default function SafeGoldSection() {
         </div>
 
         {/* The four steps, and how far along them the story is */}
-        <ol data-g="steps" style={HIDDEN} className="absolute bottom-6 left-1/2 z-20 hidden -translate-x-1/2 items-center gap-3 md:flex">
+        <ol data-g="steps" style={HIDDEN} className="absolute bottom-6 left-1/2 z-20 hidden -translate-x-1/2 items-center gap-3 lg:flex">
           {STEPS.map((step, i) => (
             <li key={step.label} className="flex items-center gap-3">
               <span data-g="step-label" className="text-xs font-medium uppercase tracking-[0.16em]">

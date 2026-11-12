@@ -9,6 +9,10 @@ import { GOLD, type GoldFrame, type ScreenPoint } from './goldData';
 const COIN_RADIUS = 0.3;
 const COIN_THICKNESS = 0.055;
 const ORBIT_COINS = 6;
+// How far the piggy bank and its orbiting coins reach from its centre, in world units at scale 1
+// (side: orbit radius plus a coin, with a little perspective; up: a coin arcing over the slot;
+// down: the legs and the bob)
+const EXTENT = { side: 2.6, up: 1.75, down: 1.45 };
 const PARTICLES = 520;
 // Where the slot sits on the piggy bank, in its own space
 const SLOT = new THREE.Vector3(-0.05, 1.04, 0);
@@ -539,10 +543,37 @@ export class GoldScene {
     const fit = Math.min(1, visibleWidth / 5.3);
 
     // ---- The piggy bank ----
-    const pigScale = f.pig.scale * fit;
-    this.toWorld({ x: f.pig.sx * W, y: f.pig.sy * H }, f.pig.z, this.pig.position);
+    let pigScale = f.pig.scale * fit;
+    let pigX = f.pig.sx * W;
+    let pigY = f.pig.sy * H;
+    // Keep it, and the coins circling it, inside the free area so it never covers text or cards
+    if (f.room?.length) {
+      const pxPerUnit = H / (2 * Math.tan((cam.fov * Math.PI) / 360) * Math.max(0.1, f.cam.z - f.pig.z));
+      let best: { room: (typeof f.room)[number]; scale: number } | null = null;
+      for (const room of f.room) {
+        const w = room.right - room.left;
+        const h = room.bottom - room.top;
+        if (w <= 0 || h <= 0) continue;
+        const scale = Math.min(w / (2 * EXTENT.side * pxPerUnit), h / ((EXTENT.up + EXTENT.down) * pxPerUnit));
+        if (!best || scale > best.scale) best = { room, scale };
+      }
+      if (best) {
+        pigScale = Math.min(pigScale, best.scale);
+        const { room } = best;
+        const half = EXTENT.side * pigScale * pxPerUnit;
+        pigX = Math.min(Math.max(pigX, room.left + half), room.right - half);
+        pigY = Math.min(Math.max(pigY, room.top + EXTENT.up * pigScale * pxPerUnit), room.bottom - EXTENT.down * pigScale * pxPerUnit);
+      }
+    }
+    this.toWorld({ x: pigX, y: pigY }, f.pig.z, this.pig.position);
+    // A gentle idle float: bobbing and swaying, always on, even when the scroll is still
+    const bob = Math.sin(f.drift * 1.3) * 0.06;
+    const sway = Math.sin(f.drift * 0.6) * 0.07;
+    this.pig.position.y += bob * pigScale;
+    this.pigShadow.position.y = -1.11 - bob;
     this.pig.scale.setScalar(pigScale);
-    this.pig.rotation.set(0.06, f.pig.rotY, 0);
+    const pigRotY = f.pig.rotY + sway;
+    this.pig.rotation.set(0.06, pigRotY, Math.sin(f.drift * 0.9) * 0.02);
 
     // Each coin going in makes it dip and settle
     let dip = 0;
@@ -575,7 +606,7 @@ export class GoldScene {
 
     this.pig.updateMatrixWorld(true);
     const slot = this.pigBody.localToWorld(SLOT.clone());
-    const slotTurn = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.06, f.pig.rotY, 0));
+    const slotTurn = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.06, pigRotY, 0));
 
     const spinQ = new THREE.Quaternion();
     // ---- A coin rising out of the piggy bank and becoming the portfolio ----
@@ -702,15 +733,16 @@ export class GoldScene {
       if (!group.visible) return;
       this.setOpacity(materials, 1);
 
-      // Where it is in its orbit right now: the orbit keeps turning as the page scrolls
-      const angle = (i / ORBIT_COINS) * Math.PI * 2 + f.time * 0.32;
+      // Where it is in its orbit right now: it turns as the page scrolls, and slowly on its own
+      const spinTime = f.time + f.drift * 0.35;
+      const angle = (i / ORBIT_COINS) * Math.PI * 2 + spinTime * 0.32;
       const r = 2.05 * pigScale;
       const orbit = new THREE.Vector3(
         this.pig.position.x + Math.cos(angle) * r,
         this.pig.position.y + 0.25 * pigScale + Math.sin(angle * 2 + i) * 0.18 * pigScale,
         this.pig.position.z + Math.sin(angle) * r * 0.75
       );
-      orbitQ.setFromEuler(new THREE.Euler(0.2, -angle + Math.PI / 2 + f.time * 0.6, 0.15));
+      orbitQ.setFromEuler(new THREE.Euler(0.2, -angle + Math.PI / 2 + spinTime * 0.6, 0.15));
       const orbitScale = pigScale * 0.85;
 
       if (t > 0 && t < 1) {

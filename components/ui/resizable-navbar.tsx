@@ -8,6 +8,7 @@ import {
   useMotionValueEvent,
 } from "motion/react";
 import React, { useState } from "react";
+import Link from "next/link";
 
 interface NavbarProps {
   children: React.ReactNode;
@@ -123,7 +124,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
       )}
     >
       {items.map((item, idx) => (
-        <a
+        <Link
           key={`link-${idx}`}
           href={item.link}
           onMouseEnter={() => setHovered(idx)}
@@ -138,7 +139,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
             />
           )}
           <span className="relative z-20">{item.name}</span>
-        </a>
+        </Link>
       ))}
     </motion.nav>
   );

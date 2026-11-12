@@ -6,6 +6,31 @@ import gsap from 'gsap';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { PhoneScreenController } from './splitStory/timeline';
 
+// The phone model is loaded once per page session and shared by every Phone3D instance,
+// so moving between pages (or mounting a second phone) never shows the loader again.
+const PHONE_MODEL_URL = '/assets/images/main.glb';
+let phoneModelPromise: Promise<THREE.Group> | null = null;
+let phoneModelCache: THREE.Group | null = null;
+
+function loadPhoneModel(): Promise<THREE.Group> {
+  if (!phoneModelPromise) {
+    phoneModelPromise = new GLTFLoader().loadAsync(PHONE_MODEL_URL).then((gltf) => {
+      phoneModelCache = gltf.scene;
+      return gltf.scene;
+    });
+    // Allow a retry on the next mount if this attempt failed
+    phoneModelPromise.catch(() => {
+      phoneModelPromise = null;
+    });
+  }
+  return phoneModelPromise;
+}
+
+// Start downloading as soon as this module is imported in the browser
+if (typeof window !== 'undefined') {
+  loadPhoneModel().catch(() => undefined);
+}
+
 interface Phone3DProps {
   className?: string;
   selectedFeatureId?: string | null;
@@ -58,7 +83,7 @@ export default function Phone3D({
   screenOverrideRef,
 }: Phone3DProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => phoneModelCache === null);
 
   const canvasTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const displayCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -341,16 +366,12 @@ export default function Phone3D({
       map: canvasTexture,
     });
 
-    // Load 3D GLTF Model (main.glb)
-    const loader = new GLTFLoader();
+    // 3D GLTF Model (main.glb), shared across instances and cloned per phone
     let isMounted = true;
     let modelLoaded = false;
 
-    loader.load(
-      '/assets/images/main.glb',
-      (gltf) => {
-        if (!isMounted) return;
-        const model = gltf.scene;
+    const addModel = (source: THREE.Group) => {
+        const model = source.clone(true);
 
         model.traverse((child) => {
           if (child instanceof THREE.Mesh && child.material) {
@@ -395,13 +416,20 @@ export default function Phone3D({
         modelGroup.add(model);
         modelLoaded = true;
         setLoading(false);
-      },
-      undefined,
-      (error) => {
-        console.error('Error loading 3D phone model:', error);
-        setLoading(false);
-      }
-    );
+    };
+
+    if (phoneModelCache) {
+      addModel(phoneModelCache);
+    } else {
+      loadPhoneModel()
+        .then((scene) => {
+          if (isMounted) addModel(scene);
+        })
+        .catch((error) => {
+          console.error('Error loading 3D phone model:', error);
+          if (isMounted) setLoading(false);
+        });
+    }
 
     // Responsive resize observer
     const onResize = () => {

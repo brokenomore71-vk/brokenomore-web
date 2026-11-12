@@ -330,17 +330,35 @@ const Scanner: React.FC<ScannerProps> = ({
 
   useEffect(() => {
     const container = containerRef.current;
-    const canvas = canvasRef.current;
-    const gl = canvas?.getContext('webgl2', {
+    if (!container) return undefined;
+    // A fresh canvas per mount: cleanup below loses this canvas's context for good, and React
+    // can re-run this effect on the same DOM (Strict Mode, or returning to a page Next kept alive),
+    // which would otherwise hand back a dead context and paint a broken canvas over the page.
+    const canvas = document.createElement('canvas');
+    canvas.className = 'block w-full h-full';
+    canvas.setAttribute('aria-hidden', 'true');
+    container.appendChild(canvas);
+    canvasRef.current = canvas;
+    const gl = canvas.getContext('webgl2', {
       alpha: true,
       premultipliedAlpha: true,
       antialias: false,
       depth: false,
       stencil: false
     });
-    if (!container || !canvas || !gl) return undefined;
+    const discardCanvas = () => {
+      canvas.remove();
+      if (canvasRef.current === canvas) canvasRef.current = null;
+    };
+    if (!gl) {
+      discardCanvas();
+      return undefined;
+    }
     const shader = link(gl);
-    if (!shader) return undefined;
+    if (!shader) {
+      discardCanvas();
+      return undefined;
+    }
     const u = shader.uniforms;
     const vao = gl.createVertexArray();
 
@@ -528,6 +546,7 @@ const Scanner: React.FC<ScannerProps> = ({
       gl.deleteVertexArray(vao);
       gl.deleteProgram(shader.program);
       gl.getExtension('WEBGL_lose_context')?.loseContext();
+      discardCanvas();
     };
   }, []);
 
@@ -541,7 +560,6 @@ const Scanner: React.FC<ScannerProps> = ({
       className={['relative w-full h-full overflow-hidden', className].filter(Boolean).join(' ')}
       style={style}
     >
-      <canvas ref={canvasRef} className="block w-full h-full" aria-hidden="true" />
     </div>
   );
 };

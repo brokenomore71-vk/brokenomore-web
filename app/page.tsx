@@ -134,7 +134,7 @@ export default function Home() {
         </div>
 
         {/* File ITR with Quicko: the tax jobs slide past, right to left, as the page scrolls */}
-        <div className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] mt-16 lg:mt-24 pointer-events-auto">
+        <div className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] pointer-events-auto">
           <QuickoSection />
         </div>
 

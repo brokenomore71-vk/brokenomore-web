@@ -36,8 +36,15 @@ export const CHART = [12, 14, 13, 17, 16, 20, 19, 23, 22, 27, 26, 31, 30, 35];
 export type ScreenPoint = { x: number; y: number };
 
 // Everything the 3D scene needs for one frame, set by the scroll timeline
+// A rectangle on the canvas, in pixels
+export type Room = { left: number; top: number; right: number; bottom: number };
+
 export interface GoldFrame {
   time: number;
+  // Real seconds since the scene started: keeps the idle float going when the scroll is still
+  drift: number;
+  // Free areas (no text or cards) the piggy bank and its orbit must stay inside; it takes the roomiest
+  room?: Room[];
   cam: { z: number; y: number };
   pig: { sx: number; sy: number; z: number; scale: number; rotY: number; value: number };
   sheen: number;
