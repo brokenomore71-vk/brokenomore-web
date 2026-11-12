@@ -1,9 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/razorpay/sync-subscriptions",
-      "schedule": "0 2 * * *"
-    }
-  ]
-}
-
+{}

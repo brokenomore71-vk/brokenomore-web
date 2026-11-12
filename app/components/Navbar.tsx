@@ -166,6 +166,9 @@ export default function Navbar() {
     }
   };
 
+  const dashboardHref =
+    user?.email?.toLowerCase() === 'admin@brokenomore.in' ? '/admin' : '/dashboard';
+
   const navItems = useMemo(() => {
     const baseItems = [
       { name: "Home", link: "/" },
@@ -173,7 +176,7 @@ export default function Navbar() {
     ];
     
     if (mounted && !loading && user) {
-      baseItems.push({ name: "Dashboard", link: "/dashboard" });
+      baseItems.push({ name: "Dashboard", link: dashboardHref });
     }
     
     baseItems.push(
@@ -183,7 +186,7 @@ export default function Navbar() {
     );
     
     return baseItems;
-  }, [user, loading, mounted]);
+  }, [user, loading, mounted, dashboardHref]);
 
   return (
     <ResizableNavbar>
@@ -254,7 +257,7 @@ export default function Navbar() {
                     </p>
                   </div>
                   <Link
-                    href="/dashboard"
+                    href={dashboardHref}
                     className="block px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 transition flex items-center gap-2"
                     onClick={() => setShowProfileMenu(false)}
                   >

@@ -1,0 +1,90 @@
+/* Admin console design tokens — scoped so the marketing site is untouched. */
+.admin-root {
+  --a-bg: #0b0b0e;
+  --a-surface: #131317;
+  --a-raised: #1b1b21;
+  --a-hover: #22222a;
+  --a-border: rgba(255, 255, 255, 0.07);
+  --a-border-strong: rgba(255, 255, 255, 0.12);
+  --a-text: #f4f3f8;
+  --a-muted: #a09eac;
+  --a-subtle: #6d6b79;
+  --a-accent: #6c4bff;
+  --a-accent-hover: #7d60ff;
+  --a-accent-soft: rgba(108, 75, 255, 0.14);
+  --a-lavender: #b4a6e6;
+  --a-green: #3dd68c;
+  --a-green-soft: rgba(61, 214, 140, 0.12);
+  --a-red: #ff6b6b;
+  --a-red-soft: rgba(255, 107, 107, 0.12);
+  --a-amber: #eaa837;
+  --a-amber-soft: rgba(234, 168, 55, 0.12);
+  --a-blue: #5ea8ff;
+  --a-blue-soft: rgba(94, 168, 255, 0.12);
+
+  background: var(--a-bg);
+  color: var(--a-text);
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+.admin-root ::selection {
+  background: rgba(108, 75, 255, 0.4);
+}
+
+.admin-root input[type='date'],
+.admin-root input[type='datetime-local'] {
+  color-scheme: dark;
+}
+
+.admin-root select option {
+  background: #1b1b21;
+  color: #f4f3f8;
+}
+
+.admin-glow {
+  background:
+    radial-gradient(600px 300px at 0% 0%, rgba(108, 75, 255, 0.10), transparent 70%),
+    radial-gradient(500px 260px at 100% 0%, rgba(180, 166, 230, 0.05), transparent 70%);
+}
+
+@keyframes admin-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.admin-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+.admin-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  animation: admin-shimmer 1.4s infinite;
+}
+
+@keyframes admin-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.admin-rise {
+  animation: admin-rise 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-rise,
+  .admin-skeleton::after {
+    animation: none;
+  }
+}
