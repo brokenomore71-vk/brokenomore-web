@@ -3,6 +3,11 @@ import Navbar from './components/Navbar';
 import FeatureShowcase from '@/components/FeatureShowcase';
 import CreditCardSection from '@/components/CreditCardSection';
 import SafeGoldSection from '@/components/safeGold/SafeGoldSection';
+// The 3D Hubble vault/terminal story is kept in components/hubble/HubbleSection.tsx, switched off
+// in favour of the flat Hubble offers panel
+// import HubbleSection from '@/components/hubble/HubbleSection';
+import HubbleOffers from '@/components/hubble/HubbleOffers';
+import QuickoSection from '@/components/quicko/QuickoSection';
 
 export default function Home() {
   return (
@@ -51,7 +56,10 @@ export default function Home() {
       <div data-bg-fade className="fixed inset-0 bg-black opacity-0 pointer-events-none" aria-hidden="true" />
 
       {/* Sticky/Fixed Animated Navbar */}
-      <Navbar />
+      {/* (Fades out once SafeGold begins; see SafeGoldSection) */}
+      <div data-site-nav>
+        <Navbar />
+      </div>
 
       {/* Hero & Interactive 3D Showcase Content Layer */}
       <div className="relative z-10 flex flex-col items-center justify-start min-h-screen pt-24 sm:pt-28 md:pt-32 pb-20 px-4 sm:px-6 pointer-events-none select-none">
@@ -59,9 +67,14 @@ export default function Home() {
         <div data-hero-panel className="w-full flex flex-col items-center justify-center min-h-[calc(100svh-6rem)] pb-24 sm:min-h-[calc(100svh-7rem)] sm:pb-28 md:min-h-[calc(100svh-8rem)] md:pb-32">
         {/* Title */}
         <h1 data-hero-title className="hero-intro-pending text-3xl sm:text-5xl md:text-6xl font-semibold text-white text-center tracking-tight leading-[1.2] max-w-5xl drop-shadow-sm">
-          <span className="block sm:whitespace-nowrap"><span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Managing</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">payments</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">has</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">been</span></span></span>
-          <span className="block sm:whitespace-nowrap"><span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">never</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">easier.</span></span></span>
+          <span className="block sm:whitespace-nowrap"><span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Managing</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Your</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Money</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Has</span></span></span>
+          <span className="block sm:whitespace-nowrap"><span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Never</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Been</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Easier.</span></span></span>
         </h1>
+
+        {/* Subtext */}
+        <p data-hero-sub className="hero-intro-pending mt-5 max-w-3xl text-center text-balance text-lg sm:text-xl text-neutral-300 tracking-wide">
+          Your all-in-one financial tracking app. Save, split, invest and plan, all in one place.
+        </p>
 
         {/* Action Buttons */}
         <div data-hero-actions className="hero-intro-pending flex flex-wrap items-center justify-center gap-4 mt-7 pointer-events-auto">
@@ -102,23 +115,34 @@ export default function Home() {
 
         </div>
 
-        {/* Interactive 3D Floating Phone + Revolving Features Showcase */}
+        {/* The phone with its orbiting feature cards (the split story has its own page, /features) */}
         <div className="w-full mt-4 sm:mt-6 pointer-events-auto" suppressHydrationWarning>
           <FeatureShowcase part="orbit" />
         </div>
 
-        {/* SafeGold: the gold piggy bank's scroll story */}
-        <div className="w-full mt-10 pointer-events-auto">
-          <SafeGoldSection />
+        {/* Hubble offers: gift card discounts on 400+ brands. The navbar fades out from here on */}
+        <div data-nav-hides-here className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] mt-10 pointer-events-auto">
+          <HubbleOffers />
         </div>
 
         {/* Credit cards coming out of the wallet */}
         <CreditCardSection />
 
-        {/* The phone again, playing the split story inside it */}
-        <div className="w-full mt-16 lg:mt-24 pointer-events-auto" suppressHydrationWarning>
-          <FeatureShowcase part="split" />
+        {/* SafeGold: the gold piggy bank's scroll story */}
+        <div className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] mt-16 lg:mt-24 pointer-events-auto">
+          <SafeGoldSection />
         </div>
+
+        {/* File ITR with Quicko: the tax jobs slide past, right to left, as the page scrolls */}
+        <div className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] mt-16 lg:mt-24 pointer-events-auto">
+          <QuickoSection />
+        </div>
+
+
+        {/* The split story lives on the Features page (app/features/page.tsx) */}
+        {/* <div className="w-full mt-16 lg:mt-24 pointer-events-auto" suppressHydrationWarning>
+          <FeatureShowcase part="split" />
+        </div> */}
       </div>
     </main>
   );

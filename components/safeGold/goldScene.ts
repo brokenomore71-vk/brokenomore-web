@@ -208,7 +208,6 @@ export class GoldScene {
   private pigGold: THREE.MeshPhysicalMaterial;
   private pigShadow: THREE.Mesh;
   private ripple: THREE.Mesh;
-  private deposits: Coin[] = [];
   private emergeCoin: Coin;
   private withdrawCoin: Coin;
   private sellCoin: Coin;
@@ -276,8 +275,8 @@ export class GoldScene {
     const shadowTex = canvasTexture(256, 256, (ctx) => {
       const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
       g.addColorStop(0, 'rgba(0,0,0,0.9)');
-      g.addColorStop(0.35, 'rgba(60,46,16,0.55)');
-      g.addColorStop(0.7, 'rgba(140,107,32,0.12)');
+      g.addColorStop(0.35, 'rgba(40,31,11,0.4)');
+      g.addColorStop(0.7, 'rgba(140,107,32,0.04)');
       g.addColorStop(1, 'rgba(140,107,32,0)');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, 256, 256);
@@ -326,7 +325,6 @@ export class GoldScene {
       this.scene.add(group);
       return { group, materials: [edge, face] };
     };
-    for (let i = 0; i < 4; i++) this.deposits.push(makeCoin());
     this.emergeCoin = makeCoin();
     this.withdrawCoin = makeCoin();
     this.sellCoin = makeCoin();
@@ -537,7 +535,8 @@ export class GoldScene {
 
     // On narrow screens everything is scaled to fit the width
     const visibleWidth = 2 * Math.tan((cam.fov * Math.PI) / 360) * f.cam.z * cam.aspect;
-    const fit = Math.min(1, visibleWidth / 4.4);
+    // (wide enough for the coins circling the piggy bank, not just the piggy bank)
+    const fit = Math.min(1, visibleWidth / 5.3);
 
     // ---- The piggy bank ----
     const pigScale = f.pig.scale * fit;
@@ -578,30 +577,7 @@ export class GoldScene {
     const slot = this.pigBody.localToWorld(SLOT.clone());
     const slotTurn = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.06, f.pig.rotY, 0));
 
-    // ---- Coins dropping into the slot ----
     const spinQ = new THREE.Quaternion();
-    f.deposits.forEach((t, i) => {
-      const { group, materials } = this.deposits[i];
-      group.visible = t > 0 && t < 1;
-      if (!group.visible) return;
-      this.setOpacity(materials, 1);
-      const start = this.toWorld({ x: W * 1.08, y: H * (0.26 + 0.07 * (i % 2)) }, 1.2 - i * 0.3);
-      const above = slot.clone().add(new THREE.Vector3(0, 0.95 * pigScale, 0));
-      const control = start.clone().lerp(above, 0.5).add(new THREE.Vector3((i % 2 ? -1 : 1) * 0.5 * pigScale, 0.55 * pigScale + i * 0.08, 0.8 - i * 0.25));
-      const fly = easeInOut(seg(t, 0, 0.7));
-      const a = start.clone().lerp(control, fly);
-      const b = control.clone().lerp(above, fly);
-      const pos = a.lerp(b, fly);
-      // Hover, square up with the slot, then drop through it
-      const drop = seg(t, 0.82, 1);
-      pos.y -= (0.95 * pigScale + 0.45 * pigScale) * drop * drop;
-      group.position.copy(pos);
-      group.scale.setScalar(pigScale * lerp(1.2, 1, fly));
-      const spin = (1 - seg(t, 0.55, 0.82)) * (6 + i);
-      spinQ.setFromEuler(new THREE.Euler(spin * 0.6 + 0.5, spin, spin * 0.3));
-      group.quaternion.copy(spinQ).slerp(slotTurn, smooth(seg(t, 0.5, 0.82)));
-    });
-
     // ---- A coin rising out of the piggy bank and becoming the portfolio ----
     {
       const e = f.emerge;
@@ -713,21 +689,71 @@ export class GoldScene {
       }
     }
 
-    // ---- The finale: coins circling the piggy bank ----
+    // ---- The coins circling the piggy bank. These are the coins that drop into its slot, one
+    // by one, and that rise back out into their orbit at the end. ----
+    const above = slot.clone().add(new THREE.Vector3(0, 0.6 * pigScale, 0));
+    const orbitQ = new THREE.Quaternion();
     this.orbitCoins.forEach(({ group, materials }, i) => {
-      group.visible = f.orbit > 0;
+      const t = f.deposits[i] ?? 0;
+      const back = f.returns[i] ?? 0;
+      const appear = f.appears[i] ?? 1;
+      const inside = t >= 1 && back <= 0;
+      group.visible = !inside && appear > 0;
       if (!group.visible) return;
-      const appear = smooth(seg(f.orbit, i * 0.08, 0.5 + i * 0.08));
-      const angle = (i / ORBIT_COINS) * Math.PI * 2 + f.orbitSpin * Math.PI * 1.4;
-      const r = 2.05 * pigScale * lerp(0.6, 1, appear);
-      group.position.set(
+      this.setOpacity(materials, 1);
+
+      // Where it is in its orbit right now: the orbit keeps turning as the page scrolls
+      const angle = (i / ORBIT_COINS) * Math.PI * 2 + f.time * 0.32;
+      const r = 2.05 * pigScale;
+      const orbit = new THREE.Vector3(
         this.pig.position.x + Math.cos(angle) * r,
         this.pig.position.y + 0.25 * pigScale + Math.sin(angle * 2 + i) * 0.18 * pigScale,
         this.pig.position.z + Math.sin(angle) * r * 0.75
       );
-      group.scale.setScalar(pigScale * 0.85 * appear);
-      group.rotation.set(0.2, -angle + Math.PI / 2 + f.orbitSpin * 2, 0.15);
-      this.setOpacity(materials, appear);
+      orbitQ.setFromEuler(new THREE.Euler(0.2, -angle + Math.PI / 2 + f.time * 0.6, 0.15));
+      const orbitScale = pigScale * 0.85;
+
+      if (t > 0 && t < 1) {
+        // Off its orbit, over the top, square with the slot, and down through it
+        const control = orbit.clone().lerp(above, 0.5).add(new THREE.Vector3(0, 0.35 * pigScale, 0.6 * pigScale));
+        const fly = easeInOut(seg(t, 0, 0.7));
+        const pos = orbit.clone().lerp(control, fly).lerp(control.clone().lerp(above, fly), fly);
+        const drop = seg(t, 0.82, 1);
+        pos.y -= 1.05 * pigScale * drop * drop;
+        group.position.copy(pos);
+        group.scale.setScalar(lerp(orbitScale, pigScale, fly));
+        const spin = Math.sin(Math.PI * seg(t, 0, 0.6)) * 2.5;
+        spinQ.setFromEuler(new THREE.Euler(0, spin, 0));
+        group.quaternion.copy(orbitQ).multiply(spinQ).slerp(slotTurn, smooth(seg(t, 0.35, 0.82)));
+      } else if (back > 0 && back < 1) {
+        // Up out of the slot and out into its place in the orbit
+        const rise = smooth(seg(back, 0, 0.35));
+        const up = slot.clone().add(new THREE.Vector3(0, lerp(-0.4, 0.6, rise) * pigScale, 0));
+        const fly = easeInOut(seg(back, 0.3, 1));
+        const control = up.clone().lerp(orbit, 0.5).add(new THREE.Vector3(0, 0.3 * pigScale, 0.4 * pigScale));
+        group.position.copy(up.clone().lerp(control, fly).lerp(control.clone().lerp(orbit, fly), fly));
+        group.scale.setScalar(lerp(pigScale, orbitScale, fly));
+        group.quaternion.copy(slotTurn).slerp(orbitQ, smooth(seg(back, 0.3, 0.9)));
+      } else if (appear < 1) {
+        // Like a planet finding its orbit: it slips out from behind the piggy bank and spirals
+        // outwards, already circling, until it settles into its place in the orbit
+        const k = smooth(appear);
+        const swept = angle - (1 - k) * Math.PI * 1.6;
+        const radius = r * lerp(0.35, 1, k);
+        const behind = (1 - smooth(seg(appear, 0, 0.45))) * 1.0 * pigScale;
+        group.position.set(
+          this.pig.position.x + Math.cos(swept) * radius,
+          this.pig.position.y + 0.25 * pigScale + Math.sin(swept * 2 + i) * 0.18 * pigScale * k,
+          this.pig.position.z + Math.sin(swept) * radius * 0.75 - behind
+        );
+        group.scale.setScalar(orbitScale * lerp(0.5, 1, k));
+        spinQ.setFromEuler(new THREE.Euler(0, (1 - k) * 3, 0));
+        group.quaternion.copy(orbitQ).multiply(spinQ);
+      } else {
+        group.position.copy(orbit);
+        group.scale.setScalar(orbitScale);
+        group.quaternion.copy(orbitQ);
+      }
     });
 
     this.renderer.render(this.scene, cam);

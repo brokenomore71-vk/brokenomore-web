@@ -41,13 +41,13 @@ export interface GoldFrame {
   cam: { z: number; y: number };
   pig: { sx: number; sy: number; z: number; scale: number; rotY: number; value: number };
   sheen: number;
-  deposits: number[];
+  appears: number[]; // each coin coming out from behind the piggy bank into orbit, 0 to 1
+  deposits: number[]; // each orbiting coin's trip into the slot, 0 to 1
+  returns: number[]; // and its trip back out into orbit
   landings: number[];
   emerge: number;
   withdraw: { coin: number; morph: number; pack: number; drop: number; lid: number; away: number };
   sell: { coin: number; burst: number; fade: number };
-  orbit: number;
-  orbitSpin: number;
   // Points on the canvas, in pixels, that the 3D pieces travel to and from
   anchors: { portfolio: ScreenPoint; withdraw: ScreenPoint; sell: ScreenPoint; bench: ScreenPoint; rupee: ScreenPoint };
 }

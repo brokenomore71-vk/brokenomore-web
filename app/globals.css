@@ -58,3 +58,24 @@ body {
 .hero-intro-pending {
   visibility: hidden;
 }
+
+/* Hubble offers: the endless brand row, and the trust badges' slow breathing */
+@keyframes hubble-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-33.3333%);
+  }
+}
+@keyframes hubble-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.92;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+}

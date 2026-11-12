@@ -63,9 +63,14 @@ export function buildJourney(context: ChapterContext) {
 
 // Moves a timeline towards wherever the scroll position says it should be, at a limited speed,
 // forwards or backwards. Stops once it has got there.
-export function createPlayhead(timeline: gsap.core.Timeline) {
+export function createPlayhead(
+  timeline: gsap.core.Timeline,
+  // A section can set its own pace: how fast it plays (units per second), and how long a long
+  // fling may take to catch up
+  { watchingSpeed = WATCHING_SPEED, longestCatchUp = LONGEST_CATCH_UP } = {}
+) {
   let target = timeline.time();
-  let speed = WATCHING_SPEED;
+  let speed = watchingSpeed;
 
   const tick = (_time: number, deltaMs: number) => {
     const current = timeline.time();
@@ -73,12 +78,12 @@ export function createPlayhead(timeline: gsap.core.Timeline) {
     if (distance === 0) return;
     if (distance < 0.0005) {
       timeline.time(target);
-      speed = WATCHING_SPEED;
+      speed = watchingSpeed;
       return;
     }
     const seconds = Math.min(deltaMs / 1000, 0.25);
     // Speeds up only as far as a long fling needs, and holds that speed until it has arrived
-    speed = Math.max(speed, distance / LONGEST_CATCH_UP);
+    speed = Math.max(speed, distance / longestCatchUp);
     const step = Math.min(distance, Math.min(distance * SETTLE, speed) * seconds);
     timeline.time(current + Math.sign(target - current) * step);
   };

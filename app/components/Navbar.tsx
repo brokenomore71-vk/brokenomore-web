@@ -169,7 +169,7 @@ export default function Navbar() {
   const navItems = useMemo(() => {
     const baseItems = [
       { name: "Home", link: "/" },
-      { name: "Pricing", link: "/pricing" },
+      { name: "Features", link: "/features" },
     ];
     
     if (mounted && !loading && user) {

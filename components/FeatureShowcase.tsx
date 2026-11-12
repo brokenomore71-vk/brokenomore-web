@@ -26,14 +26,16 @@ gsap.registerPlugin(ScrollTrigger);
 const STAGE_DESIGN_HEIGHT = 635;
 
 // Once the journey is this far in (timeline units), the slideshow's cards have faded out.
-// (The orbit and the journey are now separate sections, so this is no longer needed.)
-// const ORBIT_HIDDEN_AFTER = 1.1;
+const ORBIT_HIDDEN_AFTER = 1.1;
 
-// The page shows the phone twice: first with the feature cards orbiting it, right after the hero
-// ('orbit'), and later on its own, playing the split story as the page scrolls ('split').
-export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | 'split' }) {
-  const isSplit = part === 'split';
-  const [selectedFeatureId, setSelectedFeatureId] = useState<string>(isSplit ? 'split' : BROKENOMORE_FEATURES[0].id);
+// The phone with its feature cards orbiting it ('orbit'), the phone on its own playing the split
+// story as the page scrolls ('split'), or both in one section: the orbit first, then scrolling
+// plays the split story inside the phone ('features').
+export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' | 'split' | 'features' }) {
+  const hasOrbit = part !== 'split';
+  const hasStory = part !== 'orbit';
+  const storyOnly = part === 'split';
+  const [selectedFeatureId, setSelectedFeatureId] = useState<string>(storyOnly ? 'split' : BROKENOMORE_FEATURES[0].id);
   const [isIntroComplete, setIsIntroComplete] = useState<boolean>(false);
   const [startPhoneIntro, setStartPhoneIntro] = useState<boolean>(false);
   const sectionRef = useRef<HTMLElement | null>(null);
@@ -71,6 +73,9 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
   const [journeyScreen] = useState(() => storyRuntime.screen);
   const screenOverrideRef = useRef(journeyScreen);
   const orbitRenderPausedRef = useRef<boolean>(false);
+  // The orbiting cards stop redrawing when the section is off screen, or once the story has
+  // faded them out
+  const orbitHiddenRef = useRef({ offscreen: false, byStory: false });
   const pinRef = useRef<ScrollTrigger | null>(null);
   const journeyStartedRef = useRef<boolean>(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -96,15 +101,16 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
     // ---- The orbit part: the hero's entrance, and the phone flying in below it ----
     const title = document.querySelector<HTMLElement>('[data-hero-title]');
     const actions = document.querySelector<HTMLElement>('[data-hero-actions]');
-    if (!isSplit && title && actions) {
+    if (hasOrbit && title && actions) {
       const btnAndroid = actions.querySelector<HTMLElement>('[data-hero-btn-android]');
       const btnIos = actions.querySelector<HTMLElement>('[data-hero-btn-ios]');
+      const sub = document.querySelector<HTMLElement>('[data-hero-sub]');
 
       history.scrollRestoration = 'manual';
       window.scrollTo({ top: 0, behavior: 'instant' });
 
       mm.add('(prefers-reduced-motion: reduce)', () => {
-        gsap.set([title, actions], { autoAlpha: 1 });
+        gsap.set([title, actions, sub], { autoAlpha: 1 });
         if (btnAndroid) gsap.set(btnAndroid, { autoAlpha: 1, y: 0, scale: 1 });
         if (btnIos) gsap.set(btnIos, { autoAlpha: 1, y: 0, scale: 1 });
         setStartPhoneIntro(true);
@@ -123,6 +129,7 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
         gsap.set(title, { autoAlpha: 1 });
         gsap.set(words, { yPercent: 115, rotate: 4, transformOrigin: '0% 100%' });
         gsap.set(actions, { autoAlpha: 1, y: 0 });
+        if (sub) gsap.set(sub, { y: 14, autoAlpha: 0 });
         if (btnAndroid) gsap.set(btnAndroid, { y: 18, autoAlpha: 0, force3D: true });
         if (btnIos) gsap.set(btnIos, { y: 18, autoAlpha: 0, force3D: true });
 
@@ -136,6 +143,9 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
           ease: 'power4.out',
           stagger: 0.08,
         });
+
+        // The subtext fades up as the last words land
+        if (sub) tl.to(sub, { y: 0, autoAlpha: 1, duration: 0.8, ease: 'power3.out' }, '-=0.45');
 
         if (btnAndroid) {
           tl.to(
@@ -245,7 +255,8 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
           start: 'top bottom',
           end: 'bottom top',
           onToggle: (self) => {
-            orbitRenderPausedRef.current = !self.isActive;
+            orbitHiddenRef.current.offscreen = !self.isActive;
+            orbitRenderPausedRef.current = orbitHiddenRef.current.offscreen || orbitHiddenRef.current.byStory;
           },
         });
       });
@@ -253,7 +264,7 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
 
     // ---- The split part: pinned, scrolling plays the split story, and stops or reverses with
     // the user ----
-    if (isSplit) mm.add('(prefers-reduced-motion: no-preference)', () => {
+    if (hasStory) mm.add('(prefers-reduced-motion: no-preference)', () => {
       const section = sectionRef.current;
       const stage = stageRef.current;
       const header = headerRef.current;
@@ -276,6 +287,8 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
           const onUpdate = () => {
             const time = journey.timeline.time();
             journeyStartedRef.current = time > 0.01;
+            orbitHiddenRef.current.byStory = time > ORBIT_HIDDEN_AFTER;
+            orbitRenderPausedRef.current = orbitHiddenRef.current.offscreen || orbitHiddenRef.current.byStory;
             journey.update();
           };
           journey.timeline.eventCallback('onUpdate', onUpdate);
@@ -286,6 +299,8 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
             start: 'top 72px',
             end: `+=${journey.timeline.duration() * SCROLL_PER_UNIT}`,
             pin: true,
+            // Highest on the page of the pinned sections, so it is measured first
+            refreshPriority: 4,
             onUpdate: (self) => playhead?.follow(self.progress),
           });
           // (The split story is now the last section on the page, so nothing follows it to snap to.)
@@ -347,17 +362,17 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
     return () => {
       mm.revert();
       Object.assign(scrollMotion, { rotY: 0, face: 0 });
-      if (!isSplit) history.scrollRestoration = previousRestoration;
+      if (hasOrbit) history.scrollRestoration = previousRestoration;
       const scanner = document.querySelector<HTMLElement>('[data-bg-scanner]');
       if (scanner) scanner.style.visibility = '';
     };
-  }, [storyRuntime, journeyScreen, isSplit]);
+  }, [storyRuntime, journeyScreen, hasOrbit, hasStory]);
 
   // The slideshow: steps through the features every 3 seconds, until the journey takes over
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      if (journeyStartedRef.current || isSplit) return;
+      if (journeyStartedRef.current || storyOnly) return;
       setSelectedFeatureId((current) => {
         const currentIndex = BROKENOMORE_FEATURES.findIndex((f) => f.id === current);
         const nextIndex =
@@ -365,7 +380,7 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
         return BROKENOMORE_FEATURES[nextIndex].id;
       });
     }, 3000);
-  }, [isSplit]);
+  }, [storyOnly]);
 
   // When intro animation finishes and feature blocks appear, start 3s timer immediately
   const handleIntroComplete = useCallback(() => {
@@ -384,14 +399,17 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
 
   return (
     <>
-    <section ref={sectionRef} data-showcase={part} className="relative w-full h-[calc(100svh-72px)] flex flex-col items-center justify-start overflow-hidden py-6 sm:py-8 md:pt-4 md:pb-2 px-4 sm:px-6 select-none">
+    <section ref={sectionRef} data-showcase={part} id={storyOnly ? undefined : 'features'} className="scroll-mt-[72px] relative w-full h-[calc(100svh-72px)] flex flex-col items-center justify-start overflow-hidden py-6 sm:py-8 md:pt-4 md:pb-2 px-4 sm:px-6 select-none">
       {/* Dynamic Feature Header matching main title typography */}
       <div ref={headerRef} className="relative z-30 w-full">
-      {!isSplit && <motion.div
+      {/* In the split part it is invisible but still takes up its space, so the phone sits below
+          the story's captions exactly as it does under this heading */}
+      <motion.div
+        aria-hidden={storyOnly || undefined}
         initial={false}
         animate={isIntroComplete ? { opacity: 1, y: 0 } : { opacity: 0, y: -16 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-30 flex flex-col items-center text-center max-w-2xl mx-auto mb-2 sm:mb-4 pointer-events-auto"
+        className={`relative z-30 flex flex-col items-center text-center max-w-2xl mx-auto mb-2 sm:mb-4 ${storyOnly ? 'invisible pointer-events-none' : 'pointer-events-auto'}`}
       >
         <h2 className="text-3xl sm:text-5xl font-semibold text-white text-center tracking-tight leading-[1.2] drop-shadow-sm mt-1 transition-all duration-300">
           {selectedFeature.name}
@@ -400,17 +418,17 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
         <p className="text-sm sm:text-base text-neutral-400 text-center tracking-tight max-w-lg mt-2 transition-all duration-300">
           {selectedFeature.tagline}
         </p>
-      </motion.div>}
+      </motion.div>
       </div>
 
-      {isSplit && <SplitStoryCaptions />}
+      {hasStory && <SplitStoryCaptions />}
       {/* <StockStoryCaptions /> */}
       {/* <GoldStoryCaptions /> */}
 
       {/* Main 3D Stage: Smartphone Centered + Revolving Feature Orbit */}
       <div ref={stageRef} className="relative w-full max-w-7xl flex-1 min-h-0 flex items-center justify-center">
         {/* The slideshow of feature cards orbiting the phone */}
-        {!isSplit && (
+        {hasOrbit && (
           <FeatureOrbit
             selectedFeatureId={selectedFeatureId}
             onSelectFeature={setSelectedFeatureId}
@@ -421,7 +439,7 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
         )}
 
         {/* Billing machine, bill and everything else the phone moves among in the split story */}
-        {isSplit && <SplitStoryLayer runtime={storyRuntime} />}
+        {hasStory && <SplitStoryLayer runtime={storyRuntime} />}
 
         {/* Tickers, fundamentals, answers and the report around the phone in the stock story */}
         {/* <StockStoryLayer runtime={stockRuntime} /> */}
@@ -434,9 +452,9 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
           ref={phoneRef}
           className="relative z-[20] w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px] h-[520px] sm:h-[600px] lg:h-[650px] flex items-center justify-center pointer-events-auto"
           style={{ zIndex: 20 }}
-          title={isSplit ? undefined : 'Click to advance to next feature'}
+          title={storyOnly ? undefined : 'Click to advance to next feature'}
           onClick={() => {
-            if (isSplit) return;
+            if (storyOnly) return;
             setSelectedFeatureId((current) => {
               const currentIndex = BROKENOMORE_FEATURES.findIndex((f) => f.id === current);
               const nextIndex =
@@ -448,8 +466,8 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
           <Phone3D
             selectedFeatureId={selectedFeatureId}
             className="w-full h-full"
-            playIntro={!isSplit}
-            startIntro={isSplit || startPhoneIntro}
+            playIntro={!storyOnly}
+            startIntro={storyOnly || startPhoneIntro}
             scrollMotionRef={scrollMotionRef}
             screenOverrideRef={screenOverrideRef}
             onIntroComplete={handleIntroComplete}
@@ -458,7 +476,7 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
           {/* Subtle phone shadow reflection on floor */}
           <motion.div
             initial={false}
-            animate={isIntroComplete || isSplit ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.3 }}
+            animate={isIntroComplete || storyOnly ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.3 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
             className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-56 h-8 -rotate-6 bg-black/40 rounded-full blur-xl pointer-events-none"
           />
@@ -467,7 +485,7 @@ export default function FeatureShowcase({ part = 'orbit' }: { part?: 'orbit' | '
     </section>
 
     {/* Without motion, the story's steps are simply listed */}
-    {isSplit && <ol className="hidden motion-reduce:grid gap-6 sm:grid-cols-2 max-w-4xl mx-auto mt-16 px-4">
+    {hasStory && <ol className="hidden motion-reduce:grid gap-6 sm:grid-cols-2 max-w-4xl mx-auto mt-16 px-4">
       {[...CAPTIONS /* , ...STOCK_CAPTIONS, ...GOLD_CAPTIONS */].map((caption) => (
         <li key={caption.title}>
           <h3 className="text-xl font-semibold text-white tracking-tight">{caption.title}</h3>
