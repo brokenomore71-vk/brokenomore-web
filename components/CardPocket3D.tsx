@@ -40,10 +40,12 @@ const CLOSED_HOLD = 0.9;
 const FAN_HOLD = 3.5;
 
 // Resting fan, front card first. Keeps every lower corner inside the pocket.
+// Cards are CARD_T thick and sit 0.03 apart, so there's a clear gap between every card
+// (and between the cards and the pocket walls) and they never z-fight or clip.
 const FAN = [
-  { x: 0, y: 0.8, z: 0.025, rot: -0.03 },
-  { x: -0.2, y: 0.84, z: -0.005, rot: 0.2 },
-  { x: 0.22, y: 0.86, z: -0.03, rot: -0.2 },
+  { x: 0, y: 0.8, z: 0.028, rot: -0.03 },
+  { x: -0.2, y: 0.84, z: -0.002, rot: 0.2 },
+  { x: 0.22, y: 0.86, z: -0.032, rot: -0.2 },
 ];
 // Where each card peaks as it arcs out of the pocket, before settling into the fan.
 const PEAK = [
@@ -85,6 +87,10 @@ function fitUVs(geometry: THREE.BufferGeometry, w: number, h: number) {
   }
   uv.needsUpdate = true;
 }
+
+// Total thickness of a card plate, bevels included (depth 0.004 + 2 × 0.006 bevel)
+const CARD_DEPTH = 0.004;
+const CARD_T = CARD_DEPTH + 0.012;
 
 function roundedPlate(w: number, h: number, depth: number, r: number) {
   const shape = roundedShape(w, h, r);
@@ -250,7 +256,8 @@ export default function CardPocket3D({ cards: cardData, selection, onPick, class
       rimLight.position.set(-3, 1.5, -1);
       scene.add(rimLight);
 
-      const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 30);
+      // Nothing gets closer than ~3 units, so a tight near plane keeps depth precise for the thin cards
+      const camera = new THREE.PerspectiveCamera(28, 1, 1, 20);
       const fit = () => {
         const w = container.clientWidth;
         const h = container.clientHeight;
@@ -342,13 +349,17 @@ export default function CardPocket3D({ cards: cardData, selection, onPick, class
         return texture;
       });
       const cardEdge = new THREE.MeshStandardMaterial({ color: 0x15151c, roughness: 0.5 });
-      const cardGeometry = roundedPlate(CARD_W, CARD_H, 0.012, 0.07);
+      const cardGeometry = roundedPlate(CARD_W, CARD_H, CARD_DEPTH, 0.07);
       const faceGeometry = new THREE.ShapeGeometry(roundedShape(CARD_W, CARD_H, 0.07), 12);
       fitUVs(faceGeometry, CARD_W, CARD_H);
-      const faceOffset = 0.0125;
+      const faceOffset = CARD_T / 2 + 0.0008;
+      // Faces always win against their own plate, so the print never flickers into the card edge
+      const faceDepth = { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 };
 
-      const cardMaterials = FAN.map(() => new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0 }));
-      const backMaterial = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0 });
+      const cardMaterials = FAN.map(
+        () => new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0, ...faceDepth })
+      );
+      const backMaterial = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0, ...faceDepth });
       let shownIndex = initialIndexRef.current;
       const applyCards = (index: number) => {
         shownIndex = index;
@@ -488,7 +499,12 @@ export default function CardPocket3D({ cards: cardData, selection, onPick, class
           flipCard();
           return;
         }
-        const wasInspecting = mode === 'inspect';
+        // Check the card itself, not the mode: a pick can land while the front card is still
+        // flying forward or back, and it must be squared up before it goes near the other cards.
+        const cardOut =
+          Math.abs(frontCard.position.z - FAN[0].z) > 1e-3 ||
+          Math.abs(frontCard.rotation.x) > 1e-3 ||
+          Math.abs(frontCard.rotation.y) > 1e-3;
         const changed = index !== shownIndex;
         mode = 'busy';
         setInspecting(false);
@@ -511,7 +527,7 @@ export default function CardPocket3D({ cards: cardData, selection, onPick, class
 
         let at = 0;
         faceFront(next, 0);
-        if (wasInspecting) {
+        if (cardOut) {
           next
             .to(frontCard.position, { x: 0, y: LIFT_Y, z: FAN[0].z, duration: 0.5, ease: 'power2.inOut' }, 0)
             .to(frontCard.rotation, { x: 0, y: 0, z: 0, duration: 0.5, ease: 'power2.inOut' }, 0);
@@ -521,8 +537,8 @@ export default function CardPocket3D({ cards: cardData, selection, onPick, class
           cards.forEach((holder, slot) => {
             const start = at + slot * 0.03;
             next
-              .to(holder.position, { x: 0, y: 0, duration: 0.42, ease: 'power2.in' }, start)
-              .to(holder.rotation, { z: 0, duration: 0.42, ease: 'power2.in' }, start);
+              .to(holder.position, { x: 0, y: 0, z: FAN[slot].z, duration: 0.42, ease: 'power2.in' }, start)
+              .to(holder.rotation, { x: 0, y: 0, z: 0, duration: 0.42, ease: 'power2.in' }, start);
           });
           next.call(() => applyCards(index), [], at + 0.5);
           at += 0.55;

@@ -93,19 +93,19 @@ export default function CreditCardSection() {
     <section
       ref={sectionRef}
       data-credit-cards
-      className="relative w-full max-w-7xl mx-auto mt-16 lg:mt-24 lg:min-h-[calc(100svh-72px)] grid grid-cols-1 lg:grid-cols-[minmax(0,350px)_minmax(0,1fr)_minmax(0,240px)] items-center gap-6 lg:gap-4 pointer-events-auto select-none"
+      className="relative w-full max-w-7xl mx-auto mt-16 lg:mt-24 lg:min-h-[calc(100svh-72px)] grid grid-cols-1 lg:grid-cols-[minmax(0,350px)_minmax(0,1fr)_minmax(0,240px)] items-center gap-8 lg:gap-4 pointer-events-auto select-none"
     >
       {/* Copy and card finder */}
-      <div className="flex flex-col items-start order-1">
-        <p data-card-reveal className="text-sm font-medium text-[#FF9FFC]">Credit Cards</p>
-        <h2 data-card-reveal className="mt-2 text-3xl sm:text-5xl font-semibold text-white tracking-tight leading-[1.15]">
+      <div className="flex flex-col items-start order-0 lg:order-1">
+        <p data-card-reveal className="text-xs sm:text-sm font-medium text-[#FF9FFC]">Credit Cards</p>
+        <h2 data-card-reveal className="mt-1.5 sm:mt-2 text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-semibold text-white tracking-tight leading-[1.15]">
           Unlock more with every swipe.
         </h2>
-        <p data-card-reveal className="mt-4 text-sm sm:text-base text-neutral-300 tracking-tight">
+        <p data-card-reveal className="mt-3 sm:mt-4 text-xs xs:text-sm sm:text-base text-neutral-300 tracking-tight">
           133 credit cards in one place. Pick what you spend on, and BrokeNoMore shows you the cards that give it back.
         </p>
 
-        <div data-card-reveal className="mt-6 w-full">
+        <div data-card-reveal className="mt-5 sm:mt-6 w-full">
           <p className="text-xs font-medium text-neutral-400">Find your fit</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {CARD_PICKS.map((card, index) => (
@@ -114,7 +114,7 @@ export default function CreditCardSection() {
                 type="button"
                 aria-pressed={index === activeIndex}
                 onClick={() => pickCard(index)}
-                className={`px-3 py-1.5 rounded-full border text-[13px] font-medium cursor-pointer transition-colors duration-200 ${
+                className={`px-2.5 xs:px-3 py-1.5 rounded-full border text-xs xs:text-[13px] font-medium cursor-pointer transition-colors duration-200 ${
                   index === activeIndex
                     ? 'bg-white text-black border-white'
                     : 'text-white border-white/25 hover:bg-white/10'
@@ -126,22 +126,22 @@ export default function CreditCardSection() {
           </div>
         </div>
 
-        <div data-card-reveal className="mt-5 w-full" aria-live="polite">
-          <h3 className="text-[17px] font-semibold text-white tracking-tight">{active.name}</h3>
+        <div data-card-reveal className="mt-4 sm:mt-5 w-full" aria-live="polite">
+          <h3 className="text-base sm:text-[17px] font-semibold text-white tracking-tight">{active.name}</h3>
           <ul className="mt-2 space-y-1.5">
             {active.perks.map((perk) => (
-              <li key={perk} className="flex gap-2 text-[13px] leading-snug text-neutral-300">
-                <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-[#FF9FFC]" aria-hidden="true" />
+              <li key={perk} className="flex gap-2 text-xs xs:text-[13px] leading-snug text-neutral-300">
+                <span className="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-[#FF9FFC]" aria-hidden="true" />
                 {perk}
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-neutral-300">{active.fees}</p>
+          <p className="mt-2.5 sm:mt-3 text-xs text-neutral-400">{active.fees}</p>
         </div>
       </div>
 
       {/* Wallet */}
-      <div className="relative order-0 lg:order-2 w-full h-[420px] sm:h-[520px] lg:h-[min(680px,calc(100svh-96px))]">
+      <div className="relative order-1 lg:order-2 w-full h-[320px] xs:h-[380px] sm:h-[480px] lg:h-[min(680px,calc(100svh-96px))]">
         <div
           className="absolute inset-[15%] rounded-full bg-[#5227FF]/10 blur-[90px] pointer-events-none"
           aria-hidden="true"
@@ -150,7 +150,7 @@ export default function CreditCardSection() {
       </div>
 
       {/* How it works */}
-      <div className="order-3 flex flex-col gap-6">
+      <div className="order-2 lg:order-3 flex flex-col gap-5 sm:gap-6">
         <ol className="flex flex-col gap-6">
           {STEPS.map((step, index) => (
             <li key={step.title} data-card-reveal className="flex gap-3">

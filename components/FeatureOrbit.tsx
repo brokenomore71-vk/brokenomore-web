@@ -1,17 +1,22 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import FeatureCard from './FeatureCard';
 import { BROKENOMORE_FEATURES } from './featureScreens';
 
-// Responsive radii for a spacious, non-overlapping orbit surrounding the phone
+// Preserves original desktop web orbit exactly while providing spacious responsive limits on mobile
 function getOrbitRadii(viewportWidth: number) {
-  if (viewportWidth < 640) return { rx: 240, rz: 140, ryTilt: 160 };
+  if (viewportWidth < 380) return { rx: 160, rz: 95, ryTilt: 115 };
+  if (viewportWidth < 480) return { rx: 185, rz: 110, ryTilt: 130 };
+  if (viewportWidth < 640) return { rx: 220, rz: 130, ryTilt: 150 };
   if (viewportWidth < 1024) return { rx: 360, rz: 190, ryTilt: 180 };
   if (viewportWidth < 1440) return { rx: 480, rz: 230, ryTilt: 200 };
   return { rx: 530, rz: 250, ryTilt: 220 };
 }
+
+// Deterministic baseline radii matching the original desktop design for server rendering
+const BASELINE_RADII = { rx: 480, rz: 230, ryTilt: 200 };
 
 interface FeatureOrbitProps {
   selectedFeatureId: string | null;
@@ -22,32 +27,75 @@ interface FeatureOrbitProps {
   renderPausedRef?: React.RefObject<boolean>;
 }
 
-// A slideshow of the features: the selected one glides round to the front. Purely for watching,
-// since the website itself decides the order of the journey.
-export default function FeatureOrbit({ selectedFeatureId, isIntroComplete = true, renderPausedRef }: FeatureOrbitProps) {
+export default function FeatureOrbit({
+  selectedFeatureId,
+  onSelectFeature,
+  isIntroComplete = true,
+  renderPausedRef,
+}: FeatureOrbitProps) {
   // Starts at Math.PI / 2 so the first feature is front and center
   const orbitAngleRef = useRef<number>(Math.PI / 2);
   const targetAngleRef = useRef<number | null>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const [currentAngle, setCurrentAngle] = useState(Math.PI / 2);
-  const [radii, setRadii] = useState({ rx: 480, rz: 230, ryTilt: 200 });
+  // State initialized with identical baseline on server and client to eliminate hydration errors
+  const [radii, setRadii] = useState(BASELINE_RADII);
+  const radiiRef = useRef(BASELINE_RADII);
 
   const totalFeatures = BROKENOMORE_FEATURES.length;
 
+  // Direct DOM updates for 60/120fps hardware-accelerated transforms without React state thrashing
+  const updateCardPositions = useCallback((angle: number) => {
+    const currentRadii = radiiRef.current;
+    const total = BROKENOMORE_FEATURES.length;
+
+    for (let i = 0; i < total; i++) {
+      const el = cardRefs.current[i];
+      if (!el) continue;
+
+      const itemAngle = angle + (i * 2 * Math.PI) / total;
+      const x = Math.cos(itemAngle) * currentRadii.rx;
+      const z = Math.sin(itemAngle) * currentRadii.rz;
+      const y = Math.sin(itemAngle) * currentRadii.ryTilt;
+
+      // Depth perspective (z in [-rz, rz])
+      const depth = (z + currentRadii.rz) / (2 * currentRadii.rz); // 0 (back) to 1 (front)
+      const scale = 0.82 + depth * 0.36; // 0.82x to 1.18x
+      const opacity = Math.max(0.35, 0.4 + depth * 0.6); // 0.4 to 1.0
+
+      // Stacking relative to phone at zIndex: 20
+      // In front of phone (z > 0): 22-40; Behind phone (z <= 0): 5-18
+      const zIndex = z > 0 ? 22 + Math.round(depth * 18) : 5 + Math.round(depth * 13);
+
+      el.style.transform = `translate3d(calc(-50% + ${x.toFixed(1)}px), calc(-50% + ${y.toFixed(1)}px), 0px) scale(${scale.toFixed(3)})`;
+      el.style.opacity = `${opacity.toFixed(3)}`;
+      el.style.zIndex = `${zIndex}`;
+    }
+  }, []);
+
+  // Update responsive radii on client mount and window resize
   useEffect(() => {
-    const updateRadii = () => setRadii(getOrbitRadii(window.innerWidth));
+    const updateRadii = () => {
+      const newRadii = getOrbitRadii(window.innerWidth);
+      radiiRef.current = newRadii;
+      setRadii(newRadii);
+      updateCardPositions(orbitAngleRef.current);
+    };
 
     updateRadii();
     window.addEventListener('resize', updateRadii);
     return () => window.removeEventListener('resize', updateRadii);
-  }, []);
+  }, [updateCardPositions]);
 
+  // When selected feature changes, set target angle
   useEffect(() => {
     const idx = BROKENOMORE_FEATURES.findIndex((f) => f.id === selectedFeatureId);
-    if (idx !== -1) targetAngleRef.current = Math.PI / 2 - (idx * 2 * Math.PI) / totalFeatures;
+    if (idx !== -1) {
+      targetAngleRef.current = Math.PI / 2 - (idx * 2 * Math.PI) / totalFeatures;
+    }
   }, [selectedFeatureId, totalFeatures]);
 
-  // Eases round to the selected feature by the shortest path
+  // Eases round to the selected feature smoothly via RAF
   useEffect(() => {
     let animId: number;
 
@@ -64,43 +112,70 @@ export default function FeatureOrbit({ selectedFeatureId, isIntroComplete = true
           orbitAngleRef.current = target;
           targetAngleRef.current = null;
         }
-        if (!renderPausedRef?.current) setCurrentAngle(orbitAngleRef.current);
+
+        if (!renderPausedRef?.current) {
+          updateCardPositions(orbitAngleRef.current);
+        }
       }
       animId = requestAnimationFrame(loop);
     };
 
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, [renderPausedRef]);
+  }, [renderPausedRef, updateCardPositions]);
+
+  // Initial position sync on mount
+  useEffect(() => {
+    updateCardPositions(orbitAngleRef.current);
+  }, [updateCardPositions]);
 
   return (
-    <div className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none select-none">
-      {/* 3D Orbit Track: White-grayish line connecting the feature blocks (behind phone with center cutout) */}
-      <div data-orbit-fade className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 1 }}>
+    <div
+      className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none select-none"
+      suppressHydrationWarning
+    >
+      {/* 3D Orbit Track: Seamless, contained elliptical line looping through the feature blocks on all devices */}
+      <div
+        data-orbit-fade
+        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        style={{ zIndex: 1 }}
+        suppressHydrationWarning
+      >
         <motion.svg
           initial={false}
           animate={isIntroComplete ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.88 }}
           transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 overflow-visible"
           style={{
-            width: (radii.rx + 60) * 2,
-            height: (radii.ryTilt + 60) * 2,
+            width: (radii.rx + 30) * 2,
+            height: (radii.ryTilt + 30) * 2,
+            maxWidth: '100%',
             zIndex: 1,
           }}
-          viewBox={`-${radii.rx + 60} -${radii.ryTilt + 60} ${(radii.rx + 60) * 2} ${(radii.ryTilt + 60) * 2}`}
+          viewBox={`-${radii.rx + 30} -${radii.ryTilt + 30} ${(radii.rx + 30) * 2} ${(radii.ryTilt + 30) * 2}`}
+          suppressHydrationWarning
         >
           <defs>
             <mask id="phone-orbit-cutout">
               {/* White: reveal the orbit line */}
               <rect
-                x={-(radii.rx + 200)}
-                y={-(radii.ryTilt + 200)}
-                width={(radii.rx + 200) * 2}
-                height={(radii.ryTilt + 200) * 2}
+                x={-(radii.rx + 100)}
+                y={-(radii.ryTilt + 100)}
+                width={(radii.rx + 100) * 2}
+                height={(radii.ryTilt + 100) * 2}
                 fill="white"
               />
-              {/* Black: cut out the phone silhouette matching the tilted phone pose */}
-              <rect x="-185" y="-340" width="370" height="680" rx="64" ry="64" fill="black" transform="rotate(-13.8)" />
+              {/* Black: cut out only the central phone silhouette matching the tilted phone pose */}
+              <rect
+                x={radii.rx < 250 ? -85 : -185}
+                y={radii.rx < 250 ? -170 : -340}
+                width={radii.rx < 250 ? 170 : 370}
+                height={radii.rx < 250 ? 340 : 680}
+                rx={radii.rx < 250 ? 32 : 64}
+                ry={radii.rx < 250 ? 32 : 64}
+                fill="black"
+                transform="rotate(-13.8)"
+              />
             </mask>
           </defs>
 
@@ -117,30 +192,35 @@ export default function FeatureOrbit({ selectedFeatureId, isIntroComplete = true
         </motion.svg>
       </div>
 
-      {/* 3D Orbiting Cards */}
+      {/* 3D Orbiting Cards - Centered at (50%, 50%) and translated via GPU translate3d */}
       {BROKENOMORE_FEATURES.map((feature, i) => {
-        const itemAngle = currentAngle + (i * (2 * Math.PI)) / totalFeatures;
-
-        // 3D Elliptical coordinates
-        const x = Math.cos(itemAngle) * radii.rx;
-        const z = Math.sin(itemAngle) * radii.rz;
-        const y = Math.sin(itemAngle) * radii.ryTilt; // Orbital plane tilt
-
-        // Depth perspective (z in [-rz, rz])
-        const depth = (z + radii.rz) / (2 * radii.rz); // 0 (back) to 1 (front)
-        const scale = 0.82 + depth * 0.36; // 0.82x (back) to 1.18x (front)
-        const opacity = 0.4 + depth * 0.6; // 0.4 (back) to 1.0 (front)
-        const zIndex = Math.round(depth * 40) + 5; // 5 to 45 (phone is at 25)
+        const itemAngle = (Math.PI / 2) + (i * 2 * Math.PI) / totalFeatures;
+        const initialX = Math.cos(itemAngle) * radii.rx;
+        const initialY = Math.sin(itemAngle) * radii.ryTilt;
+        const initialZ = Math.sin(itemAngle) * radii.rz;
+        const initialDepth = (initialZ + radii.rz) / (2 * radii.rz);
+        const initialScale = 0.82 + initialDepth * 0.36;
+        const initialOpacity = Math.max(0.35, 0.4 + initialDepth * 0.6);
+        const initialZIndex = initialZ > 0 ? 22 + Math.round(initialDepth * 18) : 5 + Math.round(initialDepth * 13);
 
         return (
           <div
             key={feature.id}
-            style={{
-              transform: `translate3d(${x}px, ${y}px, 0px)`,
-              zIndex,
-              position: 'absolute',
-              transition: 'transform 0.05s linear',
+            ref={(el) => {
+              cardRefs.current[i] = el;
             }}
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: `translate3d(calc(-50% + ${initialX.toFixed(1)}px), calc(-50% + ${initialY.toFixed(1)}px), 0px) scale(${initialScale.toFixed(3)})`,
+              opacity: initialOpacity,
+              zIndex: initialZIndex,
+              willChange: 'transform, opacity',
+            }}
+            className="pointer-events-auto cursor-pointer"
+            onClick={() => onSelectFeature?.(feature.id)}
+            suppressHydrationWarning
           >
             <div data-orbit-fade>
               <motion.div
@@ -151,10 +231,6 @@ export default function FeatureOrbit({ selectedFeatureId, isIntroComplete = true
                 <FeatureCard
                   feature={feature}
                   isActive={feature.id === selectedFeatureId}
-                  scale={scale}
-                  opacity={opacity}
-                  zIndex={zIndex}
-                  isFront={z > 0}
                 />
               </motion.div>
             </div>

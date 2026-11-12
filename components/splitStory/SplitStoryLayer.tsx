@@ -79,21 +79,21 @@ export function SplitStoryCaptions() {
         {/* The feature's name, announced as its chapter begins */}
         <div data-s="chapter-opening" style={HIDDEN} className="absolute inset-x-0 top-0 text-center">
           <div className="overflow-hidden pb-[0.14em]">
-            <h2 data-s="chapter-name" className="text-5xl sm:text-7xl font-semibold text-white tracking-tight leading-[1.1]">
+            <h2 data-s="chapter-name" className="text-3xl xs:text-4xl sm:text-6xl md:text-7xl font-semibold text-white tracking-tight leading-[1.1]">
               {FEATURE.name}
             </h2>
           </div>
-          <p data-s="chapter-tagline" className="text-sm sm:text-lg text-neutral-400 tracking-tight mt-2">
+          <p data-s="chapter-tagline" className="text-xs xs:text-sm sm:text-lg text-neutral-400 tracking-tight mt-1.5 sm:mt-2">
             {FEATURE.tagline}
           </p>
         </div>
 
         {CAPTIONS.map((caption, i) => (
           <div key={caption.title} data-s="caption" data-i={i} style={HIDDEN} className="absolute inset-x-0 top-0 text-center">
-            <h3 className="text-[26px] sm:text-5xl font-semibold text-white tracking-tight leading-[1.2] drop-shadow-sm mt-1">
+            <h3 className="text-[20px] xs:text-[24px] sm:text-4xl md:text-5xl font-semibold text-white tracking-tight leading-[1.2] drop-shadow-sm mt-1">
               {caption.title}
             </h3>
-            <p className="text-sm sm:text-base text-neutral-400 tracking-tight mt-2">{caption.body}</p>
+            <p className="text-xs xs:text-sm sm:text-base text-neutral-400 tracking-tight mt-1.5 sm:mt-2">{caption.body}</p>
           </div>
         ))}
       </div>

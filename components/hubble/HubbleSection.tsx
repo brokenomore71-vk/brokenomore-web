@@ -252,7 +252,7 @@ export default function HubbleSection() {
         const wasPinned = !!pin && window.scrollY >= pin.start;
         playhead?.kill();
         context?.revert();
-        narrowRef.current = window.innerWidth < 768;
+        narrowRef.current = window.innerWidth < 1024;
         const state = createState(narrowRef.current);
         stateRef.current = state;
 
@@ -412,21 +412,21 @@ export default function HubbleSection() {
           <div className="relative mx-auto max-w-3xl">
             {SCENES.map((scene, i) => (
               <div key={scene.title} data-g="caption" className="absolute inset-x-0 top-0 text-center">
-                <h2 className="text-[25px] sm:text-4xl md:text-5xl font-semibold text-[#F5F5F5] tracking-tight leading-[1.2] mt-1">
+                <h2 className="text-[20px] xs:text-[24px] sm:text-4xl md:text-5xl font-semibold text-[#F5F5F5] tracking-tight leading-[1.2] mt-1">
                   {scene.title}
                 </h2>
-                <p className="mx-auto max-w-xl text-sm sm:text-base text-[#A3A3A3] tracking-tight mt-2.5">
+                <p className="mx-auto max-w-xl text-xs xs:text-sm sm:text-base text-[#A3A3A3] tracking-tight mt-1.5 sm:mt-2.5">
                   {scene.body}
                 </p>
 
                 {/* Final Scene CTA Button */}
                 {i === SCENES.length - 1 && (
-                  <div className="mt-5 pointer-events-auto flex flex-col items-center justify-center">
+                  <div className="mt-4 sm:mt-5 pointer-events-auto flex flex-col items-center justify-center">
                     <a
                       data-g="cta-btn"
                       href="#brands"
                       style={HIDDEN}
-                      className="group inline-flex items-center gap-2.5 rounded-full border border-white/30 bg-[#0A0A0A] px-7 py-3 text-sm font-medium text-[#F5F5F5] shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-300 hover:border-white/70 hover:bg-[#141414] hover:shadow-[0_12px_40px_rgba(255,255,255,0.12)] hover:-translate-y-0.5 active:scale-[0.98]"
+                      className="group inline-flex items-center gap-2.5 rounded-full border border-white/30 bg-[#0A0A0A] px-5 sm:px-7 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-[#F5F5F5] shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-300 hover:border-white/70 hover:bg-[#141414] hover:shadow-[0_12px_40px_rgba(255,255,255,0.12)] hover:-translate-y-0.5 active:scale-[0.98]"
                     >
                       <span>Explore Brands</span>
                       <svg
@@ -444,13 +444,13 @@ export default function HubbleSection() {
                         />
                       </svg>
                     </a>
-                    <p className="mt-4 flex items-center justify-center gap-2 text-xs text-[#737373]">
+                    <p className="mt-3 sm:mt-4 flex items-center justify-center gap-2 text-[11px] sm:text-xs text-[#737373]">
                       Brand partnerships powered by
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src="/assets/images/hubble-logo.png"
                         alt="Hubble"
-                        className="h-5 w-auto invert contrast-200 opacity-80"
+                        className="h-4 sm:h-5 w-auto invert contrast-200 opacity-80"
                       />
                     </p>
                   </div>
@@ -461,7 +461,7 @@ export default function HubbleSection() {
         </div>
 
         {/* Floating Contextual UI Cards */}
-        <div className="absolute z-20 bottom-4 left-1/2 -translate-x-1/2 w-[min(350px,calc(100%-32px))] md:bottom-auto md:left-[5%] md:translate-x-0 md:top-1/2 md:-translate-y-1/2 md:w-[340px] pointer-events-none">
+        <div className="absolute z-20 bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 w-[min(340px,calc(100%-24px))] sm:w-[min(350px,calc(100%-32px))] md:bottom-auto md:left-[5%] md:translate-x-0 md:top-1/2 md:-translate-y-1/2 md:w-[340px] pointer-events-none">
           <div className="relative">
             {/* SCENE 2: Precision Docking Card */}
             <div

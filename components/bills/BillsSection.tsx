@@ -307,16 +307,16 @@ export default function BillsSection() {
         {/* Captions */}
         <div className="relative z-30 shrink-0 px-4 pt-6 text-center sm:pt-8">
           <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-500">Bills &amp; Subscriptions</p>
-          <div className="relative mx-auto mt-2 min-h-[72px] max-w-2xl sm:min-h-[96px]">
+          <div className="relative mx-auto mt-2 min-h-[64px] max-w-2xl sm:min-h-[96px]">
             {CAPTIONS.map((c) => (
               <div key={c.title} data-b="caption" className="absolute inset-x-0 top-0">
-                <h2 className="text-2xl font-semibold tracking-tight sm:text-5xl">{c.title}</h2>
-                <p className="mt-2 text-sm text-neutral-400 sm:text-base">{c.body}</p>
+                <h2 className="text-xl xs:text-2xl font-semibold tracking-tight sm:text-4xl md:text-5xl">{c.title}</h2>
+                <p className="mt-1 sm:mt-2 text-xs sm:text-base text-neutral-400">{c.body}</p>
               </div>
             ))}
           </div>
           {/* What the colours mean */}
-          <div className="mt-1 flex items-center justify-center gap-4 text-xs text-neutral-400">
+          <div className="mt-1 flex items-center justify-center gap-2.5 sm:gap-4 text-[11px] sm:text-xs text-neutral-400">
             {GROUPS.map((status) => (
               <span key={status} className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full" style={{ background: STATUS[status].color }} />
@@ -329,10 +329,10 @@ export default function BillsSection() {
         {/* The desk calendar */}
         <div ref={stageRef} className="relative min-h-0 flex-1 [perspective:1600px]">
           <div
-            className="absolute left-1/2 top-[6%] md:top-[9%] [transform-style:preserve-3d]"
+            className="absolute left-1/2 top-[5%] md:top-[9%] [transform-style:preserve-3d]"
             style={
               {
-                '--w': 'min(390px, 64vw, 50svh)',
+                '--w': 'min(390px, 80vw, 48svh)',
                 '--h': 'calc(var(--w) * 0.92)',
                 '--depth': `calc(var(--h) * ${Math.sin((LEAN * Math.PI) / 180).toFixed(4)})`,
                 '--rise': `calc(var(--h) * ${Math.cos((LEAN * Math.PI) / 180).toFixed(4)})`,

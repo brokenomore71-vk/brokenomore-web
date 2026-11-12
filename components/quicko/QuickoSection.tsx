@@ -189,10 +189,10 @@ export default function QuickoSection() {
               <span>File ITR</span>
             </span>
           </div>
-          <h2 data-q="intro" className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
+          <h2 data-q="intro" className="mt-3 sm:mt-4 text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight">
             Taxes, done in minutes.
           </h2>
-          <p data-q="intro" className="mt-2 max-w-xl text-sm text-neutral-400 sm:text-base">
+          <p data-q="intro" className="mt-1.5 sm:mt-2 max-w-xl text-xs xs:text-sm sm:text-base text-neutral-400">
             Autofill, review and e-file your return, save every rupee you&apos;re owed, and track your refund.
           </p>
         </div>
@@ -205,23 +205,23 @@ export default function QuickoSection() {
       </div>
 
       {/* The sliding row */}
-      <div ref={viewportRef} className="relative mt-8 flex-1 min-h-0 overflow-hidden motion-reduce:overflow-x-auto sm:mt-10">
-        <div ref={trackRef} className="flex h-full items-start gap-5 px-4 pb-8 will-change-transform sm:gap-6 sm:px-[max(1.5rem,calc((100vw-72rem)/2+1.5rem))]">
+      <div ref={viewportRef} className="relative mt-6 sm:mt-10 flex-1 min-h-0 overflow-hidden motion-reduce:overflow-x-auto">
+        <div ref={trackRef} className="flex h-full items-start gap-4 sm:gap-6 px-4 pb-6 sm:pb-8 will-change-transform sm:px-[max(1.5rem,calc((100vw-72rem)/2+1.5rem))]">
           {CARDS.map((card, i) => (
             <article
               key={card.id}
               data-q="card"
-              className="flex h-full max-h-[440px] w-[78vw] max-w-[380px] shrink-0 flex-col rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-5 sm:w-[380px] sm:p-6"
+              className="flex h-full max-h-[min(440px,calc(100svh-220px))] w-[84vw] xs:w-[80vw] sm:w-[380px] max-w-[380px] shrink-0 flex-col rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4 sm:p-6"
             >
               <div className="flex items-center justify-between">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#333] bg-[#222] text-neutral-200">
+                <span className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-[#333] bg-[#222] text-neutral-200">
                   <Icon kind={card.icon} />
                 </span>
                 <span className="font-mono text-xs text-neutral-500">{String(i + 1).padStart(2, '0')}</span>
               </div>
-              <h3 className="mt-5 text-xl font-semibold tracking-tight sm:text-2xl">{card.title}</h3>
-              <p className="mt-1.5 text-sm text-neutral-400">{card.body}</p>
-              <div className="mt-auto pt-4">
+              <h3 className="mt-3 sm:mt-5 text-lg sm:text-2xl font-semibold tracking-tight">{card.title}</h3>
+              <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm text-neutral-400">{card.body}</p>
+              <div className="mt-auto pt-3 sm:pt-4">
                 <CardDetail id={card.id} />
               </div>
             </article>

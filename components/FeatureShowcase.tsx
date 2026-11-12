@@ -79,6 +79,7 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
   const pinRef = useRef<ScrollTrigger | null>(null);
   const journeyStartedRef = useRef<boolean>(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const pointerDownPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Load sequence: the title's words rise into place one by one, then the buttons appear.
   // Also builds the journey that scrolling plays once the showcase is reached.
@@ -87,10 +88,18 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
     const mm = gsap.matchMedia();
     const previousRestoration = history.scrollRestoration;
 
-    // The section is exactly one screen tall, so shrink its contents to fit shorter screens.
+    // The section is exactly one screen tall, so shrink its contents to fit shorter or narrower screens.
     const fitStage = () => {
       const stage = stageRef.current;
-      if (stage) gsap.set(stage, { scale: Math.min(1, stage.offsetHeight / STAGE_DESIGN_HEIGHT) });
+      if (stage) {
+        const stageH = stage.offsetHeight || STAGE_DESIGN_HEIGHT;
+        const heightScale = Math.min(1, Math.max(0.72, stageH / STAGE_DESIGN_HEIGHT));
+        const availW = Math.max(300, window.innerWidth - 32);
+        const targetW = window.innerWidth < 640 ? 440 : 760;
+        const widthScale = Math.min(1, Math.max(0.72, availW / targetW));
+        const scale = Math.min(heightScale, widthScale);
+        gsap.set(stage, { scale });
+      }
     };
     mm.add('(min-width: 1px)', () => {
       fitStage();
@@ -399,7 +408,7 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
 
   return (
     <>
-    <section ref={sectionRef} data-showcase={part} id={storyOnly ? undefined : 'features'} className="scroll-mt-[72px] relative w-full h-[calc(100svh-72px)] flex flex-col items-center justify-start overflow-hidden py-6 sm:py-8 md:pt-4 md:pb-2 px-4 sm:px-6 select-none">
+    <section ref={sectionRef} data-showcase={part} id={storyOnly ? undefined : 'features'} className="scroll-mt-[72px] relative w-full min-h-[580px] sm:min-h-[640px] h-[calc(100svh-72px)] flex flex-col items-center justify-start overflow-hidden pt-16 xs:pt-20 sm:pt-6 md:pt-4 pb-4 sm:pb-8 px-4 sm:px-6 select-none" suppressHydrationWarning>
       {/* Dynamic Feature Header matching main title typography */}
       <div ref={headerRef} className="relative z-30 w-full">
       {/* In the split part it is invisible but still takes up its space, so the phone sits below
@@ -411,11 +420,11 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className={`relative z-30 flex flex-col items-center text-center max-w-2xl mx-auto mb-2 sm:mb-4 ${storyOnly ? 'invisible pointer-events-none' : 'pointer-events-auto'}`}
       >
-        <h2 className="text-3xl sm:text-5xl font-semibold text-white text-center tracking-tight leading-[1.2] drop-shadow-sm mt-1 transition-all duration-300">
+        <h2 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-semibold text-white text-center tracking-tight leading-[1.2] drop-shadow-sm mt-1 transition-all duration-300">
           {selectedFeature.name}
         </h2>
 
-        <p className="text-sm sm:text-base text-neutral-400 text-center tracking-tight max-w-lg mt-2 transition-all duration-300">
+        <p className="text-xs xs:text-sm sm:text-base text-neutral-400 text-center tracking-tight max-w-lg mt-1.5 sm:mt-2 transition-all duration-300 px-2">
           {selectedFeature.tagline}
         </p>
       </motion.div>
@@ -450,11 +459,22 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
         {/* Central Floating Smartphone (z-index 20) */}
         <div
           ref={phoneRef}
-          className="relative z-[20] w-[320px] sm:w-[380px] md:w-[420px] lg:w-[460px] h-[520px] sm:h-[600px] lg:h-[650px] flex items-center justify-center pointer-events-auto"
+          className="relative z-[20] w-[260px] xs:w-[300px] sm:w-[360px] md:w-[420px] lg:w-[460px] h-[430px] xs:h-[490px] sm:h-[580px] lg:h-[650px] flex items-center justify-center pointer-events-auto"
           style={{ zIndex: 20 }}
           title={storyOnly ? undefined : 'Click to advance to next feature'}
-          onClick={() => {
+          onPointerDown={(e) => {
+            pointerDownPosRef.current = { x: e.clientX, y: e.clientY };
+          }}
+          onClick={(e) => {
             if (storyOnly) return;
+            // Prevent accidental feature changes when scrolling over the phone on touch devices
+            if (pointerDownPosRef.current) {
+              const dx = Math.abs(e.clientX - pointerDownPosRef.current.x);
+              const dy = Math.abs(e.clientY - pointerDownPosRef.current.y);
+              if (dx > 8 || dy > 8) {
+                return;
+              }
+            }
             setSelectedFeatureId((current) => {
               const currentIndex = BROKENOMORE_FEATURES.findIndex((f) => f.id === current);
               const nextIndex =

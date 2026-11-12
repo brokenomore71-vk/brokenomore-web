@@ -6,32 +6,22 @@ import { FeatureScreenDef } from './featureScreens';
 interface FeatureCardProps {
   feature: FeatureScreenDef;
   isActive: boolean;
-  scale: number;
-  opacity: number;
-  zIndex: number;
-  isFront: boolean;
 }
 
-export default function FeatureCard({ feature, isActive, scale, opacity, zIndex, isFront }: FeatureCardProps) {
+export default function FeatureCard({ feature, isActive }: FeatureCardProps) {
   return (
     <div
-      style={{
-        transform: `scale(${scale})`,
-        opacity: Math.max(0.25, opacity),
-        zIndex: zIndex,
-        filter: isFront ? 'none' : 'blur(0.8px)',
-      }}
-      className={`relative flex flex-col items-start gap-3 p-4 sm:p-5 rounded-2xl select-none transition-all duration-300 w-[230px] sm:w-[260px] ${
+      className={`relative flex flex-col items-start gap-2 sm:gap-3 p-3 xs:p-3.5 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl select-none transition-colors duration-300 w-[165px] xs:w-[195px] sm:w-[230px] md:w-[260px] ${
         isActive
-          ? 'bg-neutral-900/95 border border-white/30 shadow-[0_12px_35px_rgba(0,0,0,0.7)]'
-          : 'bg-[#121218]/85 border border-white/10'
+          ? 'bg-neutral-900/95 border border-white/35 shadow-[0_12px_35px_rgba(0,0,0,0.8)] ring-1 ring-white/20'
+          : 'bg-[#121218]/90 border border-white/10 hover:border-white/20'
       } backdrop-blur-xl`}
     >
       <div className="w-full">
-        <h4 className="text-[15px] sm:text-[17px] font-semibold text-white tracking-tight transition-colors">
+        <h4 className="text-[13px] xs:text-[14px] sm:text-[15px] md:text-[17px] font-semibold text-white tracking-tight transition-colors">
           {feature.name}
         </h4>
-        <p className="text-xs sm:text-[13px] text-neutral-400 font-normal leading-snug tracking-tight mt-1 line-clamp-2">
+        <p className="text-[10px] xs:text-[11px] sm:text-xs md:text-[13px] text-neutral-400 font-normal leading-snug tracking-tight mt-0.5 sm:mt-1 line-clamp-2">
           {feature.tagline}
         </p>
       </div>

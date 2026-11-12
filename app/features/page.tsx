@@ -14,14 +14,14 @@ export default function FeaturesPage() {
   return (
     <main className="relative min-h-screen w-full bg-black overflow-x-hidden">
       <Navbar />
-      <div className="relative z-10 flex flex-col items-center pt-[72px] pb-24 px-4 sm:px-6 select-none">
+      <div className="relative z-10 flex flex-col items-center pt-20 sm:pt-[72px] pb-16 sm:pb-24 px-4 sm:px-6 select-none">
         {/* A plain block around the section: pinning inside a flex box would drop its scroll space */}
         <div className="w-full" suppressHydrationWarning>
           <FeatureShowcase part="split" />
         </div>
 
         {/* Bills & Subscriptions, below the split story */}
-        <div className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] mt-24" suppressHydrationWarning>
+        <div className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] mt-16 sm:mt-24" suppressHydrationWarning>
           <BillsSection />
         </div>
       </div>

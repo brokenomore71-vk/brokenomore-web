@@ -529,7 +529,7 @@ export default function SafeGoldSection() {
         }}
       >
         {/* The portfolio sits behind the 3D scene, so the coin can rise out of it */}
-        <div className="absolute z-0 bottom-4 left-1/2 -translate-x-1/2 w-[min(340px,calc(100%-32px))] lg:bottom-auto lg:left-[5%] lg:translate-x-0 lg:top-1/2 lg:-translate-y-1/2 lg:w-[320px]">
+        <div className="absolute z-0 bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 w-[min(340px,calc(100%-24px))] sm:w-[min(340px,calc(100%-32px))] lg:bottom-auto lg:left-[5%] lg:translate-x-0 lg:top-1/2 lg:-translate-y-1/2 lg:w-[320px]">
           <div data-g="portfolio" style={HIDDEN} className={`${CARD} pointer-events-auto`}>
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -580,14 +580,14 @@ export default function SafeGoldSection() {
           <div data-g="captions" className="relative mt-2">
             {SCENES.map((scene, i) => (
               <div key={scene.title} data-g="caption" className="absolute inset-x-0 top-0 text-left">
-                <h2 className="text-[26px] sm:text-4xl font-semibold text-[#F5F5F5] tracking-tight leading-[1.15]">{scene.title}</h2>
-                <p className="max-w-xl text-sm sm:text-base text-[#A3A3A3] tracking-tight mt-2">{scene.body}</p>
+                <h2 className="text-[20px] xs:text-[24px] sm:text-3xl lg:text-4xl font-semibold text-[#F5F5F5] tracking-tight leading-[1.15]">{scene.title}</h2>
+                <p className="max-w-xl text-xs xs:text-sm sm:text-base text-[#A3A3A3] tracking-tight mt-1.5 sm:mt-2">{scene.body}</p>
                 {i === SCENES.length - 1 && (
                   <a
                     data-g="cta"
                     href="#safegold"
                     style={HIDDEN}
-                    className={`pointer-events-auto mt-5 inline-flex items-center gap-2 rounded-full ${METAL} bg-[length:220%_100%] bg-[position:0%_0] px-6 py-2.5 text-sm font-semibold text-[#120d02] shadow-[0_8px_24px_rgba(212,175,55,0.18)] transition-[background-position,transform,box-shadow] duration-700 ease-out hover:bg-[position:100%_0] hover:shadow-[0_10px_30px_rgba(212,175,55,0.3)] active:scale-[0.97]`}
+                    className={`pointer-events-auto mt-4 sm:mt-5 inline-flex items-center gap-2 rounded-full ${METAL} bg-[length:220%_100%] bg-[position:0%_0] px-5 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-[#120d02] shadow-[0_8px_24px_rgba(212,175,55,0.18)] transition-[background-position,transform,box-shadow] duration-700 ease-out hover:bg-[position:100%_0] hover:shadow-[0_10px_30px_rgba(212,175,55,0.3)] active:scale-[0.97]`}
                   >
                     Explore SafeGold
                     <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden="true">
@@ -601,7 +601,7 @@ export default function SafeGoldSection() {
         </div>
 
         {/* Cards to the left of the piggy bank on desktop, below it on phones */}
-        <div data-g="cards" className="absolute z-20 bottom-4 left-1/2 -translate-x-1/2 w-[min(340px,calc(100%-32px))] lg:bottom-auto lg:left-[5%] lg:translate-x-0 lg:top-1/2 lg:-translate-y-1/2 lg:w-[320px] pointer-events-none">
+        <div data-g="cards" className="absolute z-20 bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 w-[min(340px,calc(100%-24px))] sm:w-[min(340px,calc(100%-32px))] lg:bottom-auto lg:left-[5%] lg:translate-x-0 lg:top-1/2 lg:-translate-y-1/2 lg:w-[320px] pointer-events-none">
           <div className="relative">
             <div data-g="txn" style={HIDDEN} className={`${CARD} absolute inset-x-0 bottom-0 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2`}>
               <div className="flex items-center gap-3">

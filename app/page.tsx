@@ -62,30 +62,30 @@ export default function Home() {
       </div>
 
       {/* Hero & Interactive 3D Showcase Content Layer */}
-      <div className="relative z-10 flex flex-col items-center justify-start min-h-screen pt-24 sm:pt-28 md:pt-32 pb-20 px-4 sm:px-6 pointer-events-none select-none">
+      <div className="relative z-10 flex flex-col items-center justify-start min-h-screen pt-20 sm:pt-24 md:pt-28 pb-16 sm:pb-20 px-4 sm:px-6 pointer-events-none select-none">
         {/* First screen: title and buttons centred on screen (bottom padding mirrors the layer's top padding) */}
-        <div data-hero-panel className="w-full flex flex-col items-center justify-center min-h-[calc(100svh-6rem)] pb-24 sm:min-h-[calc(100svh-7rem)] sm:pb-28 md:min-h-[calc(100svh-8rem)] md:pb-32">
+        <div data-hero-panel className="w-full flex flex-col items-center justify-center min-h-[calc(100svh-5rem)] pb-16 xs:pb-20 sm:min-h-[calc(100svh-6rem)] sm:pb-24 md:min-h-[calc(100svh-7rem)] md:pb-28">
         {/* Title */}
-        <h1 data-hero-title className="hero-intro-pending text-3xl sm:text-5xl md:text-6xl font-semibold text-white text-center tracking-tight leading-[1.2] max-w-5xl drop-shadow-sm">
+        <h1 data-hero-title className="hero-intro-pending text-[26px] xs:text-3xl sm:text-5xl md:text-6xl font-semibold text-white text-center tracking-tight leading-[1.2] max-w-5xl drop-shadow-sm">
           <span className="block sm:whitespace-nowrap"><span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Managing</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Your</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Money</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Has</span></span></span>
           <span className="block sm:whitespace-nowrap"><span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Never</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Been</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Easier.</span></span></span>
         </h1>
 
         {/* Subtext */}
-        <p data-hero-sub className="hero-intro-pending mt-5 max-w-3xl text-center text-balance text-lg sm:text-xl text-neutral-300 tracking-wide">
+        <p data-hero-sub className="hero-intro-pending mt-4 sm:mt-5 max-w-3xl text-center text-balance text-sm xs:text-base sm:text-lg md:text-xl text-neutral-300 tracking-wide px-2">
           Your all-in-one financial tracking app. Save, split, invest and plan, all in one place.
         </p>
 
         {/* Action Buttons */}
-        <div data-hero-actions className="hero-intro-pending flex flex-wrap items-center justify-center gap-4 mt-7 pointer-events-auto">
+        <div data-hero-actions className="hero-intro-pending flex flex-wrap items-center justify-center gap-3 sm:gap-4 mt-6 sm:mt-7 pointer-events-auto w-full max-w-xs xs:max-w-none">
           {/* Download Android Button */}
           <button
             data-hero-btn-android
             type="button"
-            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border border-white text-white text-sm font-medium hover:bg-white/10 active:scale-95 transition-colors duration-200 cursor-pointer backdrop-blur-[2px]"
+            className="flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 rounded-full border border-white text-white text-xs sm:text-sm font-medium hover:bg-white/10 active:scale-95 transition-colors duration-200 cursor-pointer backdrop-blur-[2px] w-full xs:w-auto"
           >
             <svg
-              className="w-4 h-4 fill-current"
+              className="w-4 h-4 fill-current shrink-0"
               viewBox="0 0 24 24"
               xmlns="http://www.w3.org/2000/svg"
               aria-hidden="true"
@@ -99,10 +99,10 @@ export default function Home() {
           <button
             data-hero-btn-ios
             type="button"
-            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-white text-black text-sm font-medium hover:bg-neutral-200 active:scale-95 transition-colors duration-200 shadow-md cursor-pointer"
+            className="flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 rounded-full bg-white text-black text-xs sm:text-sm font-medium hover:bg-neutral-200 active:scale-95 transition-colors duration-200 shadow-md cursor-pointer w-full xs:w-auto"
           >
             <svg
-              className="w-4 h-4 fill-current"
+              className="w-4 h-4 fill-current shrink-0"
               viewBox="0 0 24 24"
               xmlns="http://www.w3.org/2000/svg"
               aria-hidden="true"

@@ -332,6 +332,9 @@ export default function Phone3D({
     let dragRotation = { x: 0, y: 0 };
 
     const onPointerMove = (e: PointerEvent) => {
+      // Touch events should not hijack page scrolling on mobile
+      if (e.pointerType === 'touch') return;
+
       const rect = container.getBoundingClientRect();
       const clientX = e.clientX - rect.left;
       const clientY = e.clientY - rect.top;
@@ -350,6 +353,7 @@ export default function Phone3D({
     };
 
     const onPointerDown = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
       isDragging = true;
       previousPointerPosition = { x: e.clientX, y: e.clientY };
     };

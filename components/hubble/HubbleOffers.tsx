@@ -97,9 +97,9 @@ export default function HubbleOffers() {
 
         const w = section.clientWidth;
         const narrow = w < 768;
-        const R = narrow ? Math.min(w * 0.38, 150) : Math.min(w * 0.3, 430);
+        const R = narrow ? (w < 400 ? Math.min(w * 0.34, 130) : Math.min(w * 0.38, 150)) : Math.min(w * 0.3, 430);
         const tilt = narrow ? 0.62 : 0.2; // how far the front of the ring dips below the logo
-        const cardScale = narrow ? 0.52 : 1;
+        const cardScale = narrow ? (w < 400 ? 0.44 : 0.52) : 1;
         const depth = 2000;
         const spread = backOut(seg(progress, 0, 0.45));
         // Towards the end the ring opens out a little and tips further, for the finish
@@ -175,9 +175,9 @@ export default function HubbleOffers() {
 
         {/* Hubble's logo, in the middle */}
         <div data-h="logo" className="absolute left-1/2 top-[44%] z-50 -translate-x-1/2 -translate-y-1/2">
-          <div className="relative flex items-center gap-3 overflow-hidden px-4 py-2 sm:gap-5">
+          <div className="relative flex items-center gap-2 xs:gap-3 overflow-hidden px-3 xs:px-4 py-2 sm:gap-5">
             <HubbleMark />
-            <span className="flex text-[56px] font-bold leading-none tracking-[-0.03em] sm:text-[104px]" aria-label="hubble">
+            <span className="flex text-[40px] xs:text-[52px] sm:text-[80px] md:text-[104px] font-bold leading-none tracking-[-0.03em]" aria-label="hubble">
               {'hubble'.split('').map((letter, i) => (
                 <span key={i} className="inline-block overflow-hidden pb-[0.12em]">
                   <span data-h="letter" className="inline-block" aria-hidden="true">
@@ -195,14 +195,14 @@ export default function HubbleOffers() {
         </div>
 
         {/* The offer, above */}
-        <div data-h="text" className="absolute inset-x-0 top-6 z-[70] px-4 text-center sm:top-8" style={{ visibility: 'hidden' }}>
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-4xl">
+        <div data-h="text" className="absolute inset-x-0 top-5 sm:top-8 z-[70] px-3 xs:px-4 text-center" style={{ visibility: 'hidden' }}>
+          <h2 className="text-xl xs:text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">
             Instant discounts on <span className="text-white">400+ brands</span>{' '}
             <span className="text-neutral-400">with gift cards</span>
           </h2>
-          <ul className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-neutral-400 sm:text-sm">
+          <ul className="mt-3 sm:mt-4 flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-5 gap-y-1.5 sm:gap-y-2 text-[11px] xs:text-xs text-neutral-400 sm:text-sm">
             {BADGES.map((badge, i) => (
-              <li key={badge} className="flex items-center gap-2">
+              <li key={badge} className="flex items-center gap-1.5 sm:gap-2">
                 {i > 0 && <span className="h-1 w-1 rounded-full bg-neutral-600" aria-hidden="true" />}
                 {badge}
               </li>
@@ -231,7 +231,7 @@ export default function HubbleOffers() {
 // Hubble's mark: a slanted stroke and a dot, drawn so it can animate
 function HubbleMark({ static: still = false }: { static?: boolean }) {
   return (
-    <svg viewBox="0 0 60 60" className="h-12 w-12 shrink-0 sm:h-[88px] sm:w-[88px]" aria-hidden="true">
+    <svg viewBox="0 0 60 60" className="h-8 w-8 xs:h-11 xs:w-11 sm:h-[72px] sm:w-[72px] md:h-[88px] md:w-[88px] shrink-0" aria-hidden="true">
       <path
         data-h={still ? undefined : 'mark-stroke'}
         d="M12 46 L30 12"
