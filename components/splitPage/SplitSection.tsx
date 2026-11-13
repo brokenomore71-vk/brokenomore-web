@@ -3,21 +3,22 @@
 import React, { useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { IBM_Plex_Mono } from 'next/font/google';
-import { Gradient } from '../IntroHero';
 import { glideBetweenLabels, pinned, usePointerVars } from '../scrollSteps';
 import { useTypeOnShow } from '../useTypeOnShow';
-import { typeText, type Typing } from '../typewriter';
 import { BILL, CAPTIONS, EQUAL, EQUAL_MEMBERS, ITEM_OWNERS, PEOPLE, TO_COLLECT, inr, itemWithTax } from '../splitStory/splitData';
 import { Avatar, PERSON_COLORS, PaperBill, SplitScreens } from './screens';
+import CinemaHero from './CinemaHero';
+// The tap-the-terminal hero, switched off for now:
+// import TapHero from './TapHero';
 import { BalanceBanner, GroupsCard, RecentCard, SettleScreens, SettleTable, SPOT, WALL_CARD } from './settle';
 import { GROUP, NET, NET_DEBTS, SETTLE_CAPTIONS, rupees } from './groupData';
 
 const plexMono = IBM_Plex_Mono({ weight: ['400', '500', '600'], subsets: ['latin', 'latin-ext'] });
 
 // Split & Share, told its own way:
-//   the hero: the Saffron Table bill prints out, tears along three seams into four strips, and
-//     each strip drifts off to the friend who owes that part, their share under it. Then the
-//     headline types itself in above.
+//   the hero (TapHero): everyone at the table reaches in and taps their own share onto a 3D card
+//     terminal, then the headline types itself in above. (The torn-bill hero lives on in
+//     SplitSectionTear, switched off.)
 //   the journey (pinned, scrolled sideways): four rooms, one per part of the feature, panned
 //     through left to right. Each has a checklist on the left (each step ticks off, the current one
 //     types out what happens), the app's screen in the middle (turning over like a page to the
@@ -31,182 +32,15 @@ const plexMono = IBM_Plex_Mono({ weight: ['400', '500', '600'], subsets: ['latin
 export default function SplitSection() {
   return (
     <div id="split-share" className="relative w-full bg-black text-[#F5F5F5]">
-      <TearHero />
+      <CinemaHero />
+      {/* A breath of dark between the opening shot and the steps */}
+      <div aria-hidden="true" className="h-[14vh] min-h-[90px] sm:h-[20vh]" />
       <SplitJourney />
     </div>
   );
 }
 
 const EYEBROW = 'text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-500';
-
-// ---------------------------------------------------------------------------------------------
-// The hero: a bill, torn four ways
-
-const STRIPS = PEOPLE.length;
-// Where the bill tears: three ragged seams across it, shared by the strips on either side
-const SEAMS: number[][] = (() => {
-  const rows = 16;
-  return Array.from({ length: STRIPS + 1 }, (_, k) =>
-    Array.from({ length: rows + 1 }, (_, r) => (k === 0 ? 0 : k === STRIPS ? 100 : (k * 100) / STRIPS + (r % 2 ? 1.4 : -1.4) * (r === 0 || r === rows ? 0 : 1)))
-  );
-})();
-const stripClip = (i: number) => {
-  const rows = SEAMS[0].length - 1;
-  const left = SEAMS[i].map((x, r) => `${x}% ${(r / rows) * 100}%`);
-  const right = SEAMS[i + 1].map((x, r) => `${x}% ${(r / rows) * 100}%`).reverse();
-  return `polygon(${[...left, ...right].join(', ')})`;
-};
-
-function TearHero() {
-  const sectionRef = useRef<HTMLElement | null>(null);
-
-  useLayoutEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
-    const q = (k: string) => Array.from(section.querySelectorAll<HTMLElement>(`[data-h="${k}"]`));
-    const [bill] = q('bill');
-    const [paper] = q('paper');
-    const strips = q('strip');
-    const seams = Array.from(section.querySelectorAll<SVGPathElement>('[data-h="seam"]'));
-    const friends = q('friend');
-    const [text] = q('text');
-    const pills = q('pill');
-    const gap = () => Math.min(150, (window.innerWidth - 40) / STRIPS - 64);
-    // The friends' cards sit in a row across the screen, however narrow (the bill is scaled down on phones)
-    const shrink = () => bill.getBoundingClientRect().width / (bill.offsetWidth || 1) || 1;
-    const friendX = (i: number) => (i - (STRIPS - 1) / 2) * Math.min(150, (window.innerWidth - 16) / STRIPS / shrink());
-    const spread = (i: number) => ({
-      x: (i - (STRIPS - 1) / 2) * gap(),
-      y: 14 + Math.abs(i - (STRIPS - 1) / 2) * 16,
-      rotation: (i - (STRIPS - 1) / 2) * 5,
-      rotationY: (i - (STRIPS - 1) / 2) * -12,
-    });
-
-    const ctx = gsap.context(() => {
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        strips.forEach((s, i) => gsap.set(s, spread(i)));
-        gsap.set(friends, { autoAlpha: 1, x: friendX });
-        gsap.set([text, ...pills], { autoAlpha: 1 });
-        return;
-      }
-      gsap.set(text, { autoAlpha: 0 });
-      gsap.set(pills, { autoAlpha: 0, y: 8 });
-      gsap.set(friends, { autoAlpha: 0, y: 24, scale: 0.7, x: friendX });
-      gsap.set(paper, { clipPath: 'inset(0% 0% 100% 0%)' });
-      gsap.set(bill, { y: -30 });
-
-      const typings: Typing[] = [];
-      const tl = gsap.timeline({ delay: 0.3 });
-      // It prints, top first
-      tl.to(paper, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.1, ease: 'power2.out' }, 0);
-      tl.to(bill, { y: 0, duration: 1.1, ease: 'power2.out' }, 0);
-      // Once it's out, nothing clips it, so the strips can drift apart freely
-      tl.set(paper, { clipPath: 'none' }, 1.15);
-      // The seams show where it'll split, and it shivers
-      tl.to(seams, { strokeDashoffset: 0, duration: 0.5, stagger: 0.08, ease: 'power1.inOut' }, 1.2);
-      tl.to(bill, { x: 3, duration: 0.05, repeat: 5, yoyo: true }, 1.65);
-      // It tears: four strips, drifting apart
-      tl.to(seams, { opacity: 0, duration: 0.15 }, 1.95);
-      strips.forEach((s, i) => tl.to(s, { ...spread(i), duration: 1, ease: 'back.out(1.4)' }, 1.95 + Math.abs(i - (STRIPS - 1) / 2) * 0.05));
-      // Each strip's friend, and what they owe
-      tl.to(friends, { autoAlpha: 1, y: 0, scale: 1, duration: 0.45, ease: 'back.out(2)', stagger: 0.09 }, 2.45);
-      // Then the words
-      tl.add(() => {
-        gsap.set(text, { autoAlpha: 1 });
-        const steps: [string, number][] = [
-          ['eyebrow', 22],
-          ['title', 46],
-          ['body', 13],
-        ];
-        let delay = 0;
-        steps.forEach(([k, ms]) => {
-          const el = q(k)[0];
-          typings.push(typeText(el, { msPerChar: ms, delay, keepCaret: k === 'body' }));
-          delay += (el.textContent?.length ?? 0) * ms + 180;
-        });
-        typings[typings.length - 1].done.then(() => gsap.to(pills, { autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.08 }));
-      }, 2.7);
-      // And the strips keep drifting a little
-      strips.forEach((s, i) => gsap.to(s, { y: `+=${8 + i * 2}`, duration: 2.4 + i * 0.3, ease: 'sine.inOut', yoyo: true, repeat: -1, delay: 3.2 }));
-      return () => typings.forEach((t) => t.cancel());
-    }, section);
-    return () => ctx.revert();
-  }, []);
-
-  return (
-    <section ref={sectionRef} aria-label="Split and Share" className="relative flex min-h-[calc(100svh-72px)] flex-col items-center overflow-hidden px-4 pt-10 sm:pt-14">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_45%_40%_at_50%_68%,rgba(232,106,180,0.16),transparent_70%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_30%_at_50%_95%,rgba(110,91,255,0.14),transparent_70%)]" />
-
-      {/* The words, typed in once the bill has torn */}
-      <div data-h="text" className="relative z-10 mx-auto max-w-3xl text-center" style={{ visibility: 'hidden' }}>
-        <p data-h="eyebrow" className={EYEBROW}>
-          Split &amp; Share
-        </p>
-        <h1 data-h="title" className="mt-3 text-[38px] font-semibold leading-[1.04] tracking-tight sm:text-6xl lg:text-[68px]">
-          Split any bill. <Gradient>Settle</Gradient> it in seconds.
-        </h1>
-        <p data-h="body" className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-neutral-400 sm:text-lg">
-          Split equally or go Dutch. Snap the bill, tag who had what, and everyone knows their share, right down to the paisa.
-        </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          {[
-            ['Equal', 'or Dutch'],
-            ['OCR', 'reads the bill'],
-            ['UPI', 'settles it'],
-          ].map(([a, b]) => (
-            <span key={a} data-h="pill" className="flex items-baseline gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-[13px]">
-              <b className="font-semibold text-white">{a}</b>
-              <span className="text-neutral-400">{b}</span>
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* The bill, and the four friends it's torn between */}
-      <div className="relative mt-6 flex w-full flex-1 flex-col items-center justify-start [perspective:1400px] sm:mt-10">
-        <div data-h="bill" className="relative origin-top scale-[0.7] [transform-style:preserve-3d] sm:scale-[0.82]" style={{ transform: 'rotateX(10deg)' }}>
-          <div data-h="paper" className="relative [transform-style:preserve-3d]">
-            {Array.from({ length: STRIPS }, (_, i) => (
-              <div key={i} data-h="strip" className={`${i ? 'absolute inset-0' : 'relative'} drop-shadow-[0_30px_30px_rgba(0,0,0,0.6)]`} style={{ clipPath: stripClip(i), transformOrigin: '50% 0%' }}>
-                <PaperBill mono={plexMono.style.fontFamily} rows={`hero${i}`} scale={1.12} />
-              </div>
-            ))}
-            <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-              {SEAMS.slice(1, -1).map((seam, k) => (
-                <path
-                  key={k}
-                  data-h="seam"
-                  d={seam.map((x, r) => `${r ? 'L' : 'M'}${x} ${(r / (seam.length - 1)) * 100}`).join(' ')}
-                  fill="none"
-                  stroke="#E86AB4"
-                  strokeWidth="0.6"
-                  strokeDasharray="1"
-                  strokeDashoffset="1"
-                  pathLength={1}
-                  vectorEffect="non-scaling-stroke"
-                  style={{ filter: 'drop-shadow(0 0 4px #E86AB4)' }}
-                />
-              ))}
-            </svg>
-          </div>
-          {/* Under each strip, whose share it is */}
-          <div className="absolute left-1/2 top-[calc(100%+64px)] h-0 w-0">
-            {PEOPLE.map((p) => (
-              <div key={p.id} data-h="friend" className="absolute left-0 top-0 flex w-[120px] -translate-x-1/2 flex-col items-center rounded-2xl border border-white/10 bg-[#141416]/90 px-2 py-2.5 text-center shadow-[0_20px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur">
-                <Avatar id={p.id} size={40} ring={PERSON_COLORS[p.id]} />
-                <span className="mt-1.5 text-[12px] font-medium">{p.name}</span>
-                <span className="text-[16px] font-bold tabular-nums" style={{ color: PERSON_COLORS[p.id] }}>
-                  {inr(p.dutch, 0)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 // ---------------------------------------------------------------------------------------------
 // The journey: four rooms, panned through sideways
@@ -373,8 +207,6 @@ function SplitJourney() {
       const rooms = x('room');
       const inners = x('inner');
       const tints = x('tint');
-      const rail = x('rail');
-      const railLabels = x('rail-label');
       const cardFits = x('card-fit');
       const visFits = x('vis-fit');
       const cards = p('card');
@@ -409,8 +241,6 @@ function SplitJourney() {
       gsap.set(dots[0], { borderColor: ring(0) });
       gsap.set(inners.slice(1), { rotationY: -16, scale: 0.9, autoAlpha: 0.35, transformPerspective: 1600 });
       gsap.set(tints.slice(1), { autoAlpha: 0 });
-      gsap.set(rail, { scaleX: 0, transformOrigin: 'left' });
-      gsap.set(railLabels.slice(1), { color: '#6f6f78' });
       coins.forEach((c, k) => gsap.set(c, { xPercent: -50, x: 0, y: -k * 8, autoAlpha: 0 }));
       gsap.set(v('pot-person').slice(1), { scale: 0, autoAlpha: 0 });
       gsap.set(v('slip'), { autoAlpha: 0 });
@@ -475,8 +305,6 @@ function SplitJourney() {
         tl.to(el, { borderColor: color, backgroundColor: 'rgba(110,91,255,0.12)', duration: 0.15 }, at);
       for (let c = 0; c <= STEPS; c++) tl.addLabel(`s${c}`, c);
 
-      // The rail fills as you go
-      tl.to(rail, { scaleX: 1, duration: STEPS - 0.05 }, 0);
 
       // Step by step: the checklist ticks on, and the screen turns over to the next, or the whole
       // journey pans on to the next room
@@ -505,8 +333,6 @@ function SplitJourney() {
           tl.to(inners[r], { rotationY: 0, scale: 1, autoAlpha: 1, duration: 0.6, ease: 'power2.inOut' }, at + 0.1);
           tl.to(tints[r - 1], { autoAlpha: 0, duration: 0.5 }, at);
           tl.to(tints[r], { autoAlpha: 1, duration: 0.5 }, at + 0.1);
-          tl.to(railLabels[r - 1], { color: '#a1a1aa', duration: 0.2 }, at);
-          tl.to(railLabels[r], { color: '#ffffff', duration: 0.2 }, at + 0.2);
         } else if (cards[c]) {
           // Within a room: the screen turns over like a page
           tl.to(cards[c - 1], { rotationY: -95, autoAlpha: 0, duration: 0.25, ease: 'power2.in' }, at);
@@ -653,7 +479,27 @@ function SplitJourney() {
       tl.set({}, {}, STEPS);
 
       render();
-      return glideBetweenLabels(tl);
+      // Coming into view: the first room's columns rise up into place, one after another, before
+      // the section pins
+      const firstCols = rooms[0].querySelectorAll<HTMLElement>('[data-x="col"]');
+      const entrance = gsap.fromTo(
+        firstCols,
+        { y: 160, autoAlpha: 0, rotationX: 18, transformPerspective: 1200, transformOrigin: '50% 100%' },
+        {
+          y: 0,
+          autoAlpha: 1,
+          rotationX: 0,
+          ease: 'power2.out',
+          stagger: 0.18,
+          scrollTrigger: { trigger: section, start: 'top 95%', end: 'top 80px', scrub: 0.6 },
+        }
+      );
+      const unglide = glideBetweenLabels(tl);
+      return () => {
+        unglide();
+        entrance.scrollTrigger?.kill();
+        entrance.kill();
+      };
     });
     return () => mm.revert();
   }, []);
@@ -667,6 +513,8 @@ function SplitJourney() {
 
   return (
     <section ref={sectionRef} aria-label="How Split & Share works" className="relative h-[calc(100svh-72px)] w-full overflow-hidden select-none motion-reduce:h-auto">
+      {/* It picks up where the opening shot fades out: the room's light rises out of the dark */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[22%] bg-gradient-to-b from-black to-transparent" />
       {/* Each room's light */}
       {ROOMS.map((r) => (
         <div key={r.key} data-x="tint" className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse 55% 55% at 62% 50%, ${r.tint}, transparent 70%)` }} />
@@ -677,9 +525,9 @@ function SplitJourney() {
           const first = ROOM_AT[ri];
           return (
             <div key={room.key} data-x="room" className="relative h-full w-full shrink-0 motion-reduce:h-auto motion-reduce:py-16">
-              <div data-x="inner" className="mx-auto grid h-full max-w-7xl grid-rows-[auto_1fr] gap-4 px-4 pb-16 pt-6 sm:px-8 md:grid-cols-[minmax(260px,0.85fr)_minmax(0,1fr)_minmax(0,1.1fr)] md:grid-rows-1 md:items-center md:gap-8 md:pb-14 md:pt-4">
+              <div data-x="inner" className="mx-auto grid h-full max-w-7xl grid-rows-[auto_1fr] gap-4 px-4 pb-6 pt-6 sm:px-8 md:grid-cols-[minmax(260px,0.85fr)_minmax(0,1fr)_minmax(0,1.1fr)] md:grid-rows-1 md:items-center md:gap-8 md:pb-4 md:pt-4">
                 {/* The checklist */}
-                <div className="relative z-10">
+                <div data-x="col" className="relative z-10">
                   <div className="flex items-end gap-3">
                     <span className="text-[56px] font-bold leading-none text-transparent sm:text-[88px]" style={{ WebkitTextStroke: '1.5px rgba(255,255,255,0.28)' }}>
                       {room.num}
@@ -716,7 +564,7 @@ function SplitJourney() {
                 ) : (
                   <>
                     {/* The app's screen, turning over to the next */}
-                    <div className="relative min-h-0 md:h-full [perspective:1600px]">
+                    <div data-x="col" className="relative min-h-0 md:h-full [perspective:1600px]">
                       <div className="absolute inset-0" style={{ transform: 'rotateX(calc(var(--py, 0) * -3deg)) rotateY(calc(var(--px, 0) * 5deg))', transformStyle: 'preserve-3d' }}>
                         <div data-x="card-fit" className="absolute left-1/2 top-1/2 [transform-style:preserve-3d]" style={{ width: DECK_W, height: DECK_H }}>
                           {screens.slice(first, first + room.captions.length).map((screen, k) => (
@@ -728,7 +576,7 @@ function SplitJourney() {
                       </div>
                     </div>
                     {/* What it means */}
-                    <div className="relative hidden min-h-0 md:block md:h-full [perspective:1600px]">
+                    <div data-x="col" className="relative hidden min-h-0 md:block md:h-full [perspective:1600px]">
                       <div className="absolute inset-0" style={{ transform: 'rotateX(calc(var(--py, 0) * -3deg)) rotateY(calc(var(--px, 0) * 6deg))', transformStyle: 'preserve-3d' }}>
                         <div data-x="vis-fit" data-w={visuals[ri].w} data-h={visuals[ri].h} className="absolute left-1/2 top-1/2" style={{ width: visuals[ri].w, height: visuals[ri].h }}>
                           {visuals[ri].el}
@@ -743,22 +591,6 @@ function SplitJourney() {
         })}
       </div>
 
-      {/* The journey's rail */}
-      <div className="absolute inset-x-0 bottom-4 z-20 mx-auto w-[min(720px,calc(100%-2rem))] motion-reduce:hidden">
-        <div className="grid grid-cols-4 text-center text-[11px] font-semibold uppercase tracking-[0.14em] sm:text-[12px]">
-          {ROOMS.map((r) => (
-            <span key={r.key} data-x="rail-label" className="text-white">
-              <span className="sm:hidden">{r.num}</span>
-              <span className="hidden sm:inline">
-                {r.num} · {r.name}
-              </span>
-            </span>
-          ))}
-        </div>
-        <div className="mt-2 h-[3px] overflow-hidden rounded-full bg-white/10">
-          <div data-x="rail" className="h-full w-full rounded-full bg-[linear-gradient(90deg,#6E5BFF,#E86AB4,#34d399,#6E5BFF)]" />
-        </div>
-      </div>
       <span className="sr-only">
         {inr(TO_COLLECT, 0)} to collect from {PEOPLE.length - 1} friends.
       </span>

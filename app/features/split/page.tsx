@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import FeaturePageShell from '@/components/FeaturePageShell';
 import SplitSection from '@/components/splitPage/SplitSection';
+// The torn-bill version, switched off for now:
+// import SplitSectionTear from '@/components/splitPage/SplitSectionTear';
 
 export const metadata: Metadata = {
   title: 'Split & Share · BrokeNoMore',
@@ -12,6 +14,7 @@ export default function SplitFeaturePage() {
   return (
     <FeaturePageShell slug="split">
       <SplitSection />
+      {/* <SplitSectionTear /> */}
     </FeaturePageShell>
   );
 }
