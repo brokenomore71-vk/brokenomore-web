@@ -8,6 +8,7 @@ import { glideBetweenLabels, pinned } from '../scrollSteps';
 import { useTypeOnShow } from '../useTypeOnShow';
 import { Mark, STATUS_COLOR, SUBS, TOTAL, rupees } from './BillsCity';
 
+// THE SOLAR-SYSTEM VERSION, kept for later (switched off in app/features/bills/page.tsx).
 // Bills & Subscriptions, as a solar system. The month is a circle: your money is the sun in the
 // middle, every subscription a planet in orbit round it (as big as its bill, in its brand's
 // colours, a ring round it for its status), and a beam out of the sun marks today. As time moves,

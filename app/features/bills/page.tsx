@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
 import FeaturePageShell from '@/components/FeaturePageShell';
-import BillsOrbit from '@/components/billsPage/BillsOrbit';
-// The tablet-calendar version, switched off for now:
+import BillsFlip from '@/components/billsPage/BillsFlip';
+// The night-desk scene and the flat bill calendar, switched off for now:
+// import BillsNightHero from '@/components/billsPage/BillsNightHero';
 // import BillsBoard from '@/components/billsPage/BillsBoard';
+// The solar-system version, switched off for now:
+// import BillsOrbit from '@/components/billsPage/BillsOrbit';
 // The time-tunnel version, switched off for now:
 // import BillsTunnel from '@/components/billsPage/BillsTunnel';
 // The city-of-bills version, switched off for now:
@@ -17,12 +20,15 @@ export const metadata: Metadata = {
   description: "Every bill and subscription on one calendar: what's paid, what's overdue and what's coming up.",
 };
 
-// Bills & Subscriptions: every bill a planet in orbit, due as it crosses today's beam
+// Bills & Subscriptions: a tear-off calendar, one page a day, stopping on every day a bill is due
 export default function BillsFeaturePage() {
   return (
     <FeaturePageShell slug="bills">
-      <BillsOrbit />
-      {/* <BillsBoard /> */}
+      <BillsFlip />
+      {/* <BillsNightHero /> */}
+      {/* <BillsBoard flat /> */}
+      {/* <BillsOrbit /> */}
+      {/* <BillsBoard /> (the tablet version) */}
       {/* <BillsTunnel /> */}
       {/* <BillsCity /> */}
       {/* <BillsMail /> */}

@@ -8,7 +8,7 @@ import { typeText, type Typing } from '../typewriter';
 import { BILL, PEOPLE, inr } from '../splitStory/splitData';
 import { Avatar, PERSON_COLORS, PaperBill } from './screens';
 
-const plexMono = IBM_Plex_Mono({ weight: ['400', '500', '600'], subsets: ['latin', 'latin-ext'] });
+export const plexMono = IBM_Plex_Mono({ weight: ['400', '500', '600'], subsets: ['latin', 'latin-ext'] });
 
 // The Split & Share hero, shot like a film's opening. A dark wooden table under a warm lamp, the
 // bill, a coffee and some change on it, and a phone lying face up with the bill split four ways.
@@ -24,8 +24,8 @@ const TABLE_H = 1300;
 const PHONE_X = 1000;
 const PHONE_Y = 560;
 
-type Skin = { base: string; light: string; dark: string; nail: string };
-const SKINS: Record<string, Skin> = {
+export type Skin = { base: string; light: string; dark: string; nail: string };
+export const SKINS: Record<string, Skin> = {
   light: { base: '#e3b28f', light: '#f6d3b8', dark: '#b9805e', nail: '#f3d9cc' },
   medium: { base: '#c08156', light: '#dca27a', dark: '#8e5634', nail: '#e6c0aa' },
   brown: { base: '#8c5a3c', light: '#ad7754', dark: '#5f3a24', nail: '#c99c86' },
@@ -45,7 +45,7 @@ const share = (id: string) => PEOPLE.find((p) => p.id === id)!.dutch;
 // ---------------------------------------------------------------------------------------------
 // The props
 
-function Contactless({ className = '' }: { className?: string }) {
+export function Contactless({ className = '' }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
       <path d="M8.5 8.5a5 5 0 0 1 0 7M12 6a8.5 8.5 0 0 1 0 12M15.5 3.5a12 12 0 0 1 0 17" />
@@ -54,7 +54,7 @@ function Contactless({ className = '' }: { className?: string }) {
 }
 
 // A bank card: glossy, with a metal chip and a sheen across it
-function Card({ color }: { color: string }) {
+export function Card({ color }: { color: string }) {
   return (
     <div
       className="relative h-[108px] w-[172px] overflow-hidden rounded-[11px]"
@@ -88,7 +88,7 @@ function Card({ color }: { color: string }) {
 }
 
 // A phone's body: a titanium frame, black glass, the screen inset, and the lamp's glare across it
-function PhoneBody({ w, h, radius, children }: { w: number; h: number; radius: number; children: React.ReactNode }) {
+export function PhoneBody({ w, h, radius, children }: { w: number; h: number; radius: number; children: React.ReactNode }) {
   return (
     <div
       className="relative"
@@ -184,7 +184,7 @@ function HandPhone() {
 }
 
 // A cup of coffee, seen from above
-function Coffee() {
+export function Coffee() {
   return (
     <div className="relative h-[200px] w-[260px]">
       <div className="absolute left-0 top-0 h-[200px] w-[200px] rounded-full" style={{ background: 'radial-gradient(circle at 42% 38%, #fbfaf6 0%, #e7e4dc 55%, #b9b5ab 100%)', boxShadow: '18px 24px 40px rgba(0,0,0,0.55)' }} />
@@ -197,7 +197,7 @@ function Coffee() {
   );
 }
 
-function Coin({ size = 46 }: { size?: number }) {
+export function Coin({ size = 46 }: { size?: number }) {
   return (
     <span
       className="block rounded-full"
@@ -220,8 +220,8 @@ function Coin({ size = 46 }: { size?: number }) {
 // layers so what's held sits between the thumb (under) and the fingers (over), and every finger
 // casts a soft shadow onto it. With `shadow`, it's the same shape in black, for the table.
 
-const HW = 380; // the drawing's size
-const HH = 170;
+export const HW = 380; // the drawing's size
+export const HH = 170;
 
 // The fingers that sit on top: the index stretched out, the rest curled
 const FINGERS = {
@@ -237,7 +237,7 @@ const FOLDS = [
   { x: 325, y: 113, w: 13, h: 17 },
 ];
 
-function HandLayers({ skin, sleeve, shadow, part }: { skin: Skin; sleeve: string; shadow?: boolean; part: 'under' | 'over' }) {
+export function HandLayers({ skin, sleeve, shadow, part }: { skin: Skin; sleeve: string; shadow?: boolean; part: 'under' | 'over' }) {
   const uid = useId().replace(/:/g, '');
   const ink = shadow ? '#000' : undefined;
   const skinFill = ink ?? `url(#skin-${uid})`;

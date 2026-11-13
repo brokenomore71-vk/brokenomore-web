@@ -206,3 +206,10 @@ body {
 .or-spin { animation: or-spin 40s linear infinite; }
 @keyframes or-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .or-twinkle, .or-spin { animation: none; } }
+
+/* The tear-off calendar (components/billsPage/BillsFlip.tsx): dust in the light, the binding's sheen */
+.bf-mote { animation: bf-mote 8s ease-in-out infinite; }
+@keyframes bf-mote { 50% { transform: translate(18px, -30px); opacity: 0.6; } }
+.bf-sheen::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.18) 50%, transparent 65%); background-size: 250% 100%; animation: bf-sheen 5s ease-in-out infinite; }
+@keyframes bf-sheen { 0% { background-position: 130% 0; } 60%, 100% { background-position: -130% 0; } }
+@media (prefers-reduced-motion: reduce) { .bf-mote, .bf-sheen::after { animation: none; } }

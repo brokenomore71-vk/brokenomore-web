@@ -3,6 +3,7 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Gradient } from '../IntroHero';
 import { glideBetweenLabels, pinned } from '../scrollSteps';
 import { useTypeOnShow } from '../useTypeOnShow';
@@ -332,8 +333,11 @@ function Screen({ w }: { w: ReturnType<typeof useWeek> }) {
               {t}
             </span>
           ))}
-          <span data-b="pop-tag" className="rounded-full bg-[#EF4444] px-3 py-1">
-            Overdue
+          <span data-b="pop-tag" className="relative rounded-full bg-[#EF4444] px-3 py-1">
+            <span data-b="pop-tag-overdue">Overdue</span>
+            <span data-b="pop-tag-paid" className="absolute inset-0 flex items-center justify-center opacity-0">
+              Paid
+            </span>
           </span>
         </div>
         <div className="mt-3 flex items-center gap-2">
@@ -359,7 +363,9 @@ function Screen({ w }: { w: ReturnType<typeof useWeek> }) {
 
 // ---------------------------------------------------------------------------------------------
 
-export default function BillsBoard() {
+// `flat`: shown straight on, with no tablet round it, building itself as it scrolls into view
+// (after the night-desk opening); otherwise the tablet swings up on arrival
+export default function BillsBoard({ flat = false }: { flat?: boolean }) {
   const sectionRef = useRef<HTMLElement | null>(null);
   const capsRef = useRef<HTMLDivElement | null>(null);
   const w = useWeek();
@@ -391,8 +397,11 @@ export default function BillsBoard() {
       gsap.set(floats, { autoAlpha: 0, scale: 0.6 });
 
       // ---- The tablet swings up, and its screen builds itself ----
-      const intro = gsap.timeline({ delay: 0.2 });
-      intro.fromTo(tablet, { y: 380, rotationX: 62, rotationY: -30, rotationZ: 8, scale: 0.7, autoAlpha: 0 }, { y: 0, rotationX: 10, rotationY: -16, rotationZ: 0, scale: 1, autoAlpha: 1, duration: 1.4, ease: 'power3.out' }, 0);
+      const intro = gsap.timeline(flat ? { paused: true } : { delay: 0.2 });
+      if (flat) {
+        intro.fromTo(tablet, { y: 120, scale: 0.94, autoAlpha: 0 }, { y: 0, scale: 1, autoAlpha: 1, duration: 0.9, ease: 'power3.out' }, 0);
+        ScrollTrigger.create({ trigger: section, start: 'top 75%', once: true, onEnter: () => intro.play() });
+      } else intro.fromTo(tablet, { y: 380, rotationX: 62, rotationY: -30, rotationZ: 8, scale: 0.7, autoAlpha: 0 }, { y: 0, rotationX: 10, rotationY: -16, rotationZ: 0, scale: 1, autoAlpha: 1, duration: 1.4, ease: 'power3.out' }, 0);
       intro.from(one('topbar'), { autoAlpha: 0, y: -16, duration: 0.4 }, 0.7);
       intro.from(q('side'), { autoAlpha: 0, x: -40, duration: 0.45, stagger: 0.1, ease: 'power2.out' }, 0.8);
       intro.from(one('main'), { autoAlpha: 0, scale: 0.96, duration: 0.45, ease: 'power2.out' }, 0.85);
@@ -400,9 +409,10 @@ export default function BillsBoard() {
       intro.from(blocks, { autoAlpha: 0, y: -50, scale: 0.85, duration: 0.45, stagger: 0.07, ease: 'bounce.out' }, 1.3);
       intro.to(caps[0], { autoAlpha: 1, duration: 0.3 }, 1.2);
       // Then it floats, slowly
-      intro.add(() => {
-        gsap.to(tablet, { y: -10, rotationY: -13, duration: 3.5, ease: 'sine.inOut', yoyo: true, repeat: -1 });
-      });
+      if (!flat)
+        intro.add(() => {
+          gsap.to(tablet, { y: -10, rotationY: -13, duration: 3.5, ease: 'sine.inOut', yoyo: true, repeat: -1 });
+        });
 
       // ---- One step per scroll ----
       const tl = gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { ...pinned(section, STEPS, 9), end: () => `+=${window.innerHeight * 0.65 * STEPS}` } });
@@ -441,6 +451,8 @@ export default function BillsBoard() {
       tl.to(one('pay-btn'), { scale: 1, opacity: 0, duration: 0.08 }, 2.8);
       tl.to(one('pay-done'), { opacity: 1, duration: 0.08 }, 2.82);
       tl.to(one('pop-tag'), { backgroundColor: '#22C55E', duration: 0.1 }, 2.82);
+      tl.to(one('pop-tag-overdue'), { opacity: 0, duration: 0.05 }, 2.82);
+      tl.to(one('pop-tag-paid'), { opacity: 1, duration: 0.05 }, 2.84);
       tl.to(one('pop-late'), { opacity: 0, duration: 0.1 }, 2.82);
       tl.to(block(OVERDUE.key), { backgroundColor: COLOR.paid, scale: 1, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 10px 30px -10px ${COLOR.paid}`, duration: 0.15 }, 2.85);
       tl.to(block(OVERDUE.key).querySelector('[data-b="block-tick"]'), { opacity: 1, duration: 0.1 }, 2.88);
@@ -481,12 +493,14 @@ export default function BillsBoard() {
       };
     });
     return () => mm.revert();
-  }, [w]);
+  }, [w, flat]);
 
   const glass = 'absolute z-30 flex items-center gap-2.5 rounded-2xl border border-white/15 bg-[#14141b]/80 px-4 py-3 text-white shadow-[0_30px_60px_-10px_rgba(0,0,0,0.8)] backdrop-blur-md';
 
   return (
-    <section ref={sectionRef} aria-label="Bills and Subscriptions" className="relative h-[calc(100svh-72px)] min-h-[620px] w-full overflow-hidden bg-black text-white select-none">
+    <section ref={sectionRef} aria-label={flat ? 'Your bill calendar' : 'Bills and Subscriptions'} className="relative h-[calc(100svh-72px)] min-h-[620px] w-full overflow-hidden bg-black text-white select-none">
+      {flat && <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[20%] bg-gradient-to-b from-black to-transparent" />}
+      {flat && <div className="pointer-events-none absolute inset-y-0 left-0 z-[35] hidden w-[36%] bg-gradient-to-r from-black via-black/85 to-transparent md:block" />}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_60%_at_64%_55%,rgba(110,91,255,0.24),transparent_70%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_25%_30%_at_80%_85%,rgba(232,106,180,0.1),transparent_70%)]" />
 
@@ -497,9 +511,12 @@ export default function BillsBoard() {
             <div key={c.title} data-b="cap" className="absolute inset-x-0 top-6 md:top-0">
               <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-500">{c.eyebrow}</p>
               {i === 0 ? (
-                <h1 className="mt-3 text-[34px] font-semibold leading-[1.04] tracking-tight sm:text-5xl lg:text-[56px]">
-                  Every bill, <Gradient>on your calendar.</Gradient>
-                </h1>
+                React.createElement(
+                  flat ? 'h2' : 'h1',
+                  { className: 'mt-3 text-[34px] font-semibold leading-[1.04] tracking-tight sm:text-5xl lg:text-[56px]' },
+                  'Every bill, ',
+                  <Gradient key="g">on your calendar.</Gradient>
+                )
               ) : (
                 <h2 className="mt-3 text-[26px] font-semibold leading-[1.08] tracking-tight sm:text-4xl lg:text-[46px]">{c.title}</h2>
               )}
@@ -514,18 +531,24 @@ export default function BillsBoard() {
             <div data-b="cam" className="absolute inset-0 [transform-style:preserve-3d]">
               <div data-b="tablet" className="absolute inset-0 [transform-style:preserve-3d]">
                 {/* Its body: the edge, layered for thickness, and the bezel */}
-                {[18, 14, 10, 6].map((d) => (
-                  <div key={d} className="absolute -inset-[22px] rounded-[54px]" style={{ transform: `translateZ(-${d}px)`, background: 'linear-gradient(135deg,#3b3b44,#16161b 40%,#2b2b33 70%,#0d0d10)' }} />
-                ))}
-                <div className="absolute -inset-[22px] rounded-[54px] border border-white/15 bg-[#050507] shadow-[0_80px_140px_-30px_rgba(0,0,0,0.9),0_0_80px_-20px_rgba(110,91,255,0.45)]" />
-                <div className="absolute left-1/2 top-[-14px] h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-[#1f1f26]" />
+                {flat ? (
+                  <div className="absolute -inset-px rounded-[31px] border border-white/10 shadow-[0_60px_120px_-30px_rgba(0,0,0,0.9),0_0_90px_-30px_rgba(110,91,255,0.5)]" />
+                ) : (
+                  <>
+                    {[18, 14, 10, 6].map((d) => (
+                      <div key={d} className="absolute -inset-[22px] rounded-[54px]" style={{ transform: `translateZ(-${d}px)`, background: 'linear-gradient(135deg,#3b3b44,#16161b 40%,#2b2b33 70%,#0d0d10)' }} />
+                    ))}
+                    <div className="absolute -inset-[22px] rounded-[54px] border border-white/15 bg-[#050507] shadow-[0_80px_140px_-30px_rgba(0,0,0,0.9),0_0_80px_-20px_rgba(110,91,255,0.45)]" />
+                    <div className="absolute left-1/2 top-[-14px] h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-[#1f1f26]" />
+                  </>
+                )}
                 <Screen w={w} />
                 {/* Glare across the glass */}
                 <div className="pointer-events-none absolute inset-0 rounded-[30px]" style={{ background: 'linear-gradient(118deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.0) 30%, transparent 70%, rgba(255,255,255,0.04) 100%)' }} />
 
                 {/* Coins, for the payment */}
                 <div className="absolute [transform-style:preserve-3d]" style={{ left: SIDE + 20 + 16 + GRID_X + 40, top: 330 }}>
-                  {Array.from({ length: 8 }, (_, i) => (
+                  {Array.from({ length: flat ? 0 : 8 }, (_, i) => (
                     <span key={i} data-b="coin" className="absolute h-9 w-9 rounded-full text-center text-[15px] font-extrabold leading-9 text-[#8a6418] opacity-0" style={{ background: 'radial-gradient(circle at 35% 30%, #fff4c9, #e9c565 45%, #b08427)', boxShadow: '0 0 20px rgba(245,196,81,0.6)' }}>
                       ₹
                     </span>
