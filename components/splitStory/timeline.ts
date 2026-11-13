@@ -427,17 +427,22 @@ export function createSplitChapter({ stage, section, header, phone, motion, spli
   const name = section.querySelector<HTMLElement>('[data-s="chapter-name"]');
   const tagline = section.querySelector<HTMLElement>('[data-s="chapter-tagline"]');
 
+  // On its own (the split part), the feature's name is up from the start and types itself in
+  // (see SplitStoryCaptions); after the orbit, it rises into place as the chapter begins
+  const standalone = orbitPieces.length === 0;
   gsap.set(opening, { autoAlpha: 1 });
-  gsap.set(name, { yPercent: 110 });
-  gsap.set(tagline, { autoAlpha: 0, y: 14 });
+  gsap.set(name, { yPercent: standalone ? 0 : 110 });
+  gsap.set(tagline, standalone ? { autoAlpha: 1, y: 0 } : { autoAlpha: 0, y: 14 });
 
   // Only the orbit part of the showcase has these
   if (orbitPieces.length) timeline.to(orbitPieces, { autoAlpha: 0, scale: 0.86, duration: 0.8, ease: 'power2.in' }, 0);
   timeline.to(header, { autoAlpha: 0, y: -16, duration: 0.5, ease: 'power2.in' }, 0);
   timeline.to(motion, { rotY: FRONT_ROT_Y, duration: 2.6, ease: 'power2.inOut' }, 0);
   timeline.to(phone, { y: 24, scale: 0.9, duration: 1.2, ease: 'power2.inOut' }, 0);
-  timeline.to(name, { yPercent: 0, duration: 0.8, ease: 'power3.out' }, 0.5);
-  timeline.to(tagline, { autoAlpha: 1, y: 0, duration: 0.6, ease: 'power2.out' }, 0.9);
+  if (!standalone) {
+    timeline.to(name, { yPercent: 0, duration: 0.8, ease: 'power3.out' }, 0.5);
+    timeline.to(tagline, { autoAlpha: 1, y: 0, duration: 0.6, ease: 'power2.out' }, 0.9);
+  }
   timeline.to(opening, { autoAlpha: 0, y: -18, duration: 0.35, ease: 'power2.in' }, OPENING_UNITS - 0.35);
 
   const story = gsap.timeline({ defaults: { ease: 'none' } });

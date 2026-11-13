@@ -15,6 +15,7 @@ import {
   MobileNavToggle,
   MobileNavMenu,
 } from "@/components/ui/resizable-navbar";
+import { FeaturesMenuMobile } from "@/components/ui/features-menu";
 
 export default function Navbar() {
   const router = useRouter();
@@ -167,9 +168,9 @@ export default function Navbar() {
   };
 
   const navItems = useMemo(() => {
-    const baseItems = [
+    const baseItems: { name: string; link: string; menu?: "features" }[] = [
       { name: "Home", link: "/" },
-      { name: "Features", link: "/features" },
+      { name: "Features", link: "/features", menu: "features" },
     ];
     
     if (mounted && !loading && user) {
@@ -318,7 +319,9 @@ export default function Navbar() {
           isOpen={isMobileMenuOpen}
           onClose={() => setIsMobileMenuOpen(false)}
         >
-          {navItems.map((item, idx) => (
+          {navItems.map((item, idx) => item.menu === "features" ? (
+            <FeaturesMenuMobile key={`mobile-link-${idx}`} onNavigate={() => setIsMobileMenuOpen(false)} />
+          ) : (
             <Link
               key={`mobile-link-${idx}`}
               href={item.link}

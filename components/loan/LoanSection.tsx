@@ -76,6 +76,8 @@ export default function LoanSection() {
   const sectionRef = useRef<HTMLElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const sceneHostRef = useRef<HTMLDivElement | null>(null);
+  // The pointer over the section, smoothed, -1 to 1 each way: tilts the calculator and the cards
+  const lookRef = useRef({ x: 0, y: 0 });
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
@@ -96,6 +98,7 @@ export default function LoanSection() {
       const panel = one('panel');
       const paper = one('paper');
       const tape = one('tape');
+      const turn = one('turn'); // how the 3D calculator is turned, read by the scene each frame
       const key = (k: string) => section.querySelector<HTMLElement>(`[data-key="${CSS.escape(k)}"]`)!;
 
       // ---- Layout: measured from the stage, so it holds on any screen ----
@@ -142,7 +145,8 @@ export default function LoanSection() {
       gsap.set(captions[0], { autoAlpha: 1, y: 0 });
       gsap.set(frames, { autoAlpha: 0 });
       gsap.set(frames[0], { autoAlpha: 1 });
-      gsap.set([...cards, panel], { xPercent: -50, yPercent: -50, autoAlpha: 0, scale: 0.2 });
+      gsap.set([...cards, panel], { xPercent: -50, yPercent: -50, autoAlpha: 0, scale: 0.2, transformPerspective: 900 });
+      gsap.set(turn, { rotationX: 0, rotationY: 0 });
       gsap.set(paper, { yPercent: 100 });
       gsap.set(tape, { autoAlpha: 0 });
 
@@ -200,10 +204,11 @@ export default function LoanSection() {
         tl.to(captions[k], { autoAlpha: 1, y: 0, duration: 0.35 }, at + 0.15);
       };
       const cardOut = (k: number, at: number) => {
+        // It flips out of the display edge-on, swinging round to face you as it lands
         tl.fromTo(
           cards[k],
-          { x: () => fromCalc().x, y: () => fromCalc().y, scale: 0.2, autoAlpha: 0 },
-          { x: () => cardRest(k).x, y: () => cardRest(k).y, scale: () => cardRest(k).s, autoAlpha: 1, duration: 0.3, ease: 'back.out(1.4)', immediateRender: false },
+          { x: () => fromCalc().x, y: () => fromCalc().y, z: -260, rotationY: -80, rotationX: 25, scale: 0.2, autoAlpha: 0 },
+          { x: () => cardRest(k).x, y: () => cardRest(k).y, z: 0, rotationY: 0, rotationX: 0, scale: () => cardRest(k).s, autoAlpha: 1, duration: 0.34, ease: 'back.out(1.3)', immediateRender: false },
           at
         );
       };
@@ -216,7 +221,9 @@ export default function LoanSection() {
       tl.addLabel('calculator', 1);
 
       // ---- 2. A home loan is keyed in, and "=" sends its card out with the EMI ----
+      // The calculator turns to face the cards, on the left (on phones they're below, so less)
       swapCaption(1, 1.02);
+      tl.to(turn, { rotationY: () => (narrow() ? -8 : -18), rotationX: -4, duration: 0.45, ease: 'power2.inOut' }, 1.02);
       let t = type(1, ['2', '5', '00', '00', '0'], 1.1);
       t = type(2, ['8', '.', '5'], t + 0.06);
       t = type(3, ['2', '0'], t + 0.06);
@@ -242,14 +249,15 @@ export default function LoanSection() {
         // On phones the panel takes the cards' place under the calculator
         tl.to(cards, { autoAlpha: 0, scale: () => cardScale() * 0.9, duration: 0.2 }, 3.05);
       }
+      tl.to(turn, { rotationY: () => (narrow() ? 8 : 20), rotationX: -4, duration: 0.45, ease: 'power2.inOut' }, 3.02);
       press('+', 3.08);
       show(6, 3.14);
       ['5', '0', '00'].forEach((k, i) => press(k, 3.14 + i * 0.045));
       press('EMI', 3.3);
       tl.fromTo(
         panel,
-        { x: () => fromCalc().x, y: () => fromCalc().y, scale: 0.2, autoAlpha: 0 },
-        { x: () => panelRest().x, y: () => panelRest().y, scale: () => panelRest().s, autoAlpha: 1, duration: 0.3, ease: 'back.out(1.3)', immediateRender: false },
+        { x: () => fromCalc().x, y: () => fromCalc().y, z: -260, rotationY: 80, rotationX: 25, scale: 0.2, autoAlpha: 0 },
+        { x: () => panelRest().x, y: () => panelRest().y, z: 0, rotationY: 0, rotationX: 0, scale: () => panelRest().s, autoAlpha: 1, duration: 0.34, ease: 'back.out(1.2)', immediateRender: false },
         3.2
       );
       tl.to(months, { v: PREPAY.monthsAfter, duration: 0.5, ease: 'power1.inOut' }, 3.38);
@@ -259,6 +267,8 @@ export default function LoanSection() {
       // ---- 5. "=" prints the summary out of the top ----
       swapCaption(4, 4.02);
       if (narrow()) tl.to(panel, { autoAlpha: 0, duration: 0.2 }, 4.04);
+      // Square on again for the print-out
+      tl.to(turn, { rotationY: 0, rotationX: 0, duration: 0.4, ease: 'power2.inOut' }, 4.04);
       press('=', 4.08);
       show(7, 4.12);
       tl.to(place, { y: summaryY, scale: summaryScale, duration: 0.35, ease: 'power2.inOut' }, 4.1);
@@ -314,6 +324,42 @@ export default function LoanSection() {
     return () => mm.revert();
   }, []);
 
+  // The pointer: eased towards wherever it is over the section, and handed to the cards as CSS
+  // variables (--px, --py) and to the 3D calculator through lookRef
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section || !window.matchMedia('(pointer: fine) and (prefers-reduced-motion: no-preference)').matches) return;
+    const look = lookRef.current;
+    const target = { x: 0, y: 0 };
+    const onMove = (e: PointerEvent) => {
+      const r = section.getBoundingClientRect();
+      target.x = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1));
+      target.y = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1));
+    };
+    const onLeave = () => {
+      target.x = 0;
+      target.y = 0;
+    };
+    const step = () => {
+      const dx = target.x - look.x;
+      const dy = target.y - look.y;
+      if (Math.abs(dx) < 1e-4 && Math.abs(dy) < 1e-4) return;
+      const k = Math.min(1, 0.07 * gsap.ticker.deltaRatio());
+      look.x += dx * k;
+      look.y += dy * k;
+      section.style.setProperty('--px', look.x.toFixed(4));
+      section.style.setProperty('--py', look.y.toFixed(4));
+    };
+    section.addEventListener('pointermove', onMove);
+    section.addEventListener('pointerleave', onLeave);
+    gsap.ticker.add(step);
+    return () => {
+      section.removeEventListener('pointermove', onMove);
+      section.removeEventListener('pointerleave', onLeave);
+      gsap.ticker.remove(step);
+    };
+  }, []);
+
   // The 3D calculator: loaded as the section comes near, drawn only while it's on screen. The scroll
   // timeline above moves the flat calculator's parts; each frame this reads where they are and poses
   // the 3D model to match, so the story is told once.
@@ -326,6 +372,7 @@ export default function LoanSection() {
     const entrance = qa('entrance')[0];
     const paper = qa('paper')[0];
     const tape = qa('tape')[0];
+    const turn = qa('turn')[0];
     const frames = qa('frame');
     const flat = qa('flat');
     const keys = Array.from(section.querySelectorAll<HTMLElement>('[data-key]'));
@@ -351,6 +398,8 @@ export default function LoanSection() {
           scale: num(entrance, 'scale') || 1,
           alpha: entrance.style.visibility === 'hidden' ? 0 : Number(gsap.getProperty(entrance, 'opacity')),
         },
+        turn: { x: num(turn, 'rotationX'), y: num(turn, 'rotationY') },
+        look: lookRef.current,
         presses: Object.fromEntries(keys.map((k) => [k.dataset.key!, num(k, 'y') / 3])),
         display: { label: frame.children[0]?.textContent ?? '', value: frame.children[1]?.textContent ?? '' },
         paper: tape.style.visibility === 'hidden' ? 0 : 1 - num(paper, 'yPercent') / 100,
@@ -415,6 +464,7 @@ export default function LoanSection() {
       >
         {/* A soft light on the desk */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_45%_45%_at_50%_60%,rgba(255,255,255,0.06),transparent_70%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_30%_25%_at_50%_68%,rgba(139,92,246,0.10),transparent_70%)]" />
 
         {/* Captions */}
         <div className="relative z-30 shrink-0 px-4 pt-6 text-center sm:pt-8">
@@ -434,7 +484,7 @@ export default function LoanSection() {
           <div
             data-l="place"
             className="absolute left-1/2 top-1/2 [transform-style:preserve-3d]"
-            style={{ '--w': 'min(340px, 80vw, 44svh)', width: 'var(--w)', height: 'calc(var(--w) * 0.92)' } as React.CSSProperties}
+            style={{ '--w': 'min(400px, 80vw, 46svh)', width: 'var(--w)', height: 'calc(var(--w) * 0.92)' } as React.CSSProperties}
           >
             <div data-l="entrance" className="relative h-full w-full [transform-style:preserve-3d]">
               {/* Shadow on the desk */}
@@ -460,6 +510,9 @@ export default function LoanSection() {
             </div>
           </div>
 
+          {/* Not shown: the scroll timeline turns this, and the 3D calculator copies its turn */}
+          <div data-l="turn" className="hidden" />
+
           {/* The 3D calculator draws here, over the whole desk, so the receipt has room above it */}
           <div ref={sceneHostRef} className="pointer-events-none absolute inset-0 z-10" />
 
@@ -467,11 +520,15 @@ export default function LoanSection() {
           <div className="pointer-events-none absolute inset-0 z-40">
             {LOANS.map((loan) => (
               <div key={loan.kind} data-l="card" className="absolute left-0 top-0" style={{ visibility: 'hidden' }}>
-                <LoanCard loan={loan} />
+                <Slab side="left" glow={loan.color}>
+                  <LoanCard loan={loan} />
+                </Slab>
               </div>
             ))}
             <div data-l="panel" className="absolute left-0 top-0" style={{ visibility: 'hidden', width: PANEL_W }}>
-              <PrepayPanel />
+              <Slab side="right" glow="#8B5CF6">
+                <PrepayPanel />
+              </Slab>
             </div>
           </div>
         </div>
@@ -593,6 +650,38 @@ function Receipt() {
   );
 }
 
+// A card as a solid slab: angled towards the calculator (on wide screens), with an edge you can
+// see, a glow of its colour behind it, a sheen that follows the pointer, and its parts lifted off
+// the face. It leans a little further whichever way the pointer moves.
+const SLAB_EDGE = [2, 4, 6, 8, 10];
+function Slab({ side, glow, children }: { side: 'left' | 'right'; glow: string; children: React.ReactNode }) {
+  return (
+    <div className="[perspective:900px]">
+      <div
+        className={`relative [transform-style:preserve-3d] ${side === 'left' ? 'md:[--base:16deg]' : 'md:[--base:-16deg]'} [--base:0deg]`}
+        style={{ transform: 'rotateY(calc(var(--base) + var(--px, 0) * 12deg)) rotateX(calc(var(--py, 0) * -9deg))' }}
+      >
+        {/* The glow it throws on the desk behind */}
+        <div className="absolute -inset-3 rounded-[2rem] opacity-30 blur-2xl" style={{ background: glow, transform: 'translateZ(-40px)' }} />
+        {/* Its thickness */}
+        {SLAB_EDGE.map((d) => (
+          <div key={d} className="absolute inset-0 rounded-2xl border border-white/[0.06] bg-[#0b0b0e]" style={{ transform: `translateZ(-${d}px)` }} />
+        ))}
+        {children}
+        {/* The sheen */}
+        <div
+          className="pointer-events-none absolute inset-0 rounded-2xl"
+          style={{
+            background:
+              'radial-gradient(120% 90% at calc(30% - var(--px, 0) * 40%) calc(0% - var(--py, 0) * 30%), rgba(255,255,255,0.10), transparent 55%)',
+            transform: 'translateZ(1px)',
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function LoanIcon({ kind }: { kind: (typeof LOANS)[number]['kind'] }) {
   const props = { viewBox: '0 0 24 24', className: 'h-6 w-6', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true } as const;
   if (kind === 'home')
@@ -623,15 +712,21 @@ function LoanIcon({ kind }: { kind: (typeof LOANS)[number]['kind'] }) {
 
 function LoanCard({ loan }: { loan: (typeof LOANS)[number] }) {
   return (
-    <div className="flex items-center gap-3.5 rounded-2xl border border-white/10 bg-[#141414] px-4 shadow-[0_24px_48px_rgba(0,0,0,0.7)]" style={{ width: CARD_W, height: CARD_H }}>
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-white" style={{ background: loan.color }}>
+    <div
+      className="relative flex items-center gap-3.5 rounded-2xl border border-white/10 bg-[#141414] px-4 shadow-[0_24px_48px_rgba(0,0,0,0.7)] [transform-style:preserve-3d]"
+      style={{ width: CARD_W, height: CARD_H, background: 'linear-gradient(160deg, #1c1c21 0%, #131316 60%)' }}
+    >
+      <span
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-white"
+        style={{ background: loan.color, transform: 'translateZ(22px)', boxShadow: `0 10px 22px -6px ${loan.color}aa, inset 0 1px 0 rgba(255,255,255,0.35)` }}
+      >
         <LoanIcon kind={loan.kind} />
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-semibold">{loan.name}</p>
         <p className="truncate text-xs text-neutral-500">{loan.detail}</p>
       </div>
-      <div className="text-right">
+      <div className="text-right" style={{ transform: 'translateZ(14px)' }}>
         <p className="text-[15px] font-semibold tabular-nums">₹{inr(loan.emi)}</p>
         <p className="text-[11px] text-neutral-500">EMI / mo</p>
       </div>
@@ -643,7 +738,10 @@ function LoanCard({ loan }: { loan: (typeof LOANS)[number] }) {
 function PrepayPanel({ done = false }: { done?: boolean }) {
   const after = PREPAY.interestAfter / PREPAY.interestBefore;
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#141414] p-4 shadow-[0_24px_48px_rgba(0,0,0,0.7)]">
+    <div
+      className="relative rounded-2xl border border-white/10 bg-[#141414] p-4 shadow-[0_24px_48px_rgba(0,0,0,0.7)] [transform-style:preserve-3d]"
+      style={{ background: 'linear-gradient(160deg, #1c1c21 0%, #131316 60%)' }}
+    >
       <p className="text-[15px] font-semibold">Home loan, +₹{inr(PREPAY.extra)} a month</p>
       <p className="text-xs text-neutral-500">
         {Math.floor(PREPAY.monthsBefore / 12)} yrs → {Math.floor(PREPAY.monthsAfter / 12)} yrs {PREPAY.monthsAfter % 12} mo
@@ -670,7 +768,7 @@ function PrepayPanel({ done = false }: { done?: boolean }) {
           </div>
         </div>
       </div>
-      <div className="mt-3 flex items-baseline justify-between border-t border-white/10 pt-3">
+      <div className="mt-3 flex items-baseline justify-between border-t border-white/10 pt-3" style={{ transform: 'translateZ(18px)' }}>
         <span className="text-xs text-neutral-400">You save</span>
         <span data-l={done ? undefined : 'saved'} className="text-xl font-semibold tabular-nums">
           ₹{done ? inr(SAVED) : '0'}

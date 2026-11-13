@@ -9,6 +9,7 @@ import {
 } from "motion/react";
 import React, { useState } from "react";
 import Link from "next/link";
+import { FeaturesMenu } from "./features-menu";
 
 interface NavbarProps {
   children: React.ReactNode;
@@ -25,6 +26,8 @@ interface NavItemsProps {
   items: {
     name: string;
     link: string;
+    // 'features' opens the Features menu instead of linking
+    menu?: "features";
   }[];
   className?: string;
   onItemClick?: () => void;
@@ -123,7 +126,19 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
         className,
       )}
     >
-      {items.map((item, idx) => (
+      {items.map((item, idx) =>
+        item.menu === "features" ? (
+          <div key={`link-${idx}`} className="relative" onMouseEnter={() => setHovered(idx)}>
+            {hovered === idx && (
+              <motion.div
+                layoutId="hovered"
+                className="absolute inset-0 h-full w-full rounded-full bg-white/10"
+                transition={{ type: "spring", stiffness: 350, damping: 30 }}
+              />
+            )}
+            <FeaturesMenu />
+          </div>
+        ) : (
         <Link
           key={`link-${idx}`}
           href={item.link}
@@ -140,7 +155,8 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
           )}
           <span className="relative z-20">{item.name}</span>
         </Link>
-      ))}
+        ),
+      )}
     </motion.nav>
   );
 };

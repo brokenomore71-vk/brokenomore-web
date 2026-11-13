@@ -19,6 +19,10 @@ export type CalculatorFrame = {
   box: { cx: number; cy: number; w: number; h: number };
   // The entrance: how far below (px), how far turned (degrees), how large and how visible
   enter: { y: number; rotateX: number; rotateY: number; scale: number; alpha: number };
+  // Where the story turns it (degrees), to face the card it's sending out
+  turn: { x: number; y: number };
+  // The pointer over the section, -1 to 1 each way (0 with no mouse)
+  look: { x: number; y: number };
   // How far down each key is (by its label on the page), 0 to 1
   presses: Record<string, number>;
   display: { label: string; value: string };
@@ -73,6 +77,8 @@ export class CalculatorScene {
   private keys = new Map<string, { node: THREE.Object3D; rest: number }>();
   private lcd!: { canvas: HTMLCanvasElement; texture: THREE.CanvasTexture; shown: string };
   private paper!: THREE.Object3D;
+  private keyLight!: THREE.DirectionalLight;
+  private ground!: THREE.Mesh<THREE.PlaneGeometry, THREE.ShadowMaterial>;
 
   static async create(receiptLines: [string, string, boolean?][]) {
     const source = await loadModel();
@@ -89,6 +95,9 @@ export class CalculatorScene {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.95;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // Real shadows: the keys on the deck, the receipt on the housing, the whole thing on the desk
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     // A studio to reflect, so the aluminium deck reads as metal
     const pmrem = new THREE.PMREMGenerator(this.renderer);
@@ -98,11 +107,20 @@ export class CalculatorScene {
     this.scene.environmentIntensity = 0.45;
     this.disposables.push(environment);
 
-    const key = new THREE.DirectionalLight(0xffffff, 1.4);
-    key.position.set(-2, 4, 4);
-    const rim = new THREE.DirectionalLight(0xc4bbff, 0.8);
+    // A key light from the top left that casts the shadows, and two brand-coloured rims behind,
+    // violet on the right and pink on the left, to pick out its edges against the black
+    const key = new THREE.DirectionalLight(0xffffff, 1.6);
+    key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024);
+    key.shadow.radius = 6;
+    key.shadow.bias = -0.0004;
+    key.shadow.normalBias = 0.015;
+    this.keyLight = key;
+    const rim = new THREE.DirectionalLight(0xb4a6ff, 1.1);
     rim.position.set(3, 2, -3);
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.2), key, rim);
+    const rimPink = new THREE.DirectionalLight(0xe86ab4, 0.7);
+    rimPink.position.set(-3.5, 1, -2);
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.18), key, key.target, rim, rimPink);
 
     this.camera.position.set(0, 0, 8);
     this.scene.add(this.root);
@@ -115,6 +133,10 @@ export class CalculatorScene {
       if (!mesh.isMesh) return;
       mesh.material = (mesh.material as THREE.Material).clone();
       this.disposables.push(mesh.material as THREE.Material);
+      // The flat planes that only carry a texture neither cast nor catch shadows
+      const flat = /^(Legend_|Display$|Brand$)/.test(mesh.name);
+      mesh.castShadow = !flat;
+      mesh.receiveShadow = !flat && mesh.name !== 'Paper';
     });
 
     this.dressDisplay(calculator);
@@ -122,6 +144,15 @@ export class CalculatorScene {
     this.dressBrand(calculator);
     this.dressPaper(calculator, receiptLines);
     this.measure(calculator);
+
+    // The desk: invisible but for the shadow on it. Added after measuring, so it doesn't count.
+    const groundMaterial = new THREE.ShadowMaterial({ opacity: 0.55, transparent: true });
+    this.ground = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), groundMaterial);
+    this.ground.rotation.x = -Math.PI / 2;
+    this.ground.position.y = -0.04; // the bottom of the feet
+    this.ground.receiveShadow = true;
+    this.model.add(this.ground);
+    this.disposables.push(this.ground.geometry, groundMaterial);
   }
 
   private find(calculator: THREE.Object3D, name: string) {
@@ -303,10 +334,28 @@ export class CalculatorScene {
     this.model.position.set(0, (-e.y * upp) / scale + Math.sin(f.time * 1.1) * 0.012 * idle, 0);
     this.model.scale.setScalar(e.scale);
     this.model.rotation.set(
-      POSE.x + THREE.MathUtils.degToRad(e.rotateX) + Math.sin(f.time * 0.7) * 0.015 * idle,
-      POSE.y + THREE.MathUtils.degToRad(e.rotateY) + Math.sin(f.time * 0.5) * 0.03 * idle,
+      POSE.x + THREE.MathUtils.degToRad(e.rotateX + f.turn.x) + Math.sin(f.time * 0.7) * 0.015 * idle + f.look.y * 0.12 * idle,
+      POSE.y + THREE.MathUtils.degToRad(e.rotateY + f.turn.y) + Math.sin(f.time * 0.5) * 0.03 * idle + f.look.x * 0.26 * idle,
       0
     );
+    this.ground.material.opacity = 0.55 * e.alpha;
+
+    // The key light follows the calculator round the page, its shadow box sized to it
+    this.root.updateMatrixWorld();
+    const light = this.keyLight;
+    const reach = 1.6 * scale;
+    light.target.position.copy(this.root.position);
+    light.position.copy(this.root.position).add(new THREE.Vector3(-1.6, 3.4, 3).multiplyScalar(scale));
+    const cam = light.shadow.camera;
+    if (cam.right !== reach) {
+      cam.left = -reach;
+      cam.right = reach;
+      cam.top = reach;
+      cam.bottom = -reach;
+      cam.near = 0.01;
+      cam.far = 10 * scale;
+      cam.updateProjectionMatrix();
+    }
 
     this.keys.forEach(({ node, rest }, label) => {
       node.position.z = rest - KEY_TRAVEL * Math.min(1, Math.max(0, f.presses[label] ?? 0));

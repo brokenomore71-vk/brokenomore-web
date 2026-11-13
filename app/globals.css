@@ -85,3 +85,90 @@ body {
     opacity: 1;
   }
 }
+
+/* ---- Stock Analysis & AI (components/stockAI) ----
+   Pieces inside a .sa-scope wait in their "before" state until it gets .sa-in (when it scrolls into
+   view, or straight away for a report tab that has just opened), then play once. --d delays each. */
+.sa-scope:not(.sa-in) .sa-draw { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.sa-scope:not(.sa-in) .sa-grow-y { transform: scaleY(0); }
+.sa-scope:not(.sa-in) .sa-grow-x { transform: scaleX(0); }
+.sa-scope:not(.sa-in) .sa-fade { opacity: 0; }
+.sa-scope:not(.sa-in) .sa-arc { stroke-dasharray: 0 1 !important; }
+.sa-scope:not(.sa-in) .sa-rise { opacity: 0; transform: perspective(1200px) rotateX(24deg) translateY(70px) scale(0.96); }
+
+.sa-in .sa-draw { stroke-dasharray: 1; animation: sa-draw 1.6s cubic-bezier(0.65, 0, 0.35, 1) var(--d, 0s) both; }
+.sa-draw-now { stroke-dasharray: 1; animation: sa-draw 1.3s cubic-bezier(0.65, 0, 0.35, 1) both; }
+.sa-in .sa-grow-y { transform-origin: bottom; animation: sa-grow-y 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) var(--d, 0s) both; }
+.sa-in .sa-grow-x { transform-origin: left; animation: sa-grow-x 1s cubic-bezier(0.2, 0.8, 0.2, 1) var(--d, 0s) both; }
+.sa-in .sa-fade { animation: sa-fade 0.7s ease-out var(--d, 0s) both; }
+.sa-in .sa-fade-in, .sa-fade-in { animation: sa-fade-in 0.9s ease-out var(--d, 0.4s) both; }
+.sa-in .sa-arc { animation: sa-arc 1.1s cubic-bezier(0.3, 0.7, 0.2, 1) var(--d, 0s) both; }
+.sa-in .sa-rise { animation: sa-rise 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) var(--d, 0s) both; }
+.sa-in .sa-needle, .sa-needle { transform: rotate(var(--from)); animation: sa-needle 1.6s cubic-bezier(0.3, 1.4, 0.4, 1) 0.4s forwards; }
+.sa-in .sa-tick { animation: sa-tick 0.4s ease-out var(--d, 0s) both; }
+.sa-in .sa-slide, .sa-slide { left: 0; animation: sa-slide 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards; }
+.sa-pop-late { animation: sa-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) 1.1s both; }
+.sa-callout { animation: sa-fade 0.45s ease-out both; }
+.sa-turn { animation: sa-turn 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) both; transform-origin: 50% 50% -200px; }
+
+@keyframes sa-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes sa-grow-y { from { transform: scaleY(0); } }
+@keyframes sa-grow-x { from { transform: scaleX(0); } }
+@keyframes sa-fade { from { opacity: 0; transform: translateY(10px); } }
+@keyframes sa-fade-in { from { opacity: 0; } }
+@keyframes sa-arc { from { stroke-dasharray: 0 1; } }
+@keyframes sa-rise { from { opacity: 0; transform: perspective(1200px) rotateX(24deg) translateY(70px) scale(0.96); } }
+@keyframes sa-needle { to { transform: rotate(var(--to)); } }
+@keyframes sa-tick { from { stroke: #2e2e33; } }
+@keyframes sa-slide { to { left: var(--to); } }
+@keyframes sa-pop { from { transform: translate(-50%, -50%) scale(0); } }
+@keyframes sa-turn { from { opacity: 0; transform: perspective(1400px) rotateY(-28deg) translateZ(-120px); } }
+
+/* Always-on loops: the live dot, the collections' charts, the caret, the notes, the sprout */
+.sa-live { animation: sa-live 1.6s ease-in-out infinite; }
+.sa-ping { transform-box: fill-box; transform-origin: center; animation: sa-ping 1.8s ease-out infinite; }
+.sa-ping-soft { transform-box: fill-box; transform-origin: center; animation: sa-ping-soft 2.2s ease-in-out infinite; }
+.sa-bar-breathe { transform-box: fill-box; transform-origin: bottom; animation: sa-breathe 2.6s ease-in-out infinite; }
+.sa-bar-glow { animation: sa-glow 2.2s ease-in-out infinite; }
+.sa-loop-draw { stroke-dasharray: 1; animation: sa-loop-draw 4s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+.sa-caret { animation: sa-caret 1s steps(1) infinite; }
+.sa-notes { animation: sa-notes 5s ease-in-out infinite; }
+.sa-sway { transform-origin: bottom center; animation: sa-sway 3s ease-in-out infinite; }
+.sa-cta { background-image: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.22) 50%, transparent 70%); background-size: 250% 100%; animation: sa-shine 3.2s ease-in-out infinite; }
+.sa-tilt { transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform 0.25s ease-out; }
+.sa-tilt::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(500px circle at var(--gx, 50%) var(--gy, 0%), rgba(255,255,255,0.05), transparent 40%); }
+.sa-float { animation: sa-float 6s ease-in-out infinite; }
+
+@keyframes sa-live { 50% { opacity: 0.3; } }
+@keyframes sa-ping { from { transform: scale(0.6); opacity: 0.6; } to { transform: scale(2.4); opacity: 0; } }
+@keyframes sa-ping-soft { 50% { transform: scale(1.25); } }
+@keyframes sa-breathe { 50% { transform: scaleY(0.8); } }
+@keyframes sa-glow { 50% { opacity: 0.75; } }
+@keyframes sa-loop-draw { 0% { stroke-dashoffset: 1; } 45%, 85% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -1; } }
+@keyframes sa-caret { 50% { opacity: 0; } }
+@keyframes sa-notes { 0%, 100% { transform: rotateX(28deg) rotateZ(-6deg); } 50% { transform: rotateX(18deg) rotateZ(4deg) translateY(-4px); } }
+@keyframes sa-sway { 50% { transform: rotate(-6deg); } }
+@keyframes sa-shine { 0% { background-position: 120% 0; } 60%, 100% { background-position: -120% 0; } }
+@keyframes sa-float { 50% { transform: translateY(-10px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sa-scope:not(.sa-in) .sa-draw, .sa-scope:not(.sa-in) .sa-grow-y, .sa-scope:not(.sa-in) .sa-grow-x,
+  .sa-scope:not(.sa-in) .sa-fade, .sa-scope:not(.sa-in) .sa-rise { opacity: 1; transform: none; stroke-dashoffset: 0; }
+  .sa-scope:not(.sa-in) .sa-arc { stroke-dasharray: var(--f) 1 !important; }
+  [class*='sa-'] { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; }
+  .sa-tilt { transform: none; }
+}
+
+/* The typewriter's caret (components/typewriter.ts) */
+.tw-caret {
+  display: inline-block;
+  width: 0.08em;
+  min-width: 2px;
+  height: 0.95em;
+  margin-left: 0.06em;
+  vertical-align: -0.1em;
+  border-radius: 1px;
+  background: #8b5cf6;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.8);
+  animation: sa-caret 1s steps(1) infinite;
+}

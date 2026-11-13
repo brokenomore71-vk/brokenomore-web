@@ -8,6 +8,7 @@ import { renderReceipt } from './receipt';
 import { BILL, CAPTIONS, EQUAL, PEOPLE, inr } from './splitData';
 import { BROKENOMORE_FEATURES } from '../featureScreens';
 import type { SplitStoryRuntime } from './timeline';
+import { typeText, type Typing } from '../typewriter';
 
 const plexMono = IBM_Plex_Mono({ weight: ['400', '500', '600'], subsets: ['latin', 'latin-ext'] });
 
@@ -72,9 +73,58 @@ function loadStoryAssets(runtime: SplitStoryRuntime, sceneCanvas: HTMLCanvasElem
 }
 
 // Captions sit outside the stage so they line up with the section's normal heading.
+// Each caption types itself out whenever it comes up (the scroll timeline only fades it in), the
+// title first and then the line under it
+function useTypeCaptionsOnShow(rootRef: React.RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const groups = Array.from(root.querySelectorAll<HTMLElement>('[data-s="chapter-opening"], [data-s="caption"]'));
+    const section = root.closest('section') ?? root;
+    let onScreen = false;
+    const shown = new Map<HTMLElement, boolean>();
+    const typing = new Map<HTMLElement, Typing[]>();
+    const visible = (g: HTMLElement) => g.style.visibility !== 'hidden' && parseFloat(g.style.opacity || '1') > 0.02;
+
+    const check = () =>
+      groups.forEach((g) => {
+        const now = onScreen && visible(g);
+        if (now === (shown.get(g) ?? false)) return;
+        shown.set(g, now);
+        typing.get(g)?.forEach((t) => t.cancel());
+        typing.delete(g);
+        if (!now) return;
+        const title = g.querySelector<HTMLElement>('h2, h3');
+        const body = g.querySelector<HTMLElement>('p');
+        const list: Typing[] = [];
+        const titleMs = g.dataset.s === 'chapter-opening' ? 70 : 34;
+        if (title) list.push(typeText(title, { msPerChar: titleMs }));
+        const titleTime = (title?.textContent?.length ?? 0) * titleMs;
+        if (body) list.push(typeText(body, { msPerChar: 14, delay: titleTime + 150, keepCaret: g.dataset.s === 'chapter-opening' }));
+        typing.set(g, list);
+      });
+
+    const mo = new MutationObserver(check);
+    groups.forEach((g) => mo.observe(g, { attributes: true, attributeFilter: ['style'] }));
+    const io = new IntersectionObserver((entries) => {
+      onScreen = entries.some((e) => e.isIntersecting);
+      check();
+    });
+    io.observe(section);
+    check();
+    return () => {
+      mo.disconnect();
+      io.disconnect();
+      typing.forEach((list) => list.forEach((t) => t.cancel()));
+    };
+  }, [rootRef]);
+}
+
 export function SplitStoryCaptions() {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  useTypeCaptionsOnShow(rootRef);
   return (
-    <div data-split-captions className="absolute inset-x-0 top-6 sm:top-8 md:top-4 z-30 px-4 pointer-events-none" aria-hidden="true">
+    <div ref={rootRef} data-split-captions className="absolute inset-x-0 top-6 sm:top-8 md:top-4 z-30 px-4 pointer-events-none" aria-hidden="true">
       <div className="relative mx-auto max-w-3xl">
         {/* The feature's name, announced as its chapter begins */}
         <div data-s="chapter-opening" style={HIDDEN} className="absolute inset-x-0 top-0 text-center">
