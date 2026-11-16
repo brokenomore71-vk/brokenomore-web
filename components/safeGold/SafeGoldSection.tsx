@@ -81,7 +81,6 @@ const LANDINGS = STORY_LANDINGS.map((t) => LOGO_UNITS + t);
 function buildTimeline(root: HTMLElement, S: GoldState, narrow: boolean) {
   const tl = gsap.timeline({ paused: true, defaults: { ease: 'none' } });
   const one = (k: string) => root.querySelector<HTMLElement>(`[data-g="${k}"]`)!;
-  const qa = (el: HTMLElement, k: string) => Array.from(el.querySelectorAll<HTMLElement>(`[data-g="${k}"]`));
   const captions = Array.from(root.querySelectorAll<HTMLElement>('[data-g="caption"]'));
   const closing = captions[captions.length - 1];
   const txn = one('txn');
@@ -124,19 +123,6 @@ function buildTimeline(root: HTMLElement, S: GoldState, narrow: boolean) {
     if (narrow) tl.to(S.pig, { sy, duration: 1, ease: 'power2.inOut' }, at);
   };
 
-  // The step bar: each step's line fills while that step plays
-  qa(root, 'step-fill').forEach((fill, i) => {
-    gsap.set(fill, { scaleX: 0 });
-    tl.to(fill, { scaleX: 1, duration: STEPS[i].to - STEPS[i].from }, STEPS[i].from);
-  });
-  qa(root, 'step-label').forEach((label, i) => {
-    gsap.set(label, { color: '#6b6b6b' });
-    tl.to(label, { color: GOLD.champagne, duration: 0.2 }, STEPS[i].from);
-    tl.to(label, { color: GOLD.muted, duration: 0.2 }, STEPS[i].to);
-  });
-  gsap.set(one('steps'), { autoAlpha: 0 });
-  tl.to(one('steps'), { autoAlpha: 1, duration: 0.3 }, 0.3);
-  tl.to(one('steps'), { autoAlpha: 0, duration: 0.3 }, 17.8);
 
   // ============ The coins come out from behind the piggy bank, one by one, into orbit ============
   S.appears.forEach((a, i) => tl.to(a, { t: 1, duration: 0.8 }, i * 0.18));
@@ -360,6 +346,28 @@ export default function SafeGoldSection() {
       };
       window.addEventListener('reveal-partner', onRevealPartner);
 
+      // While a beat is still playing, the page holds still: wheel, touch and keyboard scrolling are
+      // ignored until the animation has caught up with the scroll, so every beat is seen in full
+      // (including the last one, before the page moves on past the section)
+      const playing = () => {
+        if (!pin || !story) return false;
+        const y = window.scrollY;
+        if (y < pin.start - 1 || y > pin.end + 1) return false;
+        return Math.abs(story.time() - toStory(pin.progress) * story.duration()) > 0.02;
+      };
+      const hold = (e: Event) => {
+        if (playing() && e.cancelable) e.preventDefault();
+      };
+      const SCROLL_KEYS = new Set([' ', 'PageDown', 'PageUp', 'ArrowDown', 'ArrowUp', 'Home', 'End']);
+      const holdKeys = (e: KeyboardEvent) => {
+        const el = e.target as HTMLElement | null;
+        if (el?.closest('input, textarea, select, [contenteditable="true"]')) return;
+        if (SCROLL_KEYS.has(e.key)) hold(e);
+      };
+      window.addEventListener('wheel', hold, { passive: false });
+      window.addEventListener('touchmove', hold, { passive: false });
+      window.addEventListener('keydown', holdKeys);
+
       let lastWidth = window.innerWidth;
       let lastHeight = window.innerHeight;
       let timer: ReturnType<typeof setTimeout> | undefined;
@@ -377,6 +385,9 @@ export default function SafeGoldSection() {
         clearTimeout(timer);
         window.removeEventListener('resize', onResize);
         window.removeEventListener('reveal-partner', onRevealPartner);
+        window.removeEventListener('wheel', hold);
+        window.removeEventListener('touchmove', hold);
+        window.removeEventListener('keydown', holdKeys);
         playhead?.kill();
         context?.revert();
       };
@@ -724,21 +735,6 @@ export default function SafeGoldSection() {
           </div>
         </div>
 
-        {/* The four steps, and how far along them the story is */}
-        <ol data-g="steps" style={HIDDEN} className="absolute bottom-6 left-1/2 z-20 hidden -translate-x-1/2 items-center gap-3 lg:flex">
-          {STEPS.map((step, i) => (
-            <li key={step.label} className="flex items-center gap-3">
-              <span data-g="step-label" className="text-xs font-medium uppercase tracking-[0.16em]">
-                {String(i + 1).padStart(2, '0')} {step.label}
-              </span>
-              {i < STEPS.length - 1 && (
-                <span className="h-px w-14 overflow-hidden bg-[#D4AF37]/20">
-                  <span data-g="step-fill" className="block h-full w-full origin-left bg-[#D4AF37]" />
-                </span>
-              )}
-            </li>
-          ))}
-        </ol>
       </section>
 
       {/* Without motion, the journey is simply listed */}

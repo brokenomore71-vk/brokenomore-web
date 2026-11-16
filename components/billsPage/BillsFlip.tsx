@@ -271,7 +271,7 @@ export default function BillsFlip() {
         }
         render();
       };
-      const tl = gsap.timeline({ defaults: { ease: 'none' }, onUpdate, scrollTrigger: { ...pinned(section, steps, 9), end: () => `+=${window.innerHeight * 0.75 * steps}` } });
+      const tl = gsap.timeline({ defaults: { ease: 'none' }, onUpdate, scrollTrigger: { ...pinned(section, steps, 9), end: () => `+=${window.innerHeight * 1.4 * steps}` } });
       for (let c = 0; c <= steps; c++) tl.addLabel(`s${c}`, c);
       let shownCard: string | undefined;
       s.stops.forEach((stop, c) => {
@@ -283,12 +283,12 @@ export default function BillsFlip() {
         // The pages fly
         if (stop.day !== prev.day) {
           const k = s.pageDays.indexOf(prev.day);
-          tl.fromTo(cal, { i: k }, { i: k + 1, duration: 0.62, ease: 'power1.inOut', immediateRender: false }, at);
+          tl.fromTo(cal, { i: k }, { i: k + 1, duration: 0.6, ease: 'power1.inOut', immediateRender: false }, at);
           // The days in between, with nothing due, go by quietly
           const quiet = q('quiet').find((el) => Number(el.dataset.c) === c);
           if (quiet) {
-            tl.fromTo(quiet, { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.15, immediateRender: false }, at + 0.1);
-            tl.to(quiet, { autoAlpha: 0, y: -8, duration: 0.15 }, at + 0.62);
+            tl.fromTo(quiet, { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.12, immediateRender: false }, at + 0.04);
+            tl.to(quiet, { autoAlpha: 0, y: -8, duration: 0.1 }, at + 0.88);
           }
         }
         // The bill's card changes over
@@ -335,7 +335,7 @@ export default function BillsFlip() {
       tl.fromTo(one('summary'), { autoAlpha: 0, x: 160, z: -260, rotationY: -65 }, { autoAlpha: 1, x: 0, z: 0, rotationY: -14, duration: 0.4, ease: 'back.out(1.3)', immediateRender: false }, steps - 1 + 0.62);
       tl.set({}, {}, steps);
 
-      const unglide = glideBetweenLabels(tl);
+      const unglide = glideBetweenLabels(tl, 1.6);
       return () => {
         unglide();
         intro.kill();
@@ -353,7 +353,7 @@ export default function BillsFlip() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_40%_55%_at_52%_50%,rgba(110,91,255,0.22),transparent_70%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_25%_30%_at_80%_80%,rgba(232,106,180,0.1),transparent_70%)]" />
 
-      <div className="relative mx-auto grid h-full max-w-[1400px] grid-rows-[auto_1fr_auto] px-4 sm:px-8 md:grid-cols-[minmax(260px,0.9fr)_minmax(0,1.1fr)_minmax(260px,0.8fr)] md:grid-rows-1 md:items-center md:gap-6">
+      <div className="relative mx-auto grid h-full max-w-[1400px] grid-rows-[auto_1fr_auto] px-4 pb-4 sm:px-8 md:pb-0 md:grid-cols-[minmax(260px,0.9fr)_minmax(0,1.1fr)_minmax(260px,0.8fr)] md:grid-rows-1 md:items-center md:gap-6">
         {/* The story */}
         <div ref={capsRef} className="relative z-30 min-h-[96px] pt-6 md:min-h-[240px] md:pt-0">
           {s.stops.map((c, i) => (
@@ -372,7 +372,7 @@ export default function BillsFlip() {
         </div>
 
         {/* The calendar */}
-        <div data-f="stage" className="relative h-full min-h-[380px] [perspective:1300px]">
+        <div data-f="stage" className="relative h-full min-h-[240px] md:min-h-[380px] [perspective:1300px]">
           {/* Dust in the light */}
           {Array.from({ length: 18 }, (_, i) => (
             <span key={i} className="bf-mote pointer-events-none absolute rounded-full bg-white" style={{ left: `${(i * 37) % 100}%`, top: `${(i * 53) % 100}%`, width: i % 3 ? 2 : 3, height: i % 3 ? 2 : 3, opacity: 0.25, animationDelay: `${(i % 6) * 0.9}s`, animationDuration: `${7 + (i % 5)}s` }} />
@@ -426,7 +426,7 @@ export default function BillsFlip() {
                 if (to < from) return null;
                 const span = to === from ? `${from}` : to - from < 3 ? Array.from({ length: to - from + 1 }, (_, i) => from + i).join(' · ') : `${from} – ${to}`;
                 return (
-                  <span key={c} data-f="quiet" data-c={c} className="absolute whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-[12px] text-white/60 opacity-0 backdrop-blur">
+                  <span key={c} data-f="quiet" data-c={c} className="absolute whitespace-nowrap rounded-full border border-white/10 bg-white/[0.05] px-5 py-2 text-[14px] text-white/70 opacity-0 backdrop-blur">
                     <span className="font-semibold text-white/85">{span}</span> {s.monthName.slice(0, 3)} · no bills, nothing to do
                   </span>
                 );
@@ -436,9 +436,9 @@ export default function BillsFlip() {
         </div>
 
         {/* The bill, beside it */}
-        <div className="relative z-30 h-[150px] [perspective:1200px] [transform-style:preserve-3d] md:h-[300px]">
+        <div className="relative z-30 h-[228px] [perspective:1200px] [transform-style:preserve-3d] md:h-[300px]">
           {s.subs.map((b) => (
-            <div key={b.key} data-f="card" data-key={b.key} className="absolute inset-x-0 top-0 rounded-[24px] border border-white/10 bg-[#131418] p-5 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.9)] [transform-style:preserve-3d]">
+            <div key={b.key} data-f="card" data-key={b.key} className="absolute inset-x-0 top-0 rounded-[24px] border border-white/10 bg-[#131418] p-4 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.9)] md:p-5 [transform-style:preserve-3d]">
               {[4, 8, 12].map((z) => (
                 <div key={z} className="pointer-events-none absolute inset-0 rounded-[24px] border border-white/[0.06] bg-[#0b0b0f]" style={{ transform: `translateZ(-${z}px)` }} />
               ))}
@@ -450,7 +450,7 @@ export default function BillsFlip() {
                 </span>
                 <span className="text-[22px] font-bold tabular-nums">{rupees(b.amount)}</span>
               </div>
-              <div className="mt-4 flex items-center justify-between rounded-xl bg-white/[0.04] px-3 py-2.5 text-[13px]">
+              <div className="mt-3 flex items-center justify-between rounded-xl bg-white/[0.04] px-3 py-2 text-[13px] md:mt-4 md:py-2.5">
                 <span className="text-[#85868c]">Due</span>
                 <span className="font-semibold">
                   {s.weekday(b.day)}, {b.day} {s.monthName.slice(0, 3)}
@@ -458,12 +458,12 @@ export default function BillsFlip() {
               </div>
               {b.key === 'power' ? (
                 <>
-                  <div className="relative mt-3 h-6 text-[13px] font-semibold">
+                  <div className="relative mt-2 h-6 text-[13px] font-semibold md:mt-3">
                     <span data-f="state" data-s="due" className="absolute inset-0 text-[#F5A524]">● Due today · reminder sent</span>
                     <span data-f="state" data-s="overdue" className="absolute inset-0 text-[#EF4444] opacity-0">● 2 days late · late fee in 3 days</span>
                     <span data-f="state" data-s="paid" className="absolute inset-0 text-[#22C55E] opacity-0">✓ Paid via UPI · no late fee</span>
                   </div>
-                  <div className="relative mt-3 h-11">
+                  <div className="relative mt-2 h-10 md:mt-3 md:h-11">
                     <div data-f="pay-btn" className="absolute inset-0 flex items-center justify-center rounded-full bg-[#6E5BFF] text-[14px] font-semibold shadow-[0_12px_30px_-10px_rgba(110,91,255,0.9)]">
                       Pay {rupees(powerAmount)} via UPI
                     </div>
@@ -480,7 +480,7 @@ export default function BillsFlip() {
             </div>
           ))}
           {/* The month, sorted */}
-          <div data-f="summary" className="absolute inset-x-0 top-0 rounded-[24px] border border-white/10 bg-[#131418] p-5 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.9)]">
+          <div data-f="summary" className="absolute inset-x-0 top-0 rounded-[24px] border border-white/10 bg-[#131418] p-4 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.9)] md:p-5">
             <p className="text-[11px] font-semibold tracking-[0.15em] text-white/50">{s.monthName.toUpperCase()} AT A GLANCE</p>
             <p className="mt-2 text-[34px] font-bold leading-tight tabular-nums">{rupees(TOTAL)}</p>
             <p className="text-[13px] text-[#85868c]">{SUBS.length} bills · all on time</p>

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import FeaturePageShell from '@/components/FeaturePageShell';
-import LoanSection from '@/components/loan/LoanSection';
+// import LoanSection from '@/components/loan/LoanSection';
+import LoanTowers from '@/components/loanPage/LoanTowers';
 
 export const metadata: Metadata = {
   title: 'Loan Planner · BrokeNoMore',
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 export default function LoanFeaturePage() {
   return (
     <FeaturePageShell slug="loan">
-      <LoanSection />
+      {/* <LoanSection /> */}<LoanTowers />
     </FeaturePageShell>
   );
 }

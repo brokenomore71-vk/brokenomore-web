@@ -66,7 +66,7 @@ export function pinned(section: HTMLElement, steps: number, refreshPriority: num
 
 // Each scroll moves exactly one step: when the scroll comes to rest between two labels, it glides
 // on to the next one in the direction it was going (as the Loan Planner does)
-export function glideBetweenLabels(tl: gsap.core.Timeline) {
+export function glideBetweenLabels(tl: gsap.core.Timeline, glide = 0.7) {
   const st = tl.scrollTrigger!;
   const stops = () => Object.values(tl.labels).map((v) => v / tl.duration()).sort((a, b) => a - b);
   let settledAt = st.scroll();
@@ -91,7 +91,7 @@ export function glideBetweenLabels(tl: gsap.core.Timeline) {
       gliding = false;
       settledAt = st.scroll();
     };
-    gsap.to(window, { scrollTo: { y: st.start + target * (st.end - st.start), autoKill: true }, duration: 0.7, ease: 'power2.inOut', onComplete: done, onInterrupt: done });
+    gsap.to(window, { scrollTo: { y: st.start + target * (st.end - st.start), autoKill: true }, duration: glide, ease: 'power2.inOut', onComplete: done, onInterrupt: done });
   };
   ScrollTrigger.addEventListener('scrollEnd', onScrollEnd);
   return () => ScrollTrigger.removeEventListener('scrollEnd', onScrollEnd);

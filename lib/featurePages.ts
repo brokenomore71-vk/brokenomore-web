@@ -6,7 +6,7 @@ export type FeaturePage = {
   href: string;
   name: string;
   blurb: string;
-  icon: 'stocks' | 'split' | 'bills' | 'loan';
+  icon: 'stocks' | 'split' | 'bills' | 'loan' | 'calculators';
   accent: string;
 };
 
@@ -42,5 +42,13 @@ export const FEATURE_PAGES: FeaturePage[] = [
     blurb: 'Track your EMIs and see how prepaying closes loans faster.',
     icon: 'loan',
     accent: '#F5A524',
+  },
+  {
+    slug: 'calculators',
+    href: '/features/calculators',
+    name: 'Financial Calculators',
+    blurb: 'EMI, SIP, Lumpsum, SWP, FD and PPF, worked out on your own numbers.',
+    icon: 'calculators',
+    accent: '#8B5CF6',
   },
 ];
