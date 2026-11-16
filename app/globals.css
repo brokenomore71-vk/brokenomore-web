@@ -213,3 +213,45 @@ body {
 .bf-sheen::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.18) 50%, transparent 65%); background-size: 250% 100%; animation: bf-sheen 5s ease-in-out infinite; }
 @keyframes bf-sheen { 0% { background-position: 130% 0; } 60%, 100% { background-position: -130% 0; } }
 @media (prefers-reduced-motion: reduce) { .bf-mote, .bf-sheen::after { animation: none; } }
+
+/* Financial Calculators (components/calculatorsPage): the deck floats, a sheen crosses its glass, and the sliders */
+@keyframes cal-float { 0%, 100% { transform: translateZ(0); } 50% { transform: translateZ(9px); } }
+.cal-float { animation: cal-float 4.2s ease-in-out infinite; }
+@keyframes cal-sheen { 0%, 70% { transform: translateX(-120%) skewX(-18deg); } 100% { transform: translateX(220%) skewX(-18deg); } }
+.cal-sheen::after { content: ''; position: absolute; inset: 0; width: 40%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent); animation: cal-sheen 6s ease-in-out infinite; }
+.cal-range { -webkit-appearance: none; appearance: none; height: 22px; background: transparent; cursor: pointer; }
+.cal-range::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: linear-gradient(90deg, #6E5BFF 0%, #8B5CF6 calc(var(--fill) * 0.6), #D9549F var(--fill), rgba(255,255,255,0.1) var(--fill)); }
+.cal-range::-moz-range-track { height: 6px; border-radius: 999px; background: rgba(255,255,255,0.1); }
+.cal-range::-moz-range-progress { height: 6px; border-radius: 999px; background: linear-gradient(90deg, #6E5BFF, #D9549F); }
+.cal-range::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; margin-top: -7px; border-radius: 50%; background: #fff; border: 4px solid #6E5BFF; box-shadow: 0 0 0 6px rgba(110,91,255,0.18), 0 4px 10px rgba(0,0,0,0.5); transition: box-shadow .2s; }
+.cal-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 4px solid #6E5BFF; box-shadow: 0 0 0 6px rgba(110,91,255,0.18); }
+.cal-range:focus-visible::-webkit-slider-thumb, .cal-range:hover::-webkit-slider-thumb { box-shadow: 0 0 0 9px rgba(110,91,255,0.28), 0 4px 10px rgba(0,0,0,0.5); }
+@media (prefers-reduced-motion: reduce) { .cal-float, .cal-sheen::after { animation: none; } }
+
+/* Financial Calculators, the question desk (components/calculatorsPage/CalculatorDesk.tsx): its year slider */
+.cd-range { -webkit-appearance: none; appearance: none; height: 22px; background: transparent; cursor: pointer; }
+.cd-range::-webkit-slider-runnable-track { height: 4px; border-radius: 999px; background: linear-gradient(90deg, #6EF0CF var(--fill), rgba(255,255,255,0.1) var(--fill)); }
+.cd-range::-moz-range-track { height: 4px; border-radius: 999px; background: rgba(255,255,255,0.1); }
+.cd-range::-moz-range-progress { height: 4px; border-radius: 999px; background: #6EF0CF; }
+.cd-range::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: -7px; border-radius: 50%; background: #050807; border: 3px solid #6EF0CF; box-shadow: 0 0 0 5px rgba(110,240,207,0.15); }
+.cd-range::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #050807; border: 3px solid #6EF0CF; }
+
+/* Financial Calculators, the studio (components/calculatorsPage/CalculatorStudio.tsx): its sliders */
+.cs-range { -webkit-appearance: none; appearance: none; height: 20px; background: transparent; cursor: pointer; }
+.cs-range::-webkit-slider-runnable-track { height: 4px; border-radius: 999px; background: linear-gradient(90deg, #6E5BFF var(--fill), rgba(255,255,255,0.12) var(--fill)); }
+.cs-range::-moz-range-track { height: 4px; border-radius: 999px; background: rgba(255,255,255,0.12); }
+.cs-range::-moz-range-progress { height: 4px; border-radius: 999px; background: #6E5BFF; }
+.cs-range::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 4px rgba(110,91,255,0.35), 0 2px 6px rgba(0,0,0,0.6); }
+.cs-range::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 0 0 4px rgba(110,91,255,0.35); }
+
+/* Financial Calculators, the card grid (components/calculatorsPage/CalculatorsHub.tsx): the sliders */
+.ch-range { -webkit-appearance: none; appearance: none; height: 20px; background: transparent; cursor: pointer; }
+.ch-range::-webkit-slider-runnable-track { height: 5px; border-radius: 999px; background: linear-gradient(90deg, #6E5BFF var(--fill), rgba(255,255,255,0.12) var(--fill)); }
+.ch-range::-moz-range-track { height: 5px; border-radius: 999px; background: rgba(255,255,255,0.12); }
+.ch-range::-moz-range-progress { height: 5px; border-radius: 999px; background: #6E5BFF; }
+.ch-range::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; margin-top: -7.5px; border-radius: 50%; background: #6E5BFF; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+.ch-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #6E5BFF; border: 3px solid #fff; }
+/* The calculator cards' illustrations drift a little */
+@keyframes ch-float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-5px) rotate(-1.5deg); } }
+.ch-float { animation: ch-float 5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .ch-float { animation: none; } }
