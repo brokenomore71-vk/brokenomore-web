@@ -8,6 +8,7 @@ import Phone3D from './Phone3D';
 import FeatureOrbit, { getOrbitStageWidth } from './FeatureOrbit';
 import { BROKENOMORE_FEATURES } from './featureScreens';
 import dynamic from 'next/dynamic';
+import { jumpToPartner } from './partnerNav';
 
 // The split story's layer only renders on the split part (/features), so the home page's
 // orbit part doesn't download it
@@ -123,15 +124,24 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
     if (hasOrbit && title && actions) {
       const btnAndroid = actions.querySelector<HTMLElement>('[data-hero-btn-android]');
       const btnIos = actions.querySelector<HTMLElement>('[data-hero-btn-ios]');
+      const btnPartner = actions.querySelector<HTMLElement>('[data-hero-btn-partner]');
       const sub = document.querySelector<HTMLElement>('[data-hero-sub]');
 
       history.scrollRestoration = 'manual';
       window.scrollTo({ top: 0, behavior: 'instant' });
 
+      if (btnPartner) {
+        btnPartner.addEventListener('click', (e: MouseEvent) => {
+          e.preventDefault();
+          jumpToPartner();
+        });
+      }
+
       mm.add('(prefers-reduced-motion: reduce)', () => {
         gsap.set([title, actions, sub], { autoAlpha: 1 });
         if (btnAndroid) gsap.set(btnAndroid, { autoAlpha: 1, y: 0, scale: 1 });
         if (btnIos) gsap.set(btnIos, { autoAlpha: 1, y: 0, scale: 1 });
+        if (btnPartner) gsap.set(btnPartner, { autoAlpha: 1, y: 0, scale: 1 });
         setStartPhoneIntro(true);
         ScrollTrigger.create({
           trigger: sectionRef.current,
@@ -151,8 +161,9 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
         if (sub) gsap.set(sub, { y: 14, autoAlpha: 0 });
         if (btnAndroid) gsap.set(btnAndroid, { y: 18, autoAlpha: 0, force3D: true });
         if (btnIos) gsap.set(btnIos, { y: 18, autoAlpha: 0, force3D: true });
+        if (btnPartner) gsap.set(btnPartner, { y: 14, autoAlpha: 0, force3D: true });
 
-        // Flow: 1. Text appears -> 2. Android button glides in -> 3. iOS button glides in (silky smooth)
+        // Flow: 1. Text appears -> 2. Android button glides in -> 3. iOS button glides in (silky smooth) -> 4. Connect to partner text
         const tl = gsap.timeline({ delay: 0.2 });
 
         tl.to(words, {
@@ -197,6 +208,23 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
               },
             },
             '-=0.72'
+          );
+        }
+
+        if (btnPartner) {
+          tl.to(
+            btnPartner,
+            {
+              y: 0,
+              autoAlpha: 1,
+              duration: 0.8,
+              ease: 'power3.out',
+              force3D: true,
+              onComplete: () => {
+                gsap.set(btnPartner, { clearProps: 'transform' });
+              },
+            },
+            '-=0.55'
           );
         }
 

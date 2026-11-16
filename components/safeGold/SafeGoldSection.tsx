@@ -291,10 +291,11 @@ export default function SafeGoldSection() {
       let playhead: ReturnType<typeof createPlayhead> | null = null;
       let pin: ScrollTrigger | null = null;
       let story: gsap.core.Timeline | null = null;
+      let toStory: (progress: number) => number = (p) => p;
 
       const build = () => {
         const place = pin?.progress ?? 0;
-        let toStory = (progress: number) => progress;
+        toStory = (progress: number) => progress;
         const wasPinned = !!pin && window.scrollY >= pin.start;
         playhead?.kill();
         context?.revert();
@@ -351,6 +352,14 @@ export default function SafeGoldSection() {
       };
       build();
 
+      const onRevealPartner = () => {
+        if (story && toStory) {
+          story.progress(1);
+          playhead?.jump(toStory(1));
+        }
+      };
+      window.addEventListener('reveal-partner', onRevealPartner);
+
       let lastWidth = window.innerWidth;
       let lastHeight = window.innerHeight;
       let timer: ReturnType<typeof setTimeout> | undefined;
@@ -367,6 +376,7 @@ export default function SafeGoldSection() {
       return () => {
         clearTimeout(timer);
         window.removeEventListener('resize', onResize);
+        window.removeEventListener('reveal-partner', onRevealPartner);
         playhead?.kill();
         context?.revert();
       };

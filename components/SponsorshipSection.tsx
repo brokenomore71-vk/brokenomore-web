@@ -29,15 +29,38 @@ const LINES = [
   { label: 'Partner support', value: 'Dedicated team' },
 ];
 
-const rise: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  shown: (delay: number = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.85, ease: EASE, delay } }),
-};
-
 export default function SponsorshipSection() {
   const reduce = useReducedMotion();
   const [kind, setKind] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [instantReveal, setInstantReveal] = useState(false);
+
+  useEffect(() => {
+    const handleReveal = () => setInstantReveal(true);
+    if (typeof window !== 'undefined') {
+      if (window.location.hash === '#partner') {
+        setInstantReveal(true);
+      }
+      window.addEventListener('reveal-partner', handleReveal);
+      window.addEventListener('hashchange', () => {
+        if (window.location.hash === '#partner') setInstantReveal(true);
+      });
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('reveal-partner', handleReveal);
+      }
+    };
+  }, []);
+
+  const rise: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    shown: (delay: number = 0) => ({
+      opacity: 1,
+      y: 0,
+      transition: { duration: instantReveal ? 0 : 0.85, ease: EASE, delay: instantReveal ? 0 : delay },
+    }),
+  };
 
   // "× Your brand" cycles through the kinds of partner
   useEffect(() => {
@@ -61,7 +84,11 @@ export default function SponsorshipSection() {
   };
 
   return (
-    <section id="partner" aria-labelledby="partner-heading" className="relative w-full overflow-hidden bg-black px-4 sm:px-6 py-24 sm:py-32">
+    <section
+      id="partner"
+      aria-labelledby="partner-heading"
+      className="relative w-full overflow-hidden bg-black px-4 sm:px-6 py-20 sm:py-28 lg:py-32 min-h-[90vh] lg:min-h-screen flex flex-col justify-center"
+    >
       {/* A faint grid, like ruled paper, fading out towards the edges */}
       <div
         aria-hidden="true"
@@ -76,8 +103,9 @@ export default function SponsorshipSection() {
       />
 
       <motion.div
-        initial={reduce ? false : 'hidden'}
-        whileInView="shown"
+        initial={instantReveal ? 'shown' : (reduce ? false : 'hidden')}
+        animate={instantReveal ? 'shown' : undefined}
+        whileInView={instantReveal ? undefined : 'shown'}
         viewport={{ once: true, amount: 0.15 }}
         className="relative mx-auto grid max-w-6xl items-center gap-y-10 lg:gap-y-0 lg:gap-x-20 lg:grid-cols-[1.1fr_1fr] lg:grid-rows-[auto_auto] lg:content-center"
       >
@@ -152,7 +180,12 @@ export default function SponsorshipSection() {
             className="relative -mt-1.5"
             variants={{
               hidden: { clipPath: 'inset(0 0 100% 0)' },
-              shown: { clipPath: 'inset(0 0 0% 0)', transition: { duration: 1.6, ease: [0.65, 0, 0.35, 1], delay: 0.35 } },
+              shown: {
+                clipPath: 'inset(0 0 0% 0)',
+                transition: instantReveal
+                  ? { duration: 0, delay: 0 }
+                  : { duration: 1.6, ease: [0.65, 0, 0.35, 1], delay: 0.35 },
+              },
             }}
           >
             <div className="rounded-b-sm bg-[#111] border-x border-[#232323] px-5 sm:px-8 pt-6 sm:pt-8 pb-5 sm:pb-6 font-mono">
@@ -193,7 +226,13 @@ export default function SponsorshipSection() {
                     className="flex items-baseline gap-3"
                     variants={{
                       hidden: { opacity: 0, x: -8 },
-                      shown: { opacity: 1, x: 0, transition: { duration: 0.5, ease: EASE, delay: 1.1 + i * 0.14 } },
+                      shown: {
+                        opacity: 1,
+                        x: 0,
+                        transition: instantReveal
+                          ? { duration: 0, delay: 0 }
+                          : { duration: 0.5, ease: EASE, delay: 1.1 + i * 0.14 },
+                      },
                     }}
                   >
                     <dt className="shrink-0 text-neutral-500">{line.label}</dt>
@@ -207,7 +246,13 @@ export default function SponsorshipSection() {
 
               <motion.div
                 className="flex items-baseline justify-between gap-4"
-                variants={{ hidden: { opacity: 0 }, shown: { opacity: 1, transition: { duration: 0.6, delay: 1.75 } } }}
+                variants={{
+                  hidden: { opacity: 0 },
+                  shown: {
+                    opacity: 1,
+                    transition: instantReveal ? { duration: 0, delay: 0 } : { duration: 0.6, delay: 1.75 },
+                  },
+                }}
               >
                 <span className="text-xs uppercase tracking-[0.14em] text-neutral-500">Total</span>
                 <span className="font-sans text-lg sm:text-xl font-semibold tracking-tight text-white">Something awesome</span>
@@ -232,7 +277,14 @@ export default function SponsorshipSection() {
                   style={{ borderColor: '#F5F5F5', color: '#F5F5F5' }}
                   variants={{
                     hidden: { opacity: 0, scale: 1.8, rotate: -24 },
-                    shown: { opacity: 1, scale: 1, rotate: -12, transition: { type: 'spring', stiffness: 420, damping: 18, delay: 2.15 } },
+                    shown: {
+                      opacity: 1,
+                      scale: 1,
+                      rotate: -12,
+                      transition: instantReveal
+                        ? { duration: 0, delay: 0 }
+                        : { type: 'spring', stiffness: 420, damping: 18, delay: 2.15 },
+                    },
                   }}
                 >
                   <span className="absolute inset-1.5 rounded-full border border-dashed" style={{ borderColor: 'rgba(245,245,245,0.6)' }} />

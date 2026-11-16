@@ -175,7 +175,13 @@ export default function QuickoSection() {
       ScrollTrigger.sort();
       document.fonts?.ready.then(() => ScrollTrigger.refresh());
 
+      const onRevealPartner = () => {
+        tl.progress(1);
+      };
+      window.addEventListener('reveal-partner', onRevealPartner);
+
       return () => {
+        window.removeEventListener('reveal-partner', onRevealPartner);
         arrival.kill();
         build.kill();
       };
