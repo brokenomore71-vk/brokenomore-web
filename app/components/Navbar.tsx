@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import {
   ResizableNavbar,
   NavBody,
@@ -16,6 +15,10 @@ import {
   MobileNavMenu,
 } from "@/components/ui/resizable-navbar";
 import { FeaturesMenuMobile } from "@/components/ui/features-menu";
+
+// The Supabase client (~45 KB gzipped) is only needed for the signed-in state, so it loads
+// after the page instead of being part of every page's first download
+const getSupabase = () => import("@/lib/supabase").then((m) => m.supabase);
 
 export default function Navbar() {
   const router = useRouter();
@@ -33,6 +36,11 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
+
+    getSupabase().then((supabase) => {
+    if (cancelled) return;
     // Check initial session with error handling
     supabase.auth.getSession()
       .then(({ data: { session }, error }) => {
@@ -80,11 +88,21 @@ export default function Navbar() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    unsubscribe = () => subscription.unsubscribe();
+    }).catch((error) => {
+      console.error('Error loading auth client:', error);
+      if (!cancelled) setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from('user_profiles')
         .select('avatar_url')
@@ -159,6 +177,7 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     try {
+      const supabase = await getSupabase();
       await supabase.auth.signOut();
       router.push('/');
       router.refresh();

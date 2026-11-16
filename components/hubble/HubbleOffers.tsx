@@ -125,7 +125,13 @@ export default function HubbleOffers() {
       gsap.set(letters, { yPercent: 110, autoAlpha: 0 });
       gsap.set(shine, { xPercent: -120 });
       gsap.set(text, { autoAlpha: 0, y: 24 });
-      gsap.set(cards, { autoAlpha: 0 });
+      cards.forEach((card) => {
+        card.style.opacity = '0';
+        card.style.visibility = 'hidden';
+      });
+      // Each card's dimmer: a black layer whose opacity stands in for filter: brightness(), which
+      // would repaint the whole card (art, text and shadow) on every frame
+      const dimmers = cards.map((card) => card.querySelector<HTMLElement>('[data-h="dim"]'));
       const intro = gsap.timeline({ paused: true });
       intro
         .to(letters, { yPercent: 0, autoAlpha: 1, duration: 0.7, ease: 'power4.out', stagger: 0.06 })
@@ -149,6 +155,14 @@ export default function HubbleOffers() {
 
       let spin = 0;
       let lastProgress = 0;
+      // Measured on resize, not read every frame (reading layout right after writing styles
+      // forces the browser to recalculate the page's layout each frame)
+      let w = section.clientWidth;
+      const resizeObserver = new ResizeObserver(() => {
+        w = section.clientWidth;
+      });
+      resizeObserver.observe(section);
+
       const tick = (_time: number, deltaMs: number) => {
         const dt = Math.min(deltaMs / 1000, 0.05);
         progress += (target - progress) * Math.min(1, dt * 6);
@@ -157,7 +171,6 @@ export default function HubbleOffers() {
         lastProgress = progress;
         spin += dt * (0.22 + Math.min(scrollSpeed * 2.4, 2.2));
 
-        const w = section.clientWidth;
         const narrow = w < 768;
         const R = narrow ? (w < 400 ? Math.min(w * 0.34, 130) : Math.min(w * 0.38, 150)) : Math.min(w * 0.3, 430);
         const tilt = narrow ? 0.62 : 0.2; // how far the front of the ring dips below the logo
@@ -177,24 +190,44 @@ export default function HubbleOffers() {
           const y = (narrow ? 130 : 70) + z * (tilt + open * 0.06);
           const s = depth / (depth - z);
           const facing = (z + R) / (2 * R); // 0 at the back, 1 at the front
-          gsap.set(card, {
-            x: x * s,
-            y: y * s,
-            scale: s * cardScale * (0.25 + 0.75 * born),
-            rotationY: Math.sin(angle) * 32,
-            rotationZ: Math.sin(angle) * -4,
-            zIndex: z > 0 ? 60 + Math.round(z) : 10 + Math.round(z + R) / 20,
-            autoAlpha: born <= 0 ? 0 : 0.28 + 0.72 * facing,
-            filter: `brightness(${(0.45 + 0.55 * facing).toFixed(3)})`,
-          });
+          // Written straight to the style (only transform and opacity change, which the GPU
+          // composites without repainting), instead of a gsap.set tween per card per frame
+          const scale = s * cardScale * (0.25 + 0.75 * born);
+          card.style.transform =
+            `translate3d(${(x * s).toFixed(2)}px, ${(y * s).toFixed(2)}px, 0) ` +
+            `rotate(${(Math.sin(angle) * -4).toFixed(2)}deg) rotateY(${(Math.sin(angle) * 32).toFixed(2)}deg) scale(${scale.toFixed(4)})`;
+          const zIndex = String(z > 0 ? 60 + Math.round(z) : 10 + Math.round((z + R) / 20));
+          if (card.style.zIndex !== zIndex) card.style.zIndex = zIndex;
+          const alpha = born <= 0 ? 0 : 0.28 + 0.72 * facing;
+          card.style.opacity = alpha.toFixed(3);
+          const vis = alpha > 0 ? 'visible' : 'hidden';
+          if (card.style.visibility !== vis) card.style.visibility = vis;
+          // brightness(0.45 + 0.55 * facing) is the same as a black layer at 0.55 * (1 - facing)
+          const dim = dimmers[i];
+          if (dim) dim.style.opacity = (0.55 * (1 - facing)).toFixed(3);
         });
 
         // The logo eases back a little as the ring fills, and the words come in above
-        gsap.set(logo, { scale: 1 - 0.12 * smooth(seg(progress, 0, 0.45)) });
+        logo.style.transform = `scale(${(1 - 0.12 * smooth(seg(progress, 0, 0.45))).toFixed(4)})`;
         const words = smooth(seg(progress, 0.42, 0.62));
-        gsap.set(text, { autoAlpha: words, y: 24 * (1 - words) });
+        text.style.opacity = words.toFixed(3);
+        text.style.visibility = words > 0 ? 'visible' : 'hidden';
+        text.style.transform = `translateY(${(24 * (1 - words)).toFixed(2)}px)`;
       };
-      gsap.ticker.add(tick);
+
+      // Only animate while the section is on (or near) the screen
+      let running = false;
+      const setRunning = (on: boolean) => {
+        if (on === running) return;
+        running = on;
+        if (on) gsap.ticker.add(tick);
+        else gsap.ticker.remove(tick);
+      };
+      const nearObserver = new IntersectionObserver(
+        (entries) => setRunning(entries.some((e) => e.isIntersecting)),
+        { rootMargin: '100px 0px' }
+      );
+      nearObserver.observe(section);
       ScrollTrigger.sort();
       // The ring settles before the page moves on to the next section
       const releaseHold = holdPinUntilPlayed(
@@ -207,7 +240,9 @@ export default function HubbleOffers() {
 
       return () => {
         releaseHold();
-        gsap.ticker.remove(tick);
+        nearObserver.disconnect();
+        resizeObserver.disconnect();
+        setRunning(false);
         arrival.kill();
         pin.kill();
         intro.kill();
@@ -236,10 +271,11 @@ export default function HubbleOffers() {
               ref={(el) => {
                 cardsRef.current[i] = el;
               }}
-              className="absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2"
+              className="absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2 will-change-[transform,opacity]"
               style={{ visibility: 'hidden' }}
             >
               <BrandTile brand={brand} />
+              <div data-h="dim" className="pointer-events-none absolute inset-0 rounded-2xl bg-black opacity-0 will-change-[opacity]" />
             </div>
           ))}
         </div>

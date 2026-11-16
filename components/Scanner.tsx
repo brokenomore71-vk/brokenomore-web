@@ -431,16 +431,21 @@ const Scanner: React.FC<ScannerProps> = ({
       sizedDpr = s.dpr;
       view.width = Math.max(1, container.clientWidth);
       view.height = Math.max(1, container.clientHeight);
-      view.ratio = Math.min(s.dpr || window.devicePixelRatio || 1, 2);
+      // A soft full-screen background: 1.5x is indistinguishable from 2x and draws ~44% fewer pixels
+      view.ratio = Math.min(s.dpr || window.devicePixelRatio || 1, 1.5);
       canvas.width = Math.max(1, Math.round(view.width * view.ratio));
       canvas.height = Math.max(1, Math.round(view.height * view.ratio));
       draw();
       wake();
     };
 
+    // The page hides the background with `visibility: hidden` once it is covered, which an
+    // IntersectionObserver still reports as on screen, so check the computed style as well
+    const shown = () => visible && !document.hidden && getComputedStyle(container).visibility !== 'hidden';
+
     const frame = (now: number) => {
       raf = 0;
-      if (!visible || document.hidden) return;
+      if (!shown()) return;
       const s = settingsRef.current;
       if (s.dpr !== sizedDpr) resize();
       const dt = last ? clamp((now - last) / 1000, 0, 1 / 20) : 1 / 60;
@@ -470,7 +475,7 @@ const Scanner: React.FC<ScannerProps> = ({
 
     function wake() {
       quiet = 0;
-      if (!raf && visible && !document.hidden) {
+      if (!raf && shown()) {
         last = 0;
         raf = requestAnimationFrame(frame);
       }
@@ -527,6 +532,11 @@ const Scanner: React.FC<ScannerProps> = ({
       if (visible) wake();
     });
     intersection.observe(container);
+    // Restart drawing when a wrapper's inline style un-hides the background again
+    const styleObserver = new MutationObserver(() => wake());
+    if (container.parentElement) {
+      styleObserver.observe(container.parentElement, { attributes: true, attributeFilter: ['style', 'class'] });
+    }
     window.addEventListener('pointermove', onPointerMove, { passive: true });
     window.addEventListener('pointerdown', onPointerDown, { passive: true });
     document.documentElement.addEventListener('pointerleave', onPointerLeave);
@@ -539,6 +549,7 @@ const Scanner: React.FC<ScannerProps> = ({
       wakeRef.current = null;
       resizeObserver.disconnect();
       intersection.disconnect();
+      styleObserver.disconnect();
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerdown', onPointerDown);
       document.documentElement.removeEventListener('pointerleave', onPointerLeave);

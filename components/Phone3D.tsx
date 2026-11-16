@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import type { PhoneScreenController } from './splitStory/timeline';
 
 // The phone model is loaded once per page session and shared by every Phone3D instance,
@@ -14,7 +15,8 @@ let phoneModelCache: THREE.Group | null = null;
 
 function loadPhoneModel(): Promise<THREE.Group> {
   if (!phoneModelPromise) {
-    phoneModelPromise = new GLTFLoader().loadAsync(PHONE_MODEL_URL).then((gltf) => {
+    // main.glb is Meshopt-compressed (gltf-transform optimize --compress meshopt): ~0.8 MB instead of ~3.9 MB
+    phoneModelPromise = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(PHONE_MODEL_URL).then((gltf) => {
       phoneModelCache = gltf.scene;
       return gltf.scene;
     });
@@ -291,7 +293,8 @@ export default function Phone3D({
       }
     }
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    // Antialiasing is on, so 1.5x stays crisp while drawing ~44% fewer pixels than 2x
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.95;
     if (playIntroRef.current) {
@@ -457,16 +460,21 @@ export default function Phone3D({
 
     let screenWasOverridden = false;
 
-    // Two phones live on the page, so each one only draws while it is on screen
+    // Only draw while the phone is on screen; the loop stops completely when it scrolls away
     let onScreen = true;
     const visibility = new IntersectionObserver((entries) => {
+      const was = onScreen;
       onScreen = entries.some((entry) => entry.isIntersecting);
+      if (onScreen && !was) {
+        cancelAnimationFrame(animId);
+        animId = requestAnimationFrame(animate);
+      }
     });
     visibility.observe(container);
 
     const animate = () => {
-      animId = requestAnimationFrame(animate);
       if (!onScreen) return;
+      animId = requestAnimationFrame(animate);
 
       const elapsedTime = clock.getElapsedTime();
 

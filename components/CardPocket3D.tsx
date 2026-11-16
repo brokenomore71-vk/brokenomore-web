@@ -238,7 +238,7 @@ export default function CardPocket3D({ cards: cardData, selection, onPick, class
         setWebglFailed(true);
         return;
       }
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
       renderer.toneMapping = THREE.NeutralToneMapping;
       container.appendChild(renderer.domElement);
 

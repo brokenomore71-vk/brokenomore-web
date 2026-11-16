@@ -7,7 +7,12 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Phone3D from './Phone3D';
 import FeatureOrbit, { getOrbitStageWidth } from './FeatureOrbit';
 import { BROKENOMORE_FEATURES } from './featureScreens';
-import SplitStoryLayer, { SplitStoryCaptions } from './splitStory/SplitStoryLayer';
+import dynamic from 'next/dynamic';
+
+// The split story's layer only renders on the split part (/features), so the home page's
+// orbit part doesn't download it
+const SplitStoryLayer = dynamic(() => import('./splitStory/SplitStoryLayer'));
+const SplitStoryCaptions = dynamic(() => import('./splitStory/SplitStoryLayer').then((m) => m.SplitStoryCaptions));
 import { CAPTIONS } from './splitStory/splitData';
 import { createSplitStoryRuntime } from './splitStory/timeline';
 // The stock and gold phone chapters are switched off for now (SafeGold has its own section).

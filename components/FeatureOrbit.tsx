@@ -50,6 +50,7 @@ export default function FeatureOrbit({
   // Starts at Math.PI / 2 so the first feature is front and center
   const orbitAngleRef = useRef<number>(Math.PI / 2);
   const targetAngleRef = useRef<number | null>(null);
+  const kickRef = useRef<(() => void) | null>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // State initialized with identical baseline on server and client to eliminate hydration errors
@@ -106,14 +107,17 @@ export default function FeatureOrbit({
     const idx = BROKENOMORE_FEATURES.findIndex((f) => f.id === selectedFeatureId);
     if (idx !== -1) {
       targetAngleRef.current = Math.PI / 2 - (idx * 2 * Math.PI) / totalFeatures;
+      kickRef.current?.();
     }
   }, [selectedFeatureId, totalFeatures]);
 
   // Eases round to the selected feature smoothly via RAF
+  // (The loop only runs while the orbit is turning, then sleeps until the next selection)
   useEffect(() => {
-    let animId: number;
+    let animId = 0;
 
     const loop = () => {
+      animId = 0;
       const target = targetAngleRef.current;
       if (target !== null) {
         let diff = (target - orbitAngleRef.current) % (2 * Math.PI);
@@ -131,11 +135,17 @@ export default function FeatureOrbit({
           updateCardPositions(orbitAngleRef.current);
         }
       }
-      animId = requestAnimationFrame(loop);
+      if (targetAngleRef.current !== null) animId = requestAnimationFrame(loop);
     };
 
-    animId = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(animId);
+    kickRef.current = () => {
+      if (!animId) animId = requestAnimationFrame(loop);
+    };
+    kickRef.current();
+    return () => {
+      cancelAnimationFrame(animId);
+      kickRef.current = null;
+    };
   }, [renderPausedRef, updateCardPositions]);
 
   // Initial position sync on mount
