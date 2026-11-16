@@ -2,12 +2,17 @@
 
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { CalcArt } from './calcArt';
 import { CALCULATORS, inr, type CalcKey, type Field, type Result } from '@/lib/calculators';
 
 // Financial Calculators: a grid of cards, one per calculator, each with a small illustration in
-// its corner. Opening one shows its inputs on the left and the result on the right, as a donut
-// and a summary. The open calculator is kept in the URL's hash (#sip), so Back returns to the grid.
+// its corner. Each calculator has its own page (/features/calculators/sip): its inputs on the
+// left and the result on the right, as a donut and a summary. Real pages, linked through the
+// router, so the phone's Back button, the breadcrumb and shared links all behave.
+
+export const calcHref = (k: CalcKey) => `/features/calculators/${k}`;
 
 const A = '#6E5BFF'; // invested / principal
 const B = '#1A9BBD'; // returns / interest (checked against A for colour-blind separation)
@@ -183,9 +188,9 @@ function CalcCard({ c, i }: { c: (typeof CALCULATORS)[number]; i: number }) {
   const ref = useTilt<HTMLAnchorElement>(7);
   return (
     <div data-card className="[perspective:1000px]">
-      <a
+      <Link
         ref={ref}
-        href={`#${c.key}`}
+        href={calcHref(c.key)}
         className="group relative block h-[200px] rounded-2xl border border-white/[0.08] bg-[linear-gradient(160deg,#111017_0%,#0a0a0d_100%)] p-6 transition-[transform,border-color,box-shadow] duration-300 ease-out [transform-style:preserve-3d] [transform:rotateX(var(--rx,0deg))_rotateY(var(--ry,0deg))] hover:border-white/20 hover:shadow-[0_30px_60px_-30px_rgba(110,91,255,0.45)] sm:h-[216px]"
       >
         {/* A soft light that follows the pointer */}
@@ -201,7 +206,7 @@ function CalcCard({ c, i }: { c: (typeof CALCULATORS)[number]; i: number }) {
             <CalcArt k={c.key} />
           </span>
         </span>
-      </a>
+      </Link>
     </div>
   );
 }
@@ -246,7 +251,7 @@ function Donut3D({ r }: { r: Result }) {
 
 // ---------------------------------------------------------------------------------------------
 
-function CalculatorView({ k, onBack }: { k: CalcKey; onBack: () => void }) {
+function CalculatorView({ k }: { k: CalcKey }) {
   const calc = CALCULATORS.find((c) => c.key === k)!;
   const [v, setV] = useState(() => Object.fromEntries(calc.fields.map((f) => [f.key, f.value])) as Record<string, number>);
   const r = useMemo(() => calc.run(v), [calc, v]);
@@ -268,9 +273,9 @@ function CalculatorView({ k, onBack }: { k: CalcKey; onBack: () => void }) {
   return (
     <div ref={rootRef} className="select-text">
       <nav data-in className="flex items-center gap-2 text-[13px] text-white/45" aria-label="Breadcrumb">
-        <button type="button" onClick={onBack} className="transition hover:text-white">
+        <Link href="/features/calculators" className="transition hover:text-white">
           Calculators
-        </button>
+        </Link>
         <span aria-hidden="true">›</span>
         <span className="text-white/80">{calc.name}</span>
       </nav>
@@ -329,10 +334,10 @@ function CalculatorView({ k, onBack }: { k: CalcKey; onBack: () => void }) {
           <h2 className="text-[15px] font-semibold text-white/80">Other calculators</h2>
           <div className="mt-3 divide-y divide-white/[0.06] rounded-xl border border-white/10">
             {CALCULATORS.filter((c) => c.key !== k).map((c) => (
-              <a key={c.key} href={`#${c.key}`} className="flex items-center justify-between px-4 py-3 text-[14px] text-white/70 transition hover:bg-white/[0.03] hover:text-white">
+              <Link key={c.key} href={calcHref(c.key)} className="flex items-center justify-between px-4 py-3 text-[14px] text-white/70 transition hover:bg-white/[0.03] hover:text-white">
                 {c.name}
                 <span aria-hidden="true">›</span>
-              </a>
+              </Link>
             ))}
           </div>
         </div>
@@ -342,14 +347,36 @@ function CalculatorView({ k, onBack }: { k: CalcKey; onBack: () => void }) {
   );
 }
 
+// The page around both: a soft light at the top
+function Frame({ children, innerRef }: { children: React.ReactNode; innerRef?: React.Ref<HTMLDivElement> }) {
+  return (
+    <div className="relative bg-black text-[#F5F5F5]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-[radial-gradient(ellipse_45%_55%_at_50%_0%,rgba(110,91,255,0.10),transparent_70%)]" />
+      <div ref={innerRef} className="relative mx-auto max-w-[1120px] px-4 pb-16 pt-8 sm:px-8 sm:pt-12">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// One calculator's own page
+export function CalculatorPage({ k }: { k: CalcKey }) {
+  return (
+    <Frame>
+      <CalculatorView k={k} />
+    </Frame>
+  );
+}
+
+// The grid of calculators
 export default function CalculatorsHub() {
-  const [open, setOpen] = useState<CalcKey | null>(null);
+  const router = useRouter();
   const gridRef = useRef<HTMLDivElement | null>(null);
 
   // The grid coming in: the heading, then the cards one by one, tipping up into place
   useLayoutEffect(() => {
     const root = gridRef.current;
-    if (!root || open) return;
+    if (!root) return;
     const mm = gsap.matchMedia();
     mm.add('(prefers-reduced-motion: no-preference)', () => {
       const q = gsap.utils.selector(root);
@@ -357,39 +384,28 @@ export default function CalculatorsHub() {
       gsap.fromTo(q('[data-card]'), { y: 40, opacity: 0, rotateX: -18, transformPerspective: 900, transformOrigin: '50% 100%' }, { y: 0, opacity: 1, rotateX: 0, duration: 0.9, ease: 'power3.out', stagger: 0.07, delay: 0.15, clearProps: 'transform,opacity' });
     });
     return () => mm.revert();
-  }, [open]);
-
-  // The open calculator lives in the URL's hash, so Back and links work
-  useEffect(() => {
-    const read = () => {
-      const h = window.location.hash.slice(1) as CalcKey;
-      setOpen(CALCULATORS.some((c) => c.key === h) ? h : null);
-      window.scrollTo({ top: 0 });
-    };
-    read();
-    window.addEventListener('hashchange', read);
-    return () => window.removeEventListener('hashchange', read);
   }, []);
 
+  // Old links to a calculator by hash (#emi) go to its page
+  useEffect(() => {
+    const go = () => {
+      const h = window.location.hash.slice(1) as CalcKey;
+      if (CALCULATORS.some((c) => c.key === h)) router.replace(calcHref(h));
+    };
+    go();
+    window.addEventListener('hashchange', go);
+    return () => window.removeEventListener('hashchange', go);
+  }, [router]);
+
   return (
-    <div className="relative bg-black text-[#F5F5F5]">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-[radial-gradient(ellipse_45%_55%_at_50%_0%,rgba(110,91,255,0.10),transparent_70%)]" />
-      <div ref={gridRef} className="relative mx-auto max-w-[1120px] px-4 pb-16 pt-8 sm:px-8 sm:pt-12">
-        {open ? (
-          <CalculatorView key={open} k={open} onBack={() => history.back()} />
-        ) : (
-          <>
-            <h1 data-head className="text-[30px] font-semibold tracking-tight sm:text-[36px]">Calculators</h1>
-            <p data-head className="mt-2 text-[15px] text-white/45">Plan with your own numbers, using the same formulas as the app.</p>
-            <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-7">
-              {CALCULATORS.map((c, i) => (
-                <CalcCard key={c.key} c={c} i={i} />
-              ))}
-            </div>
-          </>
-        )}
+    <Frame innerRef={gridRef}>
+      <h1 data-head className="text-[30px] font-semibold tracking-tight sm:text-[36px]">Calculators</h1>
+      <p data-head className="mt-2 text-[15px] text-white/45">Plan with your own numbers, using the same formulas as the app.</p>
+      <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-7">
+        {CALCULATORS.map((c, i) => (
+          <CalcCard key={c.key} c={c} i={i} />
+        ))}
       </div>
-    </div>
+    </Frame>
   );
 }
-
