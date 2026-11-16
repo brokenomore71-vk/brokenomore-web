@@ -320,6 +320,9 @@ export class TowersScene {
     const look = lerp3(SHOTS[a].look, SHOTS[b].look);
     const narrow = this.camera.aspect < 0.8;
     if (narrow) pos.sub(look).multiplyScalar(1.6).add(look);
+    // A wide, short stage (a laptop with the browser's bars) has little height to fit the towers
+    // in: step back so the tallest tower, its label and the coin stay clear of the top
+    else if (this.camera.aspect > 1.8) pos.sub(look).multiplyScalar(Math.min(1.45, 1 + (this.camera.aspect - 1.8) * 0.5)).add(look);
     pos.x += Math.sin(t * 0.25) * 0.4 + p.x * 1.6;
     pos.y += Math.sin(t * 0.33) * 0.2 - p.y * 0.9;
     this.camera.position.copy(pos);

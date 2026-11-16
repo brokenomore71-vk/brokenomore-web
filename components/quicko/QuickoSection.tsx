@@ -211,7 +211,7 @@ export default function QuickoSection() {
       </div>
 
       {/* Heading */}
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-end justify-between gap-4 px-4 pt-8 sm:px-6 sm:pt-12">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-end justify-between gap-4 px-4 pt-8 sm:px-6 sm:pt-12 short:pt-5">
         <div>
           <div className="flex items-center gap-3 text-sm text-neutral-400">
             {/* The title lands here as "ITR" (shown as is when motion is reduced) */}
@@ -219,10 +219,10 @@ export default function QuickoSection() {
               <ItrTitle className="text-[24px] sm:text-[28px]" />
             </span>
           </div>
-          <h2 data-q="intro" className="mt-3 sm:mt-4 text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight">
+          <h2 data-q="intro" className="mt-3 sm:mt-4 text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight short:mt-1 short:text-[38px]">
             Taxes, done in minutes.
           </h2>
-          <p data-q="intro" className="mt-1.5 sm:mt-2 max-w-xl text-xs xs:text-sm sm:text-base text-neutral-400">
+          <p data-q="intro" className="mt-1.5 sm:mt-2 max-w-xl text-xs xs:text-sm sm:text-base text-neutral-400 short:mt-1 short:max-w-2xl short:text-[15px]">
             Autofill, review and e-file your return, save every rupee you&apos;re owed, and track your refund.
           </p>
         </div>
@@ -235,13 +235,13 @@ export default function QuickoSection() {
       </div>
 
       {/* The sliding row */}
-      <div ref={viewportRef} className="relative mt-6 sm:mt-10 flex-1 min-h-0 overflow-hidden motion-reduce:overflow-x-auto">
-        <div ref={trackRef} className="flex h-full items-start gap-4 sm:gap-6 px-4 pb-6 sm:pb-8 will-change-transform sm:px-[max(1.5rem,calc((100vw-72rem)/2+1.5rem))]">
+      <div ref={viewportRef} className="relative mt-6 sm:mt-10 flex-1 min-h-0 overflow-hidden motion-reduce:overflow-x-auto short:mt-5">
+        <div ref={trackRef} className="flex h-full items-start gap-4 sm:gap-6 px-4 pb-6 sm:pb-8 short:pb-4 will-change-transform sm:px-[max(1.5rem,calc((100vw-72rem)/2+1.5rem))]">
           {CARDS.map((card, i) => (
             <article
               key={card.id}
               data-q="card"
-              className="flex h-full max-h-[min(440px,calc(100svh-220px))] w-[84vw] xs:w-[80vw] sm:w-[380px] max-w-[380px] shrink-0 flex-col rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4 sm:p-6"
+              className="flex h-full max-h-[min(440px,calc(100svh-220px))] w-[84vw] xs:w-[80vw] sm:w-[380px] max-w-[380px] shrink-0 flex-col rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4 sm:p-6 short:p-5"
             >
               <div className="flex items-center justify-between">
                 <span className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-[#333] bg-[#222] text-neutral-200">
@@ -249,9 +249,9 @@ export default function QuickoSection() {
                 </span>
                 <span className="font-mono text-xs text-neutral-500">{String(i + 1).padStart(2, '0')}</span>
               </div>
-              <h3 className="mt-3 sm:mt-5 text-lg sm:text-2xl font-semibold tracking-tight">{card.title}</h3>
+              <h3 className="mt-3 sm:mt-5 text-lg sm:text-2xl font-semibold tracking-tight short:mt-3 short:text-xl">{card.title}</h3>
               <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm text-neutral-400">{card.body}</p>
-              <div className="mt-auto pt-3 sm:pt-4">
+              <div className="mt-auto pt-3 sm:pt-4 short:pt-3">
                 <CardDetail id={card.id} />
               </div>
             </article>
@@ -260,11 +260,11 @@ export default function QuickoSection() {
       </div>
 
       {/* How far along the row you are */}
-      <div data-q="footer" className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6 motion-reduce:hidden">
+      <div data-q="footer" className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6 motion-reduce:hidden short:pb-3">
         <div className="h-px w-full bg-[#2A2A2A]">
           <div data-q="progress" className="h-px w-full origin-left bg-[#F5F5F5]" style={{ transform: 'scaleX(0)' }} />
         </div>
-        <p className="mt-3 text-[11px] text-neutral-500">Tax filing powered by Quicko. Figures shown are illustrative.</p>
+        <p className="mt-3 text-[11px] text-neutral-500 short:mt-2">Tax filing powered by Quicko. Figures shown are illustrative.</p>
       </div>
     </section>
   );
@@ -352,12 +352,12 @@ function CardDetail({ id }: { id: CardId }) {
     case 'file':
       return (
         <div>
-          <ul className="space-y-2.5">
+          <ul className="space-y-2.5 short:space-y-2">
             <Step label="Autofill from AIS & Form 26AS" />
             <Step label="Review income & deductions" />
             <Step label="e-File & e-verify" done={false} />
           </ul>
-          <span className="mt-5 inline-flex rounded-lg bg-[#F5F5F5] px-4 py-2 text-sm font-semibold text-[#111]">File your Return</span>
+          <span className="mt-5 inline-flex rounded-lg bg-[#F5F5F5] px-4 py-2 text-sm font-semibold text-[#111] short:mt-3">File your Return</span>
         </div>
       );
     case 'regime':

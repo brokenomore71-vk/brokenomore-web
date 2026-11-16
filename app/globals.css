@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* `short:`: a wide but short window (a laptop with the browser's bars): pinned full-screen
+   sections tighten up so everything still fits on one screen */
+@custom-variant short (@media (min-width: 640px) and (max-height: 820px));
+
 /* Tailwind's font-sans is the site's typeface too */
 @theme {
   --font-sans: var(--font-brand), ui-sans-serif, system-ui, sans-serif;

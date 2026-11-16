@@ -284,7 +284,7 @@ export default function LoanTowers() {
         </div>
 
         {/* Captions */}
-        <div ref={capsRef} className="pointer-events-none absolute left-4 right-4 top-6 md:left-[6vw] md:right-auto md:top-1/2 md:w-[min(440px,38vw)] md:-translate-y-1/2">
+        <div ref={capsRef} className="pointer-events-none absolute left-4 right-4 top-6 md:left-[6vw] md:right-auto md:top-1/2 md:w-[min(440px,38vw)] md:-translate-y-1/2 short:top-[42%]">
           {CAPTIONS.map((c, k) => (
             <div key={k} data-wrap className={k === 0 ? 'relative' : 'absolute inset-x-0 top-0'}>
               <div data-cap>
@@ -301,16 +301,16 @@ export default function LoanTowers() {
         </div>
 
         {/* The planner's numbers */}
-        <div data-hud className="pointer-events-none absolute bottom-4 left-4 right-4 grid grid-cols-2 gap-2 md:bottom-8 md:left-auto md:right-8 md:w-[420px] md:gap-3">
+        <div data-hud className="pointer-events-none absolute bottom-4 left-4 right-4 grid grid-cols-2 gap-2 md:bottom-8 md:left-auto md:right-8 md:w-[420px] md:gap-3 short:bottom-6 short:left-[6vw] short:right-auto short:w-[min(480px,40vw)] short:grid-cols-4 short:gap-1.5">
           {[
             ['Outstanding', 'h-out', `₹${inr(OUTSTANDING)}`],
             ['Total interest', 'h-int', lakh(TOTAL_INTEREST)],
             ['Home loan left', 'h-months', yearsMonths(PREPAY.monthsBefore)],
             ['Debt-free by', 'h-date', doneBy(PREPAY.monthsBefore)],
           ].map(([label, key, value]) => (
-            <div key={key} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 backdrop-blur-md md:px-4 md:py-3">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45 md:text-[11px]">{label}</div>
-              <div {...{ [`data-${key}`]: '' }} className="mt-0.5 text-[16px] font-semibold tabular-nums md:text-[20px]">
+            <div key={key} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 backdrop-blur-md md:px-4 md:py-3 short:px-2.5 short:py-2">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45 md:text-[11px] short:truncate short:text-[9px] short:tracking-[0.08em]">{label}</div>
+              <div {...{ [`data-${key}`]: '' }} className="mt-0.5 text-[16px] font-semibold tabular-nums md:text-[20px] short:text-[14px]">
                 {value}
               </div>
             </div>

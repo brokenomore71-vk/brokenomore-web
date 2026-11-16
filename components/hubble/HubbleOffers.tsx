@@ -162,8 +162,10 @@ export default function HubbleOffers() {
       // Measured on resize, not read every frame (reading layout right after writing styles
       // forces the browser to recalculate the page's layout each frame)
       let w = section.clientWidth;
+      let h = section.clientHeight;
       const resizeObserver = new ResizeObserver(() => {
         w = section.clientWidth;
+        h = section.clientHeight;
       });
       resizeObserver.observe(section);
 
@@ -177,9 +179,13 @@ export default function HubbleOffers() {
         spin += dt * (0.22 + Math.min(scrollSpeed * 2.4, 2.2));
 
         const narrow = w < 768;
-        const R = narrow ? (w < 400 ? Math.min(w * 0.34, 130) : Math.min(w * 0.38, 150)) : Math.min(w * 0.3, 430);
+        // The ring is sized for a stage about 820px tall; on a shorter screen (a laptop with the
+        // browser's bars, say) it shrinks to fit, so the cards behind stay clear of the heading and
+        // the cards in front stay on screen
+        const fit = Math.min(1, Math.max(0.55, h / 820));
+        const R = (narrow ? (w < 400 ? Math.min(w * 0.34, 130) : Math.min(w * 0.38, 150)) : Math.min(w * 0.3, 430)) * fit;
         const tilt = narrow ? 0.62 : 0.2; // how far the front of the ring dips below the logo
-        const cardScale = narrow ? (w < 400 ? 0.44 : 0.52) : 1;
+        const cardScale = (narrow ? (w < 400 ? 0.44 : 0.52) : 1) * fit;
         const depth = 2000;
         const spread = backOut(seg(progress, 0, 0.45));
         // Towards the end the ring opens out a little and tips further, for the finish
@@ -192,7 +198,7 @@ export default function HubbleOffers() {
           const r = R * (1 + open * 0.08) * Math.min(spread, 1.06) * backOut(born);
           const x = Math.sin(angle) * r;
           const z = Math.cos(angle) * r;
-          const y = (narrow ? 130 : 70) + z * (tilt + open * 0.06);
+          const y = (narrow ? 130 : 70) * fit + z * (tilt + open * 0.06);
           const s = depth / (depth - z);
           const facing = (z + R) / (2 * R); // 0 at the back, 1 at the front
           // Written straight to the style (only transform and opacity change, which the GPU
