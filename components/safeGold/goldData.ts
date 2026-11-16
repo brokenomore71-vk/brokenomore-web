@@ -45,6 +45,9 @@ export interface GoldFrame {
   drift: number;
   // Free areas (no text or cards) the piggy bank and its orbit must stay inside; it takes the roomiest
   room?: Room[];
+  // On wide layouts the withdraw box and the ₹ play out at the bench, beside the piggy bank: the
+  // piggy bank (and its orbit) stays left of the box there, whatever the screen's size or shape
+  keepLeftOfBench?: boolean;
   cam: { z: number; y: number };
   pig: { sx: number; sy: number; z: number; scale: number; rotY: number; value: number };
   sheen: number;

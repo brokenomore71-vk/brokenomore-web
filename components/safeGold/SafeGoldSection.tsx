@@ -479,6 +479,7 @@ export default function SafeGoldSection() {
         time: timeRef.current,
         drift,
         room: measureRoom(origin, narrow),
+        keepLeftOfBench: !narrow,
         appears: S.appears.map((a) => a.t),
         cam: S.cam,
         pig: S.pig,

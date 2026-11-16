@@ -611,8 +611,15 @@ export class GoldScene {
     // Keep it, and the coins circling it, inside the free area so it never covers text or cards
     if (f.room?.length) {
       const pxPerUnit = H / (2 * Math.tan((cam.fov * Math.PI) / 360) * Math.max(0.1, f.cam.z - f.pig.z));
+      let rooms = f.room;
+      if (f.keepLeftOfBench) {
+        // The box, at its biggest (1.3 wide, scaled up to ~1.2), seen at the bench's depth, plus a gap
+        const benchPx = H / (2 * Math.tan((cam.fov * Math.PI) / 360) * Math.max(0.1, f.cam.z - 0.8));
+        const limit = f.anchors.bench.x - 0.85 * fit * benchPx - 24;
+        rooms = rooms.map((r) => ({ ...r, right: Math.min(r.right, limit) }));
+      }
       let best: { room: (typeof f.room)[number]; scale: number } | null = null;
-      for (const room of f.room) {
+      for (const room of rooms) {
         const w = room.right - room.left;
         const h = room.bottom - room.top;
         if (w <= 0 || h <= 0) continue;
