@@ -9,7 +9,6 @@ import {
   NavBody,
   NavItems,
   MobileNav,
-  NavbarButton,
   MobileNavHeader,
   MobileNavToggle,
   MobileNavMenu,
@@ -228,7 +227,8 @@ export default function Navbar() {
         <NavItems items={navItems} />
 
         {/* Right Action / Auth Buttons */}
-        <div className="flex items-center gap-3 flex-shrink-0">
+        {/* Same width as the logo, so the links stay centred whether or not the avatar shows */}
+        <div className="flex min-w-[170px] items-center justify-end gap-3 flex-shrink-0">
           {loading ? (
             <div className="w-9 h-9"></div>
           ) : user ? (
@@ -306,12 +306,7 @@ export default function Navbar() {
                 </div>
               )}
             </div>
-          ) : (
-            <>
-              <NavbarButton variant="secondary" href="/signin">Sign In</NavbarButton>
-              <NavbarButton variant="primary" href="/signup">Sign Up</NavbarButton>
-            </>
-          )}
+          ) : null}
         </div>
       </NavBody>
 
@@ -350,26 +345,7 @@ export default function Navbar() {
               {item.name}
             </Link>
           ))}
-          {!user ? (
-            <div className="flex w-full flex-col gap-3 mt-3 pt-3 border-t border-neutral-800">
-              <NavbarButton
-                onClick={() => setIsMobileMenuOpen(false)}
-                variant="secondary"
-                href="/signin"
-                className="w-full py-2.5"
-              >
-                Sign In
-              </NavbarButton>
-              <NavbarButton
-                onClick={() => setIsMobileMenuOpen(false)}
-                variant="primary"
-                href="/signup"
-                className="w-full py-2.5"
-              >
-                Sign Up
-              </NavbarButton>
-            </div>
-          ) : (
+          {user && (
             <div className="flex w-full flex-col gap-2 mt-3 pt-3 border-t border-neutral-800">
               <p className="text-xs text-neutral-400 px-1 truncate">{user.email}</p>
               <Link

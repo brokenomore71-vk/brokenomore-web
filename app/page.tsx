@@ -81,12 +81,12 @@ export default function Home() {
 
         {/* Action Buttons */}
         <div data-hero-actions className="hero-intro-pending flex flex-col items-center justify-center gap-3.5 sm:gap-4 mt-6 sm:mt-7 pointer-events-auto w-full">
-          <div className="flex flex-row items-center justify-center gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             {/* Download Android Button */}
             <button
               data-hero-btn-android
               type="button"
-              className="flex items-center justify-center gap-2 py-2.5 w-[190px] sm:w-[215px] rounded-full border border-white text-white text-xs sm:text-sm font-medium hover:bg-white/10 active:scale-95 transition-colors duration-200 cursor-pointer backdrop-blur-[2px] shrink-0 whitespace-nowrap"
+              className="flex items-center justify-center gap-2 py-3 sm:py-2.5 w-[230px] sm:w-[215px] rounded-full border border-white text-white text-xs sm:text-sm font-medium hover:bg-white/10 active:scale-95 transition-colors duration-200 cursor-pointer backdrop-blur-[2px] shrink-0 whitespace-nowrap"
             >
               <svg
                 className="w-4 h-4 fill-current shrink-0"
@@ -103,7 +103,7 @@ export default function Home() {
             <button
               data-hero-btn-ios
               type="button"
-              className="flex items-center justify-center gap-2 py-2.5 w-[190px] sm:w-[215px] rounded-full bg-white text-black text-xs sm:text-sm font-medium hover:bg-neutral-200 active:scale-95 transition-colors duration-200 shadow-md cursor-pointer shrink-0 whitespace-nowrap"
+              className="flex items-center justify-center gap-2 py-3 sm:py-2.5 w-[230px] sm:w-[215px] rounded-full bg-white text-black text-xs sm:text-sm font-medium hover:bg-neutral-200 active:scale-95 transition-colors duration-200 shadow-md cursor-pointer shrink-0 whitespace-nowrap"
             >
               <svg
                 className="w-4 h-4 fill-current shrink-0"
