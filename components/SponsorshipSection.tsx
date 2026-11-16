@@ -33,17 +33,18 @@ export default function SponsorshipSection() {
   const reduce = useReducedMotion();
   const [kind, setKind] = useState(0);
   const [copied, setCopied] = useState(false);
-  const [instantReveal, setInstantReveal] = useState(false);
+  const [billKey, setBillKey] = useState(0);
 
   useEffect(() => {
-    const handleReveal = () => setInstantReveal(true);
+    const handleReveal = () => {
+      // Re-trigger the bill's print & stamp animation
+      setBillKey((k) => k + 1);
+    };
+
     if (typeof window !== 'undefined') {
-      if (window.location.hash === '#partner') {
-        setInstantReveal(true);
-      }
       window.addEventListener('reveal-partner', handleReveal);
       window.addEventListener('hashchange', () => {
-        if (window.location.hash === '#partner') setInstantReveal(true);
+        if (window.location.hash === '#partner') handleReveal();
       });
     }
     return () => {
@@ -58,7 +59,7 @@ export default function SponsorshipSection() {
     shown: (delay: number = 0) => ({
       opacity: 1,
       y: 0,
-      transition: { duration: instantReveal ? 0 : 0.85, ease: EASE, delay: instantReveal ? 0 : delay },
+      transition: { duration: 0.85, ease: EASE, delay },
     }),
   };
 
@@ -103,9 +104,8 @@ export default function SponsorshipSection() {
       />
 
       <motion.div
-        initial={instantReveal ? 'shown' : (reduce ? false : 'hidden')}
-        animate={instantReveal ? 'shown' : undefined}
-        whileInView={instantReveal ? undefined : 'shown'}
+        initial={reduce ? false : 'hidden'}
+        whileInView="shown"
         viewport={{ once: true, amount: 0.15 }}
         className="relative mx-auto grid max-w-6xl items-center gap-y-10 lg:gap-y-0 lg:gap-x-20 lg:grid-cols-[1.1fr_1fr] lg:grid-rows-[auto_auto] lg:content-center"
       >
@@ -172,7 +172,16 @@ export default function SponsorshipSection() {
         </div>
 
         {/* ---- The receipt ---- */}
-        <motion.div variants={rise} custom={0.2} className="order-2 lg:order-none relative mx-auto w-[calc(100%-16px)] max-w-[360px] sm:max-w-[420px] lg:col-start-2 lg:row-start-1 lg:row-span-2">
+        <motion.div
+          key={billKey}
+          initial={reduce ? false : 'hidden'}
+          animate={billKey > 0 ? 'shown' : undefined}
+          whileInView={billKey > 0 ? undefined : 'shown'}
+          viewport={{ once: true, amount: 0.15 }}
+          variants={rise}
+          custom={0.1}
+          className="order-2 lg:order-none relative mx-auto w-[calc(100%-16px)] max-w-[360px] sm:max-w-[420px] lg:col-start-2 lg:row-start-1 lg:row-span-2"
+        >
           {/* The slot it prints out of */}
           <div aria-hidden="true" className="relative z-10 mx-[-10px] h-3 rounded-full border border-[#2A2A2A] bg-[#0d0d0d] shadow-[inset_0_2px_4px_rgba(0,0,0,0.9)]" />
 
@@ -182,9 +191,7 @@ export default function SponsorshipSection() {
               hidden: { clipPath: 'inset(0 0 100% 0)' },
               shown: {
                 clipPath: 'inset(0 0 0% 0)',
-                transition: instantReveal
-                  ? { duration: 0, delay: 0 }
-                  : { duration: 1.6, ease: [0.65, 0, 0.35, 1], delay: 0.35 },
+                transition: { duration: 1.3, ease: [0.65, 0, 0.35, 1], delay: 0.12 },
               },
             }}
           >
@@ -229,9 +236,7 @@ export default function SponsorshipSection() {
                       shown: {
                         opacity: 1,
                         x: 0,
-                        transition: instantReveal
-                          ? { duration: 0, delay: 0 }
-                          : { duration: 0.5, ease: EASE, delay: 1.1 + i * 0.14 },
+                        transition: { duration: 0.45, ease: EASE, delay: 0.5 + i * 0.12 },
                       },
                     }}
                   >
@@ -250,7 +255,7 @@ export default function SponsorshipSection() {
                   hidden: { opacity: 0 },
                   shown: {
                     opacity: 1,
-                    transition: instantReveal ? { duration: 0, delay: 0 } : { duration: 0.6, delay: 1.75 },
+                    transition: { duration: 0.5, delay: 1.05 },
                   },
                 }}
               >
@@ -281,9 +286,7 @@ export default function SponsorshipSection() {
                       opacity: 1,
                       scale: 1,
                       rotate: -12,
-                      transition: instantReveal
-                        ? { duration: 0, delay: 0 }
-                        : { type: 'spring', stiffness: 420, damping: 18, delay: 2.15 },
+                      transition: { type: 'spring', stiffness: 420, damping: 18, delay: 1.35 },
                     },
                   }}
                 >
