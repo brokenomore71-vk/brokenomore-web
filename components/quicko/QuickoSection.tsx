@@ -3,7 +3,6 @@
 import React, { useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { holdPinUntilPlayed } from '../journey';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -98,10 +97,14 @@ export default function QuickoSection() {
           start: 'top 72px',
           end: () => `+=${distance() + window.innerHeight * 1.2}`,
           pin: true,
+          anticipatePin: 1,
           refreshPriority: 1,
           scrub: 0.7,
           invalidateOnRefresh: true,
-          onRefresh: () => syncCards(),
+          onRefresh: () => {
+            measure();
+            syncCards();
+          },
         },
         // Runs on every frame the row actually moves, including while it eases to a stop
         onUpdate: () => {
@@ -133,16 +136,28 @@ export default function QuickoSection() {
         ticks: Array.from(card.querySelectorAll<HTMLElement>('[data-q="tick"]')),
       }));
       const clamp01 = (t: number) => Math.max(0, Math.min(1, t));
-      const syncCards = () => {
-        const vw = viewport.clientWidth;
+      // Measured once per refresh, not every frame: reading a card's position right after writing
+      // styles makes the browser redo the page's layout on every frame of the scroll. Between
+      // refreshes a card only moves with the row, so its place is its resting offset plus the
+      // row's x.
+      let vw = 0;
+      let rest = 0;
+      let offsets: number[] = [];
+      const measure = () => {
+        vw = viewport.clientWidth;
         const left = viewport.getBoundingClientRect().left;
+        const trackX = Number(gsap.getProperty(track, 'x')) || 0;
+        offsets = cards.map((card) => card.getBoundingClientRect().left - left - trackX);
         // Where the last card comes to rest. Every card is fully in and filled by the time it gets
         // there, so the last one finishes exactly as the row stops.
         const last = cards[cards.length - 1];
-        const rest = vw - pad() - (last?.offsetWidth ?? 0);
+        rest = vw - pad() - (last?.offsetWidth ?? 0);
+      };
+      const syncCards = () => {
+        const trackX = Number(gsap.getProperty(track, 'x')) || 0;
         let current = 1;
         parts.forEach(({ card, fills, ticks }, i) => {
-          const x = card.getBoundingClientRect().left - left;
+          const x = offsets[i] + trackX;
           const seen = clamp01((rest + vw * 0.42 - x) / (vw * 0.3));
           const filled = clamp01((rest + vw * 0.25 - x) / (vw * 0.25));
           // The counter shows how many cards have reached the resting line
@@ -151,22 +166,16 @@ export default function QuickoSection() {
           fills.forEach((f, k) => gsap.set(f, { scaleX: clamp01(filled * 1.3 - k * 0.15) }));
           ticks.forEach((t, k) => gsap.set(t, { autoAlpha: 0.2 + 0.8 * clamp01(filled * 1.6 - k * 0.25) }));
         });
-        counter.textContent = String(Math.min(current, cards.length)).padStart(2, '0');
+        const shown = String(Math.min(current, cards.length)).padStart(2, '0');
+        if (counter.textContent !== shown) counter.textContent = shown;
       };
+      measure();
       syncCards();
       // Put every pinned section back in page order, and measure again once the fonts have settled
       ScrollTrigger.sort();
       document.fonts?.ready.then(() => ScrollTrigger.refresh());
 
-      // The row always finishes sliding before the page moves on
-      const releaseHold = holdPinUntilPlayed(
-        () => tl.scrollTrigger,
-        () => tl.progress(),
-        (toEnd) => tl.progress(toEnd ? 1 : 0)
-      );
-
       return () => {
-        releaseHold();
         arrival.kill();
         build.kill();
       };

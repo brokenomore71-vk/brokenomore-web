@@ -167,6 +167,7 @@ export default function BillsSection() {
           start: 'top 72px',
           end: () => `+=${window.innerHeight * 0.6 * (GROUPS.length + 4)}`,
           pin: true,
+          anticipatePin: 1,
           scrub: 0.8,
           refreshPriority: -1,
           invalidateOnRefresh: true,

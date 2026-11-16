@@ -318,6 +318,7 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
             start: 'top 72px',
             end: `+=${journey.timeline.duration() * SCROLL_PER_UNIT}`,
             pin: true,
+            anticipatePin: 1,
             // Highest on the page of the pinned sections, so it is measured first
             refreshPriority: 4,
             onUpdate: (self) => playhead?.follow(self.progress),

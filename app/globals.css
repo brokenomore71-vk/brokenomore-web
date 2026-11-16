@@ -10,9 +10,9 @@
   --foreground: #ffffff;
 }
 
-html {
-  scroll-behavior: smooth;
-}
+/* No `scroll-behavior: smooth` here: GSAP ScrollTrigger moves the page itself (snaps, pins, the
+   pinned sections' holds), and CSS smoothing turns each of those moves into its own little
+   animation, so the page stutters and shakes */
 
 html,
 body {

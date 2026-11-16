@@ -440,8 +440,11 @@ const Scanner: React.FC<ScannerProps> = ({
     };
 
     // The page hides the background with `visibility: hidden` once it is covered, which an
-    // IntersectionObserver still reports as on screen, so check the computed style as well
-    const shown = () => visible && !document.hidden && getComputedStyle(container).visibility !== 'hidden';
+    // IntersectionObserver still reports as on screen, so check the computed style as well. It is
+    // read only when the wrapper's style changes: reading it every frame, while the page's scroll
+    // animations write styles, forced the browser to recalculate styles on every frame.
+    let styleHidden = getComputedStyle(container).visibility === 'hidden';
+    const shown = () => visible && !document.hidden && !styleHidden;
 
     const frame = (now: number) => {
       raf = 0;
@@ -533,7 +536,10 @@ const Scanner: React.FC<ScannerProps> = ({
     });
     intersection.observe(container);
     // Restart drawing when a wrapper's inline style un-hides the background again
-    const styleObserver = new MutationObserver(() => wake());
+    const styleObserver = new MutationObserver(() => {
+      styleHidden = getComputedStyle(container).visibility === 'hidden';
+      wake();
+    });
     if (container.parentElement) {
       styleObserver.observe(container.parentElement, { attributes: true, attributeFilter: ['style', 'class'] });
     }

@@ -175,6 +175,7 @@ export default function LoanSection() {
           start: 'top 72px',
           end: () => `+=${window.innerHeight * 0.6 * CAPTIONS.length}`,
           pin: true,
+          anticipatePin: 1,
           scrub: 0.8,
           refreshPriority: -2,
           invalidateOnRefresh: true,

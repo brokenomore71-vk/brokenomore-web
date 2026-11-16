@@ -3,7 +3,7 @@
 import React, { useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { holdPinUntilPlayed } from '../journey';
+import { hurryWhenLeft } from '../journey';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -146,6 +146,7 @@ export default function HubbleOffers() {
         start: 'top 72px',
         end: '+=180%',
         pin: true,
+        anticipatePin: 1,
         // Pinned sections must work out their positions top to bottom, whatever order they were made in
         refreshPriority: 3,
         onUpdate: (self) => {
@@ -155,6 +156,9 @@ export default function HubbleOffers() {
 
       let spin = 0;
       let lastProgress = 0;
+      // How quickly the ring eases towards the scroll position; raised once the visitor has
+      // scrolled on past the section, so it finishes before it is out of sight
+      let rate = 6;
       // Measured on resize, not read every frame (reading layout right after writing styles
       // forces the browser to recalculate the page's layout each frame)
       let w = section.clientWidth;
@@ -165,7 +169,8 @@ export default function HubbleOffers() {
 
       const tick = (_time: number, deltaMs: number) => {
         const dt = Math.min(deltaMs / 1000, 0.05);
-        progress += (target - progress) * Math.min(1, dt * 6);
+        progress += (target - progress) * Math.min(1, dt * rate);
+        if (Math.abs(target - progress) < 0.001) rate = 6;
         // It turns on its own, and faster the quicker you scroll
         const scrollSpeed = Math.abs(progress - lastProgress) / Math.max(dt, 0.001);
         lastProgress = progress;
@@ -229,12 +234,12 @@ export default function HubbleOffers() {
       );
       nearObserver.observe(section);
       ScrollTrigger.sort();
-      // The ring settles before the page moves on to the next section
-      const releaseHold = holdPinUntilPlayed(
+      // Scrolled on before the ring has settled: it settles quickly
+      const releaseHold = hurryWhenLeft(
         () => pin,
         () => progress,
-        (toEnd) => {
-          progress = toEnd ? 1 : 0;
+        () => {
+          rate = 16;
         }
       );
 

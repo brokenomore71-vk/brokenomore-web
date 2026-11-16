@@ -6,6 +6,8 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
+// Phones' address bar resizing the window shouldn't re-measure every pin mid-scroll
+ScrollTrigger.config({ ignoreMobileResize: true });
 
 // What the pinned, one-step-per-scroll sections share (Stock Analysis & AI, Split & Share).
 
@@ -56,6 +58,7 @@ export function pinned(section: HTMLElement, steps: number, refreshPriority: num
     start: 'top 72px',
     end: () => `+=${window.innerHeight * 0.7 * steps}`,
     pin: true,
+    anticipatePin: 1,
     scrub: 0.8,
     invalidateOnRefresh: true,
   };
@@ -84,11 +87,7 @@ export function glideBetweenLabels(tl: gsap.core.Timeline) {
     }
     const target = dir > 0 ? (list.find((q) => q > p + eps) ?? 1) : ([...list].reverse().find((q) => q < p - eps) ?? 0);
     gliding = true;
-    const html = document.documentElement;
-    const before = html.style.scrollBehavior;
-    html.style.scrollBehavior = 'auto';
     const done = () => {
-      html.style.scrollBehavior = before;
       gliding = false;
       settledAt = st.scroll();
     };

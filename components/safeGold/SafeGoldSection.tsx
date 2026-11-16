@@ -3,7 +3,7 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { createPlayhead, holdPinUntilPlayed } from '../journey';
+import { createPlayhead } from '../journey';
 import { CHART, GOLD, PORTFOLIO, SALE, SCENES, type GoldFrame, type Room, type ScreenPoint } from './goldData';
 import type { GoldScene } from './goldScene';
 
@@ -59,7 +59,13 @@ export const STEPS = [
 // scroll always moves exactly one beat on
 const SCROLL_PER_BEAT = 220;
 // Whatever the scroll, the story plays at this pace (a medium one: each step takes 2 to 3 seconds)
-const PACE = { watchingSpeed: 1 / 0.65, longestCatchUp: 6 };
+// Withdraw and Sell pack more into each beat (coin, bar, box, send-off) than Buy and Grow (one long
+// coin drop), so from Withdraw on the story plays slower, to feel the same as the first two steps
+const LATE_STEPS_PACE = 0.55;
+const PACE = {
+  watchingSpeed: 1 / 0.65,
+  paceAt: (time: number) => (time >= LOGO_UNITS + STEPS[2].from - 0.1 ? LATE_STEPS_PACE : 1),
+};
 // Where each scroll comes to rest (story time). One beat per scroll: either coins moving or one
 // card showing, never both: the first coin goes in, the purchase card; the rest of the coins go
 // in, the portfolio card; a coin rises out into the portfolio, it comes out as a boxed bar, the
@@ -86,7 +92,9 @@ function buildTimeline(root: HTMLElement, S: GoldState, narrow: boolean) {
   const fills = { withdraw: one('fill-withdraw'), sell: one('fill-sell') };
   const labels = { withdraw: one('label-withdraw'), sell: one('label-sell') };
   const cta = one('cta');
-  const faint = narrow ? { autoAlpha: 0, scale: 0.92 } : { autoAlpha: 0.22, scale: 0.92 };
+  // On desktop the balance card stays fully visible beside the closing caption; on phones it
+  // makes way for the caption
+  const faint = narrow ? { autoAlpha: 0, scale: 0.92 } : { autoAlpha: 1, scale: 1 };
 
   // ---- The opening frame: just the piggy bank ----
   gsap.set(captions, { autoAlpha: 0, y: 18 });
@@ -320,6 +328,7 @@ export default function SafeGoldSection() {
             start: 'top 72px',
             end: `+=${beats * SCROLL_PER_BEAT}`,
             pin: true,
+            anticipatePin: 1,
             refreshPriority: 2,
             onUpdate: (self) => playhead?.follow(toStory(self.progress)),
             // Any scroll, however small, carries on to the next step in that direction
@@ -341,12 +350,6 @@ export default function SafeGoldSection() {
         }
       };
       build();
-      // The story always finishes before the page moves on to the next section
-      const releaseHold = holdPinUntilPlayed(
-        () => pin,
-        () => story?.progress() ?? 0,
-        (toEnd) => playhead?.jump(toEnd ? 1 : 0)
-      );
 
       let lastWidth = window.innerWidth;
       let lastHeight = window.innerHeight;
@@ -364,7 +367,6 @@ export default function SafeGoldSection() {
       return () => {
         clearTimeout(timer);
         window.removeEventListener('resize', onResize);
-        releaseHold();
         playhead?.kill();
         context?.revert();
       };

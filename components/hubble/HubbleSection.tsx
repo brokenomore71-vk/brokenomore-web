@@ -270,6 +270,7 @@ export default function HubbleSection() {
             start: 'top 72px',
             end: `+=${tl.duration() * SCROLL_PER_UNIT}`,
             pin: true,
+            anticipatePin: 1,
             onUpdate: (self) => playhead?.follow(self.progress),
           });
         }, section);

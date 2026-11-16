@@ -254,11 +254,24 @@ export default function BillsFlip() {
       const intro = gsap.timeline({ delay: 0.2 });
       intro.fromTo(pad, { y: -420, z: 500, rotationX: -50, rotationZ: -18, autoAlpha: 0 }, { y: 0, z: 0, rotationX: 0, rotationZ: 0, autoAlpha: 1, duration: 1.2, ease: 'bounce.out' }, 0);
       intro.fromTo(base, { ry: 60, rx: 40 }, { ry: base.ry, rx: 16, duration: 1.6, ease: 'power3.out' }, 0);
-      intro.to(caps[0], { autoAlpha: 1, duration: 0.3 }, 0.8);
+      // The first caption fades in with the intro only if the visitor hasn't scrolled on yet; the
+      // scroll timeline owns the captions from the first scroll, so two never show at once
+      let firstCap: gsap.core.Tween | null = null;
+      intro.call(() => {
+        if (tl.time() < 0.03) firstCap = gsap.to(caps[0], { autoAlpha: 1, duration: 0.3 });
+      }, [], 0.8);
 
       // ---- One stop per scroll: the pages fly to the next day with a bill ----
       const steps = s.stops.length - 1;
-      const tl = gsap.timeline({ defaults: { ease: 'none' }, onUpdate: render, scrollTrigger: { ...pinned(section, steps, 9), end: () => `+=${window.innerHeight * 0.75 * steps}` } });
+      const onUpdate = () => {
+        if (firstCap && tl.time() > 0) {
+          firstCap.kill();
+          firstCap = null;
+          if (tl.time() < 0.03) gsap.set(caps[0], { autoAlpha: 1 });
+        }
+        render();
+      };
+      const tl = gsap.timeline({ defaults: { ease: 'none' }, onUpdate, scrollTrigger: { ...pinned(section, steps, 9), end: () => `+=${window.innerHeight * 0.75 * steps}` } });
       for (let c = 0; c <= steps; c++) tl.addLabel(`s${c}`, c);
       let shownCard: string | undefined;
       s.stops.forEach((stop, c) => {
