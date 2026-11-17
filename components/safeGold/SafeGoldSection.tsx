@@ -42,12 +42,28 @@ type GoldState = ReturnType<typeof createState>;
 // the rest as the gold builds up. When each one starts, and how long its trip lasts (timeline units).
 const DEPOSITS = [
   { at: 0.9, dur: 1.4 },
-  { at: 4.2, dur: 1.1 },
-  { at: 4.55, dur: 1.1 },
-  { at: 4.9, dur: 1.1 },
-  { at: 5.25, dur: 1.1 },
-  { at: 5.6, dur: 1.1 },
+  { at: 4.2, dur: 0.95 },
+  { at: 4.45, dur: 0.95 },
+  { at: 4.7, dur: 0.95 },
+  { at: 4.95, dur: 0.95 },
+  { at: 5.2, dur: 0.95 },
 ];
+// Stretches cut out of the story (written in the times below, before the cut) to keep it short:
+// the moments where a card just sits there once its own animation is done, and the lull after the
+// last coin goes in
+const CUTS: [number, number][] = [
+  [2.35, 2.65],
+  [3.3, 3.7],
+  [6.2, 6.8],
+  [8.6, 9.0],
+  [10.5, 10.8],
+  [12.85, 13.05],
+  [14.15, 14.4],
+  [16.5, 16.7],
+  [17.4, 17.6],
+  [19.1, 19.5],
+];
+const squeeze = (t: number) => CUTS.reduce((s, [a, b]) => s - Math.min(Math.max(t - a, 0), b - a), t);
 // The four steps, and where each one starts and ends on the timeline
 export const STEPS = [
   { label: 'Buy', from: 0.4, to: 3.8 },
@@ -63,24 +79,35 @@ const SCROLL_PER_BEAT = 220;
 // coin drop), so from Withdraw on the story plays slower, to feel the same as the first two steps
 const LATE_STEPS_PACE = 0.8;
 const PACE = {
-  watchingSpeed: 1 / 0.4,
-  paceAt: (time: number) => (time >= LOGO_UNITS + STEPS[2].from - 0.1 ? LATE_STEPS_PACE : 1),
+  watchingSpeed: 1 / 0.33,
+  paceAt: (time: number) => (time >= LOGO_UNITS + squeeze(STEPS[2].from - 0.1) ? LATE_STEPS_PACE : 1),
 };
 // Where each scroll comes to rest (story time). One beat per scroll: either coins moving or one
 // card showing, never both: the first coin goes in, the purchase card; the rest of the coins go
 // in, the portfolio card; a coin rises out into the portfolio, it comes out as a boxed bar, the
 // withdraw card; a coin streams into a ₹, the sold card; then the closing frame
-const STOPS = [2.6, 6.9, 10.7, 14.25, 17.4];
+// Three scrolls: Buy and Grow together, stopping on the portfolio card; Withdraw, stopping on the
+// withdraw card; then Sell, through to the closing frame
+const STOPS = [8.6, 14.15].map(squeeze);
 // The moment each coin passes through the slot
 // Before the story, the SafeGold logo flies from the middle up to the corner (timeline units)
 const LOGO_UNITS = 1.2;
 // When each coin passes through the slot: inside the story, and on the whole timeline
-const STORY_LANDINGS = DEPOSITS.map((d) => d.at + d.dur * 0.93);
+const STORY_LANDINGS = DEPOSITS.map((d) => squeeze(d.at + d.dur * 0.93));
 const LANDINGS = STORY_LANDINGS.map((t) => LOGO_UNITS + t);
 
 function buildTimeline(root: HTMLElement, S: GoldState, narrow: boolean) {
-  const tl = gsap.timeline({ paused: true, defaults: { ease: 'none' } });
-  const one = (k: string) => root.querySelector<HTMLElement>(`[data-g="${k}"]`)!;
+  const story = gsap.timeline({ paused: true, defaults: { ease: 'none' } });
+  // Places everything with the CUTS taken out: a tween that spans a cut is shortened to match
+  const tl = {
+    to: (target: gsap.TweenTarget, vars: gsap.TweenVars, at: number) => {
+      const start = squeeze(at);
+      const duration = Math.max(squeeze(at + Number(vars.duration ?? 0.5)) - start, 0.01);
+      return story.to(target, { ...vars, duration }, start);
+    },
+    set: (target: gsap.TweenTarget, vars: gsap.TweenVars, at: number) => story.set(target, vars, squeeze(at)),
+  };
+  const one =(k: string) => root.querySelector<HTMLElement>(`[data-g="${k}"]`)!;
   const captions = Array.from(root.querySelectorAll<HTMLElement>('[data-g="caption"]'));
   const closing = captions[captions.length - 1];
   const txn = one('txn');
@@ -235,7 +262,7 @@ function buildTimeline(root: HTMLElement, S: GoldState, narrow: boolean) {
     gsap.set(canvas, { autoAlpha: 0 });
     whole.to(canvas, { autoAlpha: 1, duration: 0.6, ease: 'power1.out' }, LOGO_UNITS - 0.5);
   }
-  whole.add(tl.paused(false), LOGO_UNITS);
+  whole.add(story.paused(false), LOGO_UNITS);
   whole.eventCallback('onUpdate', sync);
   return whole;
 }
