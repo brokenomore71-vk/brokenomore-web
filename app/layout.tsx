@@ -15,25 +15,55 @@ export const metadata: Metadata = {
   category: "finance",
   creator: SITE_NAME,
   publisher: SITE_NAME,
-  // Each page sets its own canonical address (alternates.canonical), so it isn't set here
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: SITE_NAME,
+  },
+  alternates: {
+    canonical: SITE_URL,
+  },
   openGraph: {
     type: "website",
     siteName: SITE_NAME,
     locale: "en_IN",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: `${SITE_NAME}: Save, split, invest and plan, all in one place`,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
+    images: ["/opengraph-image"],
   },
   robots: {
     index: true,
     follow: true,
-    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
   formatDetection: { telephone: false },
+  other: {
+    "geo.region": "IN",
+    "target-country": "in",
+    "distribution": "global",
+    "rating": "general",
+  },
 };
 
 export const viewport: Viewport = {

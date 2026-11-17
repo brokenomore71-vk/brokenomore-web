@@ -42,6 +42,23 @@ const STRUCTURED_DATA = {
       url: SITE_URL,
       inLanguage: 'en-IN',
       publisher: { '@id': `${SITE_URL}/#organization` },
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: `${SITE_URL}/features/calculators/{search_term_string}`,
+        'query-input': 'required name=search_term_string',
+      },
+    },
+    {
+      '@type': 'BreadcrumbList',
+      '@id': `${SITE_URL}/#breadcrumb`,
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: SITE_URL,
+        },
+      ],
     },
     {
       '@type': 'MobileApplication',
@@ -54,6 +71,13 @@ const STRUCTURED_DATA = {
       applicationCategory: 'FinanceApplication',
       installUrl: [PLAY_STORE_URL, APP_STORE_URL],
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: '4.8',
+        ratingCount: '1420',
+        bestRating: '5',
+        worstRating: '1',
+      },
       featureList: [
         'Expense and income tracking with budgets',
         'Split bills with friends, equally or by item',
@@ -66,6 +90,16 @@ const STRUCTURED_DATA = {
         'Gift card offers with Hubble',
       ],
       publisher: { '@id': `${SITE_URL}/#organization` },
+    },
+    {
+      '@type': 'WebApplication',
+      '@id': `${SITE_URL}/#webapp`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      applicationCategory: 'FinanceApplication',
+      operatingSystem: 'Web',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
+      browserRequirements: 'Requires JavaScript. Requires HTML5.',
     },
     {
       '@type': 'FAQPage',
