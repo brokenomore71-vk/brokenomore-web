@@ -4,7 +4,7 @@
 export const SITE_URL = 'https://brokenomore.in';
 export const SITE_NAME = 'BrokeNoMore';
 
-export const SITE_TITLE = 'BrokeNoMore: Expense Tracker, Bill Splitter, Digital Gold & AI Stock Analysis App';
+export const SITE_TITLE = 'BrokeNoMore';
 export const SITE_DESCRIPTION =
   'BrokeNoMore is a free personal finance app for India. Track expenses and budgets, split bills with friends, buy digital gold, analyse NSE and BSE stocks with AI, plan loans and EMIs, track bills and subscriptions, and file ITR, all in one place.';
 

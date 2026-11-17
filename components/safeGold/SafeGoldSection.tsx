@@ -61,16 +61,16 @@ const SCROLL_PER_BEAT = 220;
 // Whatever the scroll, the story plays at this pace (a medium one: each step takes 2 to 3 seconds)
 // Withdraw and Sell pack more into each beat (coin, bar, box, send-off) than Buy and Grow (one long
 // coin drop), so from Withdraw on the story plays slower, to feel the same as the first two steps
-const LATE_STEPS_PACE = 0.55;
+const LATE_STEPS_PACE = 0.8;
 const PACE = {
-  watchingSpeed: 1 / 0.65,
+  watchingSpeed: 1 / 0.4,
   paceAt: (time: number) => (time >= LOGO_UNITS + STEPS[2].from - 0.1 ? LATE_STEPS_PACE : 1),
 };
 // Where each scroll comes to rest (story time). One beat per scroll: either coins moving or one
 // card showing, never both: the first coin goes in, the purchase card; the rest of the coins go
 // in, the portfolio card; a coin rises out into the portfolio, it comes out as a boxed bar, the
 // withdraw card; a coin streams into a ₹, the sold card; then the closing frame
-const STOPS = [2.6, 3.5, 6.9, 8.8, 10.7, 12.95, 14.25, 16.6, 17.4];
+const STOPS = [2.6, 6.9, 10.7, 14.25, 17.4];
 // The moment each coin passes through the slot
 // Before the story, the SafeGold logo flies from the middle up to the corner (timeline units)
 const LOGO_UNITS = 1.2;
@@ -278,6 +278,7 @@ export default function SafeGoldSection() {
       let pin: ScrollTrigger | null = null;
       let story: gsap.core.Timeline | null = null;
       let toStory: (progress: number) => number = (p) => p;
+      let beatCount = 1;
 
       const build = () => {
         const place = pin?.progress ?? 0;
@@ -305,6 +306,7 @@ export default function SafeGoldSection() {
           // of the timeline
           const marks = [0, ...STOPS.map((t) => LOGO_UNITS + t), tl.duration()];
           const beats = marks.length - 1;
+          beatCount = beats;
           toStory = (progress: number) => {
             const at = Math.min(Math.max(progress, 0), 1) * beats;
             const k = Math.min(Math.floor(at), beats - 1);
@@ -355,18 +357,75 @@ export default function SafeGoldSection() {
         if (y < pin.start - 1 || y > pin.end + 1) return false;
         return Math.abs(story.time() - toStory(pin.progress) * story.duration()) > 0.02;
       };
-      const hold = (e: Event) => {
-        if (playing() && e.cancelable) e.preventDefault();
+      // Inside the story the browser never scrolls by itself: each gesture (a wheel flick, a swipe,
+      // a key) moves exactly one beat, and only once the beat before it has finished. A single hard
+      // flick or a trackpad's momentum used to carry the page through several beats, or right past
+      // the section, in one go. A flick from outside stops at the story's edge instead of flying
+      // through it. The page only scrolls on past an edge once the story there has finished.
+      const ARRIVAL_QUIET_MS = 400;
+      let arrivedAt = 0;
+      const markY = (k: number) => (pin ? Math.round(pin.start + ((pin.end - pin.start) * k) / beatCount) : 0);
+      const gate = (e: Event, delta: number, mayStep: boolean) => {
+        if (!pin || !story || delta === 0) return false;
+        const y = window.scrollY;
+        const dir = Math.sign(delta);
+        const prevent = () => e.cancelable && e.preventDefault();
+        if (y < pin.start - 1 || y > pin.end + 1) {
+          if (dir > 0 && y < pin.start - 1 && y + delta > pin.start) {
+            prevent();
+            window.scrollTo({ top: pin.start, behavior: 'instant' });
+            arrivedAt = performance.now();
+          } else if (dir < 0 && y > pin.end + 1 && y + delta < pin.end) {
+            prevent();
+            window.scrollTo({ top: pin.end, behavior: 'instant' });
+            arrivedAt = performance.now();
+          }
+          return false;
+        }
+        const busy = playing();
+        if (!busy && ((dir > 0 && y >= pin.end - 1) || (dir < 0 && y <= pin.start + 1))) return false;
+        prevent();
+        // The momentum of the flick that brought the page here doesn't start the story by itself
+        if (busy || !mayStep || performance.now() - arrivedAt < ARRIVAL_QUIET_MS) return false;
+        const at = pin.progress * beatCount;
+        const k = dir > 0 ? Math.floor(at + 0.01) + 1 : Math.ceil(at - 0.01) - 1;
+        window.scrollTo({ top: markY(Math.min(Math.max(k, 0), beatCount)), behavior: 'instant' });
+        return true;
       };
-      const SCROLL_KEYS = new Set([' ', 'PageDown', 'PageUp', 'ArrowDown', 'ArrowUp', 'Home', 'End']);
-      const holdKeys = (e: KeyboardEvent) => {
+      const LINE_PX = 16;
+      const onWheel = (e: WheelEvent) => {
+        const scale = e.deltaMode === 1 ? LINE_PX : e.deltaMode === 2 ? window.innerHeight : 1;
+        // Wheel events keep coming while the page is held, so a quiet stretch counts as arrival too
+        if (performance.now() - arrivedAt < ARRIVAL_QUIET_MS) arrivedAt = performance.now();
+        gate(e, e.deltaY * scale, true);
+      };
+      // A swipe moves one beat once it has gone far enough to mean it
+      const SWIPE_PX = 24;
+      let touchY = 0;
+      let swiped = false;
+      const onTouchStart = (e: TouchEvent) => {
+        touchY = e.touches[0]?.clientY ?? 0;
+        swiped = false;
+      };
+      const onTouchMove = (e: TouchEvent) => {
+        const delta = touchY - (e.touches[0]?.clientY ?? touchY);
+        if (gate(e, delta, !swiped && Math.abs(delta) > SWIPE_PX)) swiped = true;
+      };
+      const KEY_DIR: Record<string, number> = { ' ': 1, PageDown: 1, ArrowDown: 1, End: 1, PageUp: -1, ArrowUp: -1, Home: -1 };
+      const onKey = (e: KeyboardEvent) => {
         const el = e.target as HTMLElement | null;
         if (el?.closest('input, textarea, select, [contenteditable="true"]')) return;
-        if (SCROLL_KEYS.has(e.key)) hold(e);
+        const dir = e.key === ' ' && e.shiftKey ? -1 : KEY_DIR[e.key];
+        if (!dir || !pin) return;
+        const y = window.scrollY;
+        // Keys only steer inside the story; elsewhere they scroll as usual
+        if (y < pin.start - 1 || y > pin.end + 1) return;
+        gate(e, dir, true);
       };
-      window.addEventListener('wheel', hold, { passive: false });
-      window.addEventListener('touchmove', hold, { passive: false });
-      window.addEventListener('keydown', holdKeys);
+      window.addEventListener('wheel', onWheel, { passive: false });
+      window.addEventListener('touchstart', onTouchStart, { passive: true });
+      window.addEventListener('touchmove', onTouchMove, { passive: false });
+      window.addEventListener('keydown', onKey);
 
       let lastWidth = window.innerWidth;
       let lastHeight = window.innerHeight;
@@ -385,9 +444,10 @@ export default function SafeGoldSection() {
         clearTimeout(timer);
         window.removeEventListener('resize', onResize);
         window.removeEventListener('reveal-partner', onRevealPartner);
-        window.removeEventListener('wheel', hold);
-        window.removeEventListener('touchmove', hold);
-        window.removeEventListener('keydown', holdKeys);
+        window.removeEventListener('wheel', onWheel);
+        window.removeEventListener('touchstart', onTouchStart);
+        window.removeEventListener('touchmove', onTouchMove);
+        window.removeEventListener('keydown', onKey);
         playhead?.kill();
         context?.revert();
       };
