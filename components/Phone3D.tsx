@@ -28,9 +28,12 @@ function loadPhoneModel(): Promise<THREE.Group> {
   return phoneModelPromise;
 }
 
-// Start downloading as soon as this module is imported in the browser
+// Start downloading once the page itself has finished loading (the phone only flies in after the
+// first scroll), so the 0.5 MB model never competes with the first screen
 if (typeof window !== 'undefined') {
-  loadPhoneModel().catch(() => undefined);
+  const preload = () => loadPhoneModel().catch(() => undefined);
+  if (document.readyState === 'complete') preload();
+  else window.addEventListener('load', preload, { once: true });
 }
 
 interface Phone3DProps {
@@ -50,16 +53,16 @@ interface Phone3DProps {
 }
 
 const FEATURE_IMAGES: Record<string, string> = {
-  gold: '/assets/images/features/goldsavings.jpeg',
-  'gold-savings': '/assets/images/features/goldsavings.jpeg',
-  split: '/assets/images/features/splitshare.jpeg',
-  'split-share': '/assets/images/features/splitshare.jpeg',
-  stocks: '/assets/images/features/stocks.jpeg',
-  stock: '/assets/images/features/stocks.jpeg',
-  loan: '/assets/images/features/loanplanner.jpeg',
-  'loan-planner': '/assets/images/features/loanplanner.jpeg',
-  itr: '/assets/images/features/ITR.jpeg',
-  'file-itr': '/assets/images/features/ITR.jpeg',
+  gold: '/assets/images/features/goldsavings.webp',
+  'gold-savings': '/assets/images/features/goldsavings.webp',
+  split: '/assets/images/features/splitshare.webp',
+  'split-share': '/assets/images/features/splitshare.webp',
+  stocks: '/assets/images/features/stocks.webp',
+  stock: '/assets/images/features/stocks.webp',
+  loan: '/assets/images/features/loanplanner.webp',
+  'loan-planner': '/assets/images/features/loanplanner.webp',
+  itr: '/assets/images/features/ITR.webp',
+  'file-itr': '/assets/images/features/ITR.webp',
 };
 
 const TOP_BG_COLORS: Record<string, string> = {

@@ -19,9 +19,6 @@ const APP_STORE_URL = 'https://apps.apple.com/in/app/brokenomore/id6756296299';
 export default function Home() {
   return (
     <main className="relative min-h-screen w-full bg-[#080808] overflow-x-hidden">
-      <noscript>
-        <style>{`.hero-intro-pending { visibility: visible; }`}</style>
-      </noscript>
 
       {/* Background Interactive Scanner */}
       <div data-bg-scanner className="fixed inset-0 w-full h-full pointer-events-auto">
@@ -73,18 +70,18 @@ export default function Home() {
         {/* First screen: title and buttons centred on screen (bottom padding mirrors the layer's top padding) */}
         <div data-hero-panel className="w-full flex flex-col items-center justify-center min-h-[calc(100svh-5rem)] pb-16 xs:pb-20 sm:min-h-[calc(100svh-6rem)] sm:pb-24 md:min-h-[calc(100svh-7rem)] md:pb-28">
         {/* Title */}
-        <h1 data-hero-title className="hero-intro-pending text-[26px] xs:text-3xl sm:text-5xl md:text-6xl font-semibold text-white text-center tracking-tight leading-[1.2] max-w-5xl drop-shadow-sm">
-          <span className="block sm:whitespace-nowrap"><span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Managing</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Your</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Money</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Has</span></span></span>
-          <span className="block sm:whitespace-nowrap"><span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Never</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Been</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="inline-block">Easier.</span></span></span>
+        <h1 data-hero-title className="text-[26px] xs:text-3xl sm:text-5xl md:text-6xl font-semibold text-white text-center tracking-tight leading-[1.2] max-w-5xl drop-shadow-sm">
+          <span className="block sm:whitespace-nowrap"><span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="hero-word inline-block" style={{ animationDelay: '0.10s' }}>Managing</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="hero-word inline-block" style={{ animationDelay: '0.17s' }}>Your</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="hero-word inline-block" style={{ animationDelay: '0.24s' }}>Money</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="hero-word inline-block" style={{ animationDelay: '0.31s' }}>Has</span></span></span>
+          <span className="block sm:whitespace-nowrap"><span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="hero-word inline-block" style={{ animationDelay: '0.38s' }}>Never</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="hero-word inline-block" style={{ animationDelay: '0.45s' }}>Been</span></span>{' '}<span className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em] align-bottom"><span data-hero-word className="hero-word inline-block" style={{ animationDelay: '0.52s' }}>Easier.</span></span></span>
         </h1>
 
         {/* Subtext */}
-        <p data-hero-sub className="hero-intro-pending mt-4 sm:mt-5 max-w-3xl text-center text-balance text-sm xs:text-base sm:text-lg md:text-xl text-neutral-300 tracking-wide px-2">
+        <p data-hero-sub className="hero-sub mt-4 sm:mt-5 max-w-3xl text-center text-balance text-sm xs:text-base sm:text-lg md:text-xl text-neutral-300 tracking-wide px-2">
           Your all-in-one financial tracking app. Save, split, invest and plan, all in one place.
         </p>
 
         {/* Action Buttons */}
-        <div data-hero-actions className="hero-intro-pending flex flex-col items-center justify-center gap-3.5 sm:gap-4 mt-6 sm:mt-7 pointer-events-auto w-full">
+        <div data-hero-actions className="flex flex-col items-center justify-center gap-3.5 sm:gap-4 mt-6 sm:mt-7 pointer-events-auto w-full">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             {/* Download Android Button */}
             <a
@@ -92,8 +89,8 @@ export default function Home() {
               href={PLAY_STORE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Download BrokeNoMore on Google Play"
-              className="flex items-center justify-center gap-2 py-3 sm:py-2.5 w-[230px] sm:w-[215px] rounded-full border border-white text-white text-xs sm:text-sm font-medium hover:bg-white/10 active:scale-95 transition-colors duration-200 cursor-pointer backdrop-blur-[2px] shrink-0 whitespace-nowrap"
+              style={{ animationDelay: '0.55s' }}
+              className="hero-rise flex items-center justify-center gap-2 py-3 sm:py-2.5 w-[230px] sm:w-[215px] rounded-full border border-white text-white text-xs sm:text-sm font-medium hover:bg-white/10 active:scale-95 transition-colors duration-200 cursor-pointer backdrop-blur-[2px] shrink-0 whitespace-nowrap"
             >
               <svg
                 className="w-4 h-4 fill-current shrink-0"
@@ -104,6 +101,7 @@ export default function Home() {
                 <path d="M17.523 15.341c-.55 0-.999-.448-.999-.999 0-.551.449-.999.999-.999.551 0 .999.448.999.999 0 .551-.448.999-.999.999m-11.046 0c-.551 0-.999-.448-.999-.999 0-.551.448-.999.999-.999.55 0 .999.448.999.999 0 .551-.449.999-.999.999m11.405-6.02 1.997-3.46a.416.416 0 0 0-.152-.567.416.416 0 0 0-.568.152L17.135 8.95C15.59 8.412 13.853 8 12 8s-3.59.412-5.137 1.15L4.841 5.648a.416.416 0 0 0-.568-.152.416.416 0 0 0-.152.568l1.997 3.459C2.689 11.187 0 14.777 0 19h24c0-4.223-2.689-7.813-6.118-9.679" />
               </svg>
               <span>Download Android</span>
+              <span className="sr-only"> (BrokeNoMore on Google Play, opens in a new tab)</span>
             </a>
 
             {/* Download iOS Button */}
@@ -112,8 +110,8 @@ export default function Home() {
               href={APP_STORE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Download BrokeNoMore on the App Store"
-              className="flex items-center justify-center gap-2 py-3 sm:py-2.5 w-[230px] sm:w-[215px] rounded-full bg-white text-black text-xs sm:text-sm font-medium hover:bg-neutral-200 active:scale-95 transition-colors duration-200 shadow-md cursor-pointer shrink-0 whitespace-nowrap"
+              style={{ animationDelay: '0.65s' }}
+              className="hero-rise flex items-center justify-center gap-2 py-3 sm:py-2.5 w-[230px] sm:w-[215px] rounded-full bg-white text-black text-xs sm:text-sm font-medium hover:bg-neutral-200 active:scale-95 transition-colors duration-200 shadow-md cursor-pointer shrink-0 whitespace-nowrap"
             >
               <svg
                 className="w-4 h-4 fill-current shrink-0"
@@ -124,6 +122,7 @@ export default function Home() {
                 <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.92-2.85-.9.04-1.98.6-2.62 1.35-.57.65-1.06 1.71-.93 2.74 1 .08 2.01-.49 2.63-1.24z" />
               </svg>
               <span>Download iOS</span>
+              <span className="sr-only"> (BrokeNoMore on the App Store, opens in a new tab)</span>
             </a>
           </div>
 
@@ -131,7 +130,8 @@ export default function Home() {
           <a
             data-hero-btn-partner
             href="#partner"
-            className="group inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-neutral-400 hover:text-white transition-colors duration-200 cursor-pointer pt-0.5"
+            style={{ animationDelay: '0.8s' }}
+            className="hero-rise group inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-neutral-400 hover:text-white transition-colors duration-200 cursor-pointer pt-0.5"
           >
             <span>Connect to partner</span>
             <svg

@@ -294,7 +294,8 @@ export default function HubbleOffers() {
         {/* Hubble's logo, in the middle */}
         <div data-h="logo" className="absolute left-1/2 top-[44%] z-50 -translate-x-1/2 -translate-y-1/2">
           <div className="relative flex items-center gap-2 xs:gap-3 overflow-hidden px-3 xs:px-4 py-2 sm:gap-5">
-            <span className="flex text-[34px] sm:text-[64px] lg:text-[84px] font-semibold leading-none tracking-[0.02em] text-white whitespace-nowrap" aria-label="Offers">
+            <span className="flex text-[34px] sm:text-[64px] lg:text-[84px] font-semibold leading-none tracking-[0.02em] text-white whitespace-nowrap">
+              <span className="sr-only">Offers</span>
               {'Offers'.split('').map((letter, i) => (
                 <span key={i} className="inline-block overflow-hidden pb-[0.1em]">
                   <span data-h="letter" className="inline-block" aria-hidden="true">

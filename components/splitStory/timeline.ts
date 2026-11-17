@@ -1,7 +1,8 @@
 import gsap from 'gsap';
 import type { Chapter, ChapterContext } from '../journey';
 import { BILL, EQUAL, EQUAL_MEMBERS, ITEM_OWNERS, PEOPLE, inr, itemWithTax } from './splitData';
-import { initialSceneParams, PaymentScene, SLOT_PAPER_WIDTH, slotOnStage, type SceneParams } from './paymentScene';
+import type { PaymentScene } from './paymentScene';
+import { initialSceneParams, SLOT_PAPER_WIDTH, slotOnStage, type SceneParams } from './sceneParams';
 import { OCR_ROWS, RECEIPT_H, RECEIPT_W } from './receipt';
 import { drawPhoneScreen, initialScreenState, type ScreenAssets, type ScreenState } from './phoneScreen';
 

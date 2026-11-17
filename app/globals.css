@@ -65,9 +65,19 @@ body {
 }
 
 /* Hidden until the GSAP load sequence positions them, so nothing flashes in its final spot */
-.hero-intro-pending {
-  visibility: hidden;
-}
+/* The hero's entrance (app/page.tsx), in CSS so it plays from the very first paint rather than
+   waiting for the JavaScript to load: the title's words rise up out of their lines one by one,
+   then the subtitle and the buttons fade up. The text is never hidden waiting for a script, so
+   the page's main content shows as early as it can. Each element's delay is set inline. */
+@keyframes hero-word { from { transform: translateY(115%) rotate(4deg); } }
+@keyframes hero-rise { from { opacity: 0; transform: translateY(14px); } }
+/* The subtitle is the page's largest text, so it never starts fully invisible: Chrome only counts an
+   element as shown once it's visibly painted, and a fade from 0 wouldn't count until it ended */
+@keyframes hero-sub { from { opacity: 0.3; filter: blur(6px); transform: translateY(14px); } }
+.hero-word { transform-origin: 0% 100%; animation: hero-word 0.95s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.hero-rise { animation: hero-rise 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.35s backwards; }
+.hero-sub { animation: hero-sub 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.3s backwards; }
+@media (prefers-reduced-motion: reduce) { .hero-word, .hero-rise, .hero-sub { animation: none; } }
 
 /* Hubble offers: the endless brand row, and the trust badges' slow breathing */
 @keyframes hubble-marquee {

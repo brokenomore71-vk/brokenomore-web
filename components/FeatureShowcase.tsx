@@ -4,10 +4,12 @@ import React, { useState, useCallback, useEffect, useLayoutEffect, useRef } from
 import { motion } from 'motion/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import Phone3D from './Phone3D';
 import FeatureOrbit, { getOrbitStageWidth } from './FeatureOrbit';
 import { BROKENOMORE_FEATURES } from './featureScreens';
 import dynamic from 'next/dynamic';
+// The 3D phone (and three.js with it) loads on its own, after the page appears: it only flies in
+// once the visitor scrolls, and the box it fills keeps its size meanwhile
+const Phone3D = dynamic(() => import('./Phone3D'), { ssr: false });
 import { jumpToPartner } from './partnerNav';
 
 // The split story's layer only renders on the split part (/features), so the home page's
@@ -152,81 +154,11 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
       });
 
       mm.add('(prefers-reduced-motion: no-preference)', () => {
-        const words = title.querySelectorAll<HTMLElement>('[data-hero-word]');
         const panel = document.querySelector<HTMLElement>('[data-hero-panel]');
 
-        gsap.set(title, { autoAlpha: 1 });
-        gsap.set(words, { yPercent: 115, rotate: 4, transformOrigin: '0% 100%' });
-        gsap.set(actions, { autoAlpha: 1, y: 0 });
-        if (sub) gsap.set(sub, { y: 14, autoAlpha: 0 });
-        if (btnAndroid) gsap.set(btnAndroid, { y: 18, autoAlpha: 0, force3D: true });
-        if (btnIos) gsap.set(btnIos, { y: 18, autoAlpha: 0, force3D: true });
-        if (btnPartner) gsap.set(btnPartner, { y: 14, autoAlpha: 0, force3D: true });
-
-        // Flow: 1. Text appears -> 2. Android button glides in -> 3. iOS button glides in (silky smooth) -> 4. Connect to partner text
-        const tl = gsap.timeline({ delay: 0.2 });
-
-        tl.to(words, {
-          yPercent: 0,
-          rotate: 0,
-          duration: 0.95,
-          ease: 'power4.out',
-          stagger: 0.08,
-        });
-
-        // The subtext fades up as the last words land
-        if (sub) tl.to(sub, { y: 0, autoAlpha: 1, duration: 0.8, ease: 'power3.out' }, '-=0.45');
-
-        if (btnAndroid) {
-          tl.to(
-            btnAndroid,
-            {
-              y: 0,
-              autoAlpha: 1,
-              duration: 0.9,
-              ease: 'expo.out',
-              force3D: true,
-              onComplete: () => {
-                gsap.set(btnAndroid, { clearProps: 'transform' });
-              },
-            },
-            '-=0.15'
-          );
-        }
-
-        if (btnIos) {
-          tl.to(
-            btnIos,
-            {
-              y: 0,
-              autoAlpha: 1,
-              duration: 0.9,
-              ease: 'expo.out',
-              force3D: true,
-              onComplete: () => {
-                gsap.set(btnIos, { clearProps: 'transform' });
-              },
-            },
-            '-=0.72'
-          );
-        }
-
-        if (btnPartner) {
-          tl.to(
-            btnPartner,
-            {
-              y: 0,
-              autoAlpha: 1,
-              duration: 0.8,
-              ease: 'power3.out',
-              force3D: true,
-              onComplete: () => {
-                gsap.set(btnPartner, { clearProps: 'transform' });
-              },
-            },
-            '-=0.55'
-          );
-        }
+        // The title, subtitle and buttons make their entrance in CSS (see .hero-word and
+        // .hero-rise in globals.css), so they show from the first paint without waiting for this
+        // script
 
         // Scrolling away lifts and fades the first page out as the showcase arrives
         gsap.to(panel, {

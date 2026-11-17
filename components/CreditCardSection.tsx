@@ -3,7 +3,11 @@
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import CardPocket3D from './CardPocket3D';
+import dynamic from 'next/dynamic';
+
+// The 3D card stack (and three.js with it) loads on its own, after the page appears: it's further
+// down the page, and the box it fills keeps its size meanwhile
+const CardPocket3D = dynamic(() => import('./CardPocket3D'), { ssr: false });
 
 gsap.registerPlugin(ScrollTrigger);
 

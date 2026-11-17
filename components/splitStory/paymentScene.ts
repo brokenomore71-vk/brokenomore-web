@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { BILL, inr } from './splitData';
 import { OCR_ROWS, RECEIPT_H, RECEIPT_W } from './receipt';
+import { slotOnStage, type SceneParams } from './sceneParams';
 
 // Measured from payment_machine.glb.
 const MODEL_CENTER = new THREE.Vector3(0.045, 1.778, 0.454);
@@ -13,12 +14,11 @@ const SCREEN = {
   width: 4.02,
   height: 7.72,
 };
-// The groove behind the top bezel, which is where the paper comes out.
-const SLOT = new THREE.Vector3(0, 3.7, 3.55);
+// The groove behind the top bezel, where the paper comes out, is at (0, 3.7, 3.55): see sceneParams.ts
 const PAPER_EXIT = new THREE.Vector3(0, 0.55, 0.835).normalize();
 const PAPER_FACING = new THREE.Vector3(0, 0.835, -0.55).normalize();
 // Width of paper the slot takes, in model units.
-export const SLOT_PAPER_WIDTH = 3.9;
+export { SLOT_PAPER_WIDTH } from './sceneParams';
 
 // Stands the machine upright: its printer end up, its screen towards the viewer.
 const MOUNT = new THREE.Quaternion().setFromRotationMatrix(
@@ -32,35 +32,12 @@ const SEGMENTS_ACROSS = 10;
 const SEGMENTS_ALONG = 110;
 const CURVE_SAMPLES = 140;
 
-// What the scroll timeline animates. Distances are stage pixels from the stage's middle.
-export function initialSceneParams() {
-  return {
-    machine: { x: 0, y: 0, pxPerUnit: 30, rx: -0.4, ry: 0, rz: 0, shake: 0 },
-    paper: {
-      printed: 0, // how much has come out of the slot, 0 to 1
-      anchored: 1, // 1 while feeding out of the slot, 0 once torn free
-      x: 0,
-      y: 0,
-      z: 0,
-      scale: 0.5,
-      rx: 0,
-      ry: 0,
-      rz: 0,
-      pivot: 0, // 0 holds it by the slot end, 1 by its middle
-      curl: 2.25, // radians the free end bends back, from the roll it came off
-      tail: 0, // once torn, how far the other end curls forward
-      bow: 0.1, // slight belly near the slot
-      cup: 9, // the width-wise curve that stops real paper hanging limp
-      twist: 7,
-      wave: 0,
-      visible: 0,
-      overlay: 1,
-    },
-  };
-}
-export type SceneParams = ReturnType<typeof initialSceneParams>;
+// The timeline's parameters and the slot's place on the stage live in sceneParams.ts (free of
+// three.js, so the timeline can load without it); re-exported here for anything importing them
+// from the scene
+export { initialSceneParams, slotOnStage } from './sceneParams';
+export type { SceneParams } from './sceneParams';
 
-const scratchQuat = new THREE.Quaternion();
 const scratchEuler = new THREE.Euler();
 
 function machineQuaternion(m: SceneParams['machine'], target: THREE.Quaternion) {
@@ -68,11 +45,6 @@ function machineQuaternion(m: SceneParams['machine'], target: THREE.Quaternion) 
   return target.setFromEuler(scratchEuler).multiply(MOUNT);
 }
 
-// Where the slot is on the stage for a given machine pose, with y pointing down.
-export function slotOnStage(m: SceneParams['machine']) {
-  const p = SLOT.clone().sub(MODEL_CENTER).multiplyScalar(m.pxPerUnit).applyQuaternion(machineQuaternion(m, scratchQuat));
-  return { x: m.x + p.x, y: m.y - p.y, z: p.z };
-}
 
 interface SceneOptions {
   canvas: HTMLCanvasElement;

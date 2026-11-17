@@ -18,6 +18,14 @@ import { FeaturesMenuMobile } from "@/components/ui/features-menu";
 // The Supabase client (~45 KB gzipped) is only needed for the signed-in state, so it loads
 // after the page instead of being part of every page's first download
 const getSupabase = () => import("@/lib/supabase").then((m) => m.supabase);
+// Resolves once the page has finished loading and the browser has a spare moment, so checking
+// who's signed in (and downloading the auth library to do it) never competes with the first paint
+const afterPageLoad = () =>
+  new Promise<void>((resolve) => {
+    const idle = () => ("requestIdleCallback" in window ? window.requestIdleCallback(() => resolve(), { timeout: 2000 }) : setTimeout(resolve, 200));
+    if (document.readyState === "complete") idle();
+    else window.addEventListener("load", idle, { once: true });
+  });
 
 export default function Navbar() {
   const router = useRouter();
@@ -38,7 +46,7 @@ export default function Navbar() {
     let cancelled = false;
     let unsubscribe: (() => void) | undefined;
 
-    getSupabase().then((supabase) => {
+    afterPageLoad().then(getSupabase).then((supabase) => {
     if (cancelled) return;
     // Check initial session with error handling
     supabase.auth.getSession()
@@ -215,7 +223,7 @@ export default function Navbar() {
         >
           <Image
             src="/assets/images/main_logo.png"
-            alt="BrokeNoMore"
+            alt=""
             width={34}
             height={34}
             className="object-contain rounded-full"
@@ -316,7 +324,7 @@ export default function Navbar() {
           <Link href="/" className="relative z-20 flex items-center space-x-3 px-1 py-1 text-base font-semibold text-white">
             <Image
               src="/assets/images/main_logo.png"
-              alt="BrokeNoMore"
+              alt=""
               width={32}
               height={32}
               className="object-contain rounded-full"
