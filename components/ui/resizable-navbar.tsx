@@ -68,7 +68,7 @@ export const ResizableNavbar = ({ children, className }: NavbarProps) => {
     <motion.header
       // Fixed sticky header that stays at the top of the viewport at all times
       className={cn(
-        "fixed inset-x-0 top-0 z-50 w-full transition-all duration-300 pointer-events-auto",
+        "fixed inset-x-0 top-0 z-[100] w-full transition-all duration-300 pointer-events-auto",
         className,
       )}
     >
@@ -103,7 +103,7 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
         damping: 30,
       }}
       className={cn(
-        "relative z-[60] mx-auto hidden w-full max-w-7xl flex-row items-center justify-between rounded-full px-6 py-2.5 lg:flex transition-colors duration-300",
+        "relative z-[110] mx-auto hidden w-full max-w-7xl flex-row items-center justify-between rounded-full px-6 py-2.5 lg:flex transition-colors duration-300",
         visible
           ? "bg-[#18181b]/85 border border-white/10"
           : "bg-transparent",
@@ -179,7 +179,7 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
         damping: 30,
       }}
       className={cn(
-        "relative z-50 mx-auto flex w-full flex-col items-center justify-between px-4 py-3 lg:hidden transition-colors duration-300",
+        "relative z-[110] mx-auto flex w-full flex-col items-center justify-between px-4 py-3 lg:hidden transition-colors duration-300",
         visible
           ? "bg-[#18181b]/90 border border-white/10"
           : "bg-transparent",
@@ -221,7 +221,7 @@ export const MobileNavMenu = ({
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
           className={cn(
-            "absolute inset-x-0 top-16 z-50 flex w-full max-h-[calc(100svh-5rem)] overflow-y-auto overscroll-contain flex-col items-start justify-start gap-4 rounded-2xl bg-[#18181b] border border-white/10 px-5 py-5 sm:px-6 sm:py-6 shadow-2xl",
+            "absolute inset-x-0 top-16 z-[120] flex w-full max-h-[calc(100svh-5rem)] overflow-y-auto overscroll-contain flex-col items-start justify-start gap-4 rounded-2xl bg-[#18181b] border border-white/10 px-5 py-5 sm:px-6 sm:py-6 shadow-2xl",
             className,
           )}
         >

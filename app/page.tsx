@@ -163,8 +163,7 @@ export default function Home() {
       <div data-bg-fade className="fixed inset-0 bg-black opacity-0 pointer-events-none" aria-hidden="true" />
 
       {/* Sticky/Fixed Animated Navbar */}
-      {/* (Fades out once SafeGold begins; see SafeGoldSection) */}
-      <div data-site-nav>
+      <div data-site-nav className="relative z-[100]">
         <Navbar />
       </div>
 
@@ -256,8 +255,8 @@ export default function Home() {
           <FeatureShowcase part="orbit" />
         </div>
 
-        {/* Hubble offers: gift card discounts on 400+ brands. The navbar fades out from here on */}
-        <div data-nav-hides-here className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] mt-10 pointer-events-auto">
+        {/* Hubble offers: gift card discounts on 400+ brands */}
+        <div className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] mt-10 pointer-events-auto">
           <HubbleOffers />
         </div>
 

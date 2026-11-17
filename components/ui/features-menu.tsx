@@ -67,7 +67,7 @@ export function FeaturesMenu() {
             animate={{ opacity: 1, x: "-50%", y: 0, scale: 1 }}
             exit={{ opacity: 0, x: "-50%", y: -6, scale: 0.97 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute left-1/2 top-full z-50 mt-3 w-52 origin-top rounded-2xl border border-white/10 bg-[#0b0b0d]/95 p-1.5 shadow-[0_24px_48px_rgba(0,0,0,0.6)] backdrop-blur-xl"
+            className="absolute left-1/2 top-full z-[120] mt-3 w-52 origin-top rounded-2xl border border-white/10 bg-[#0b0b0d]/95 p-1.5 shadow-[0_24px_48px_rgba(0,0,0,0.6)] backdrop-blur-xl"
           >
             {FEATURE_PAGES.map((f) => {
               const here = pathname === f.href;

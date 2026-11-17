@@ -395,23 +395,7 @@ export default function SafeGoldSection() {
     return () => mm.revert();
   }, []);
 
-  // The site's navbar belongs to the top of the page: it fades out as SafeGold begins, and comes
-  // back when the user scrolls up to the phone again
-  useEffect(() => {
-    const nav = document.querySelector<HTMLElement>('[data-site-nav]');
-    const from = document.querySelector<HTMLElement>('[data-nav-hides-here]');
-    if (!nav || !from) return;
-    const trigger = ScrollTrigger.create({
-      trigger: from,
-      start: 'top 55%',
-      onEnter: () => gsap.to(nav, { autoAlpha: 0, duration: 0.3, overwrite: true }),
-      onLeaveBack: () => gsap.to(nav, { autoAlpha: 1, duration: 0.3, overwrite: true }),
-    });
-    return () => {
-      trigger.kill();
-      gsap.set(nav, { clearProps: 'opacity,visibility' });
-    };
-  }, []);
+
 
   // The 3D scene loads only as the section comes near, and draws only while it is on screen
   useEffect(() => {
