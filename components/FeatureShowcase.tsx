@@ -54,6 +54,9 @@ gsap.registerPlugin(ScrollTrigger);
 const STAGE_DESIGN_HEIGHT = 635;
 // Once the journey is this far in (timeline units), the slideshow's cards have faded out.
 const ORBIT_HIDDEN_AFTER = 1.1;
+// How often the orbit turns to the next feature, and how long a clicked card stays in front
+const SLIDE_MS = 1500;
+const HOLD_AFTER_PICK_MS = 6000;
 
 // The phone with its feature cards orbiting it ('orbit'), the phone on its own playing the split
 // story as the page scrolls ('split'), or both in one section: the orbit first, then scrolling
@@ -118,6 +121,7 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
   const journeyStartedRef = useRef<boolean>(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pointerDownPosRef = useRef<{ x: number; y: number } | null>(null);
+  const holdUntilRef = useRef(0);
 
   // Load sequence: the title's words rise into place one by one, then the buttons appear.
   // Also builds the journey that scrolling plays once the showcase is reached.
@@ -380,19 +384,27 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
     };
   }, [story, hasOrbit, hasStory]);
 
-  // The slideshow: steps through the features every 3 seconds, until the journey takes over
+  // The slideshow: steps through the features every 1.5 seconds, until the journey takes over.
+  // Picking a card holds it in front for a while before the slideshow carries on.
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       if (journeyStartedRef.current || storyOnly) return;
+      if (performance.now() < holdUntilRef.current) return;
       setSelectedFeatureId((current) => {
         const currentIndex = BROKENOMORE_FEATURES.findIndex((f) => f.id === current);
         const nextIndex =
           (currentIndex - 1 + BROKENOMORE_FEATURES.length) % BROKENOMORE_FEATURES.length;
         return BROKENOMORE_FEATURES[nextIndex].id;
       });
-    }, 3000);
+    }, SLIDE_MS);
   }, [storyOnly]);
+
+  // A card (or the phone) was clicked: show that feature and keep it there for a while
+  const pickFeature = useCallback((id: string) => {
+    holdUntilRef.current = performance.now() + HOLD_AFTER_PICK_MS;
+    setSelectedFeatureId(id);
+  }, []);
 
   // When intro animation finishes and feature blocks appear, start 3s timer immediately
   const handleIntroComplete = useCallback(() => {
@@ -443,7 +455,7 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
         {hasOrbit && (
           <FeatureOrbit
             selectedFeatureId={selectedFeatureId}
-            onSelectFeature={setSelectedFeatureId}
+            onSelectFeature={pickFeature}
             isOrbitPaused={true}
             isIntroComplete={isIntroComplete}
             renderPausedRef={orbitRenderPausedRef}
@@ -478,12 +490,10 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
                 return;
               }
             }
-            setSelectedFeatureId((current) => {
-              const currentIndex = BROKENOMORE_FEATURES.findIndex((f) => f.id === current);
-              const nextIndex =
-                (currentIndex - 1 + BROKENOMORE_FEATURES.length) % BROKENOMORE_FEATURES.length;
-              return BROKENOMORE_FEATURES[nextIndex].id;
-            });
+            const currentIndex = BROKENOMORE_FEATURES.findIndex((f) => f.id === selectedFeatureId);
+            const nextIndex =
+              (currentIndex - 1 + BROKENOMORE_FEATURES.length) % BROKENOMORE_FEATURES.length;
+            pickFeature(BROKENOMORE_FEATURES[nextIndex].id);
           }}
         >
           <Phone3D
