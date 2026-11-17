@@ -285,7 +285,7 @@ export default function TermsPage() {
           items={[
             'In-app support feature',
             <>
-              Email: <A href="mailto:support@brokenomore.com">support@brokenomore.com</A>
+              Email: <A href="mailto:support@brokenomore.in">support@brokenomore.in</A>
             </>,
             'Contact Support section in the App',
           ]}

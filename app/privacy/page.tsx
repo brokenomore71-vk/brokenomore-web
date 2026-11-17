@@ -281,7 +281,7 @@ export default function PrivacyPage() {
         />
         <p>
           To exercise these rights, please contact us through the App&apos;s support feature or email{' '}
-          <A href="mailto:support@brokenomore.com">support@brokenomore.com</A>.
+          <A href="mailto:support@brokenomore.in">support@brokenomore.in</A>.
         </p>
       </Section>
 
@@ -385,7 +385,7 @@ export default function PrivacyPage() {
           items={[
             "Contact us through the App's support feature",
             <>
-              Email us at: <A href="mailto:support@brokenomore.com">support@brokenomore.com</A>
+              Email us at: <A href="mailto:support@brokenomore.in">support@brokenomore.in</A>
             </>,
             'Include "California Privacy Rights Request" in the subject line',
             'Provide sufficient information to verify your identity',
@@ -415,7 +415,7 @@ export default function PrivacyPage() {
         <List
           items={[
             <>
-              <B>Support Email:</B> <A href="mailto:support@brokenomore.com">support@brokenomore.com</A>
+              <B>Support Email:</B> <A href="mailto:support@brokenomore.in">support@brokenomore.in</A>
             </>,
             <>
               <B>In-App Support:</B> Use the Contact Support feature in the App
