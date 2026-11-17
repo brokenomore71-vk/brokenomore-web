@@ -6,6 +6,7 @@ import gsap from 'gsap';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import type { PhoneScreenController } from './splitStory/timeline';
+import { isLowPowerGraphics } from './lowPowerGraphics';
 
 // The phone model is loaded once per page session and shared by every Phone3D instance,
 // so moving between pages (or mounting a second phone) never shows the loader again.
@@ -460,6 +461,14 @@ export default function Phone3D({
 
     let screenWasOverridden = false;
 
+    // Without a GPU each frame of the phone is drawn on the CPU, so it arrives in its resting pose
+    // without the floating, and a frame is only drawn when something on it has changed
+    const still = isLowPowerGraphics();
+    let drawnPose = '';
+    let drawnSize = '';
+    let drawnScreen = -1;
+    let drawnModel = false;
+
     // Only draw while the phone is on screen; the loop stops completely when it scrolls away
     let onScreen = true;
     const visibility = new IntersectionObserver((entries) => {
@@ -510,7 +519,7 @@ export default function Phone3D({
             );
           }
         }
-        const introDuration = 1.35; // brisk, cinematic rise
+        const introDuration = still ? 0.001 : 1.35; // brisk, cinematic rise
         const rawProgress = Math.min(1, Math.max(0, (elapsedTime - introStartTime) / introDuration));
         // Quartic ease out: rapid initial upward rush, buttery-smooth deceleration into resting pose
         introProgress = 1 - Math.pow(1 - rawProgress, 4);
@@ -537,7 +546,7 @@ export default function Phone3D({
       haptic.targetZ *= 0.92;
 
       // Organic 3D floating waves matching the reference pose
-      const floatFactor = introCompleted ? 1 : introProgress;
+      const floatFactor = still ? 0 : introCompleted ? 1 : introProgress;
       const floatY = Math.sin(elapsedTime * 1.3) * 0.007 * floatFactor;
       const floatX = Math.cos(elapsedTime * 0.9) * 0.002 * floatFactor;
       const floatRotX = Math.sin(elapsedTime * 1.1) * 0.018 * floatFactor;
@@ -585,6 +594,18 @@ export default function Phone3D({
         modelGroup.rotation.z = currentRotZ;
       }
 
+      if (still) {
+        const p = modelGroup.position;
+        const r = modelGroup.rotation;
+        const pose = [p.x, p.y, p.z, r.x, r.y, r.z].map((v) => v.toFixed(4)).join();
+        const canvasEl = renderer.domElement;
+        const size = `${canvasEl.width}x${canvasEl.height}`;
+        if (pose === drawnPose && size === drawnSize && canvasTexture.version === drawnScreen && modelLoaded === drawnModel) return;
+        drawnPose = pose;
+        drawnSize = size;
+        drawnScreen = canvasTexture.version;
+        drawnModel = modelLoaded;
+      }
       renderer.render(scene, camera);
     };
 

@@ -11,14 +11,83 @@ import QuickoSection from '@/components/quicko/QuickoSection';
 import SponsorshipSection from '@/components/SponsorshipSection';
 import ContactSection from '@/components/ContactSection';
 import FAQSection from '@/components/FAQSection';
+import type { Metadata } from 'next';
+import { FAQ_CATEGORIES } from '@/lib/faqData';
+import { APP_STORE_URL, PLAY_STORE_URL, SITE_DESCRIPTION, SITE_NAME, SITE_URL, SUPPORT_EMAIL } from '@/lib/site';
 
-// Where the Download buttons go
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.bnm.broke_no_more';
-const APP_STORE_URL = 'https://apps.apple.com/in/app/brokenomore/id6756296299';
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+  openGraph: { url: '/' },
+};
+
+// What search engines read about the site, the app and the FAQ (schema.org structured data).
+// Not shown on the page.
+const STRUCTURED_DATA = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      alternateName: ['Broke No More', 'BNM'],
+      url: SITE_URL,
+      logo: `${SITE_URL}/assets/images/main_logo.png`,
+      email: SUPPORT_EMAIL,
+      sameAs: [PLAY_STORE_URL, APP_STORE_URL],
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      inLanguage: 'en-IN',
+      publisher: { '@id': `${SITE_URL}/#organization` },
+    },
+    {
+      '@type': 'MobileApplication',
+      '@id': `${SITE_URL}/#app`,
+      name: SITE_NAME,
+      alternateName: 'Broke No More',
+      description: SITE_DESCRIPTION,
+      url: SITE_URL,
+      operatingSystem: 'Android, iOS',
+      applicationCategory: 'FinanceApplication',
+      installUrl: [PLAY_STORE_URL, APP_STORE_URL],
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
+      featureList: [
+        'Expense and income tracking with budgets',
+        'Split bills with friends, equally or by item',
+        'Buy, grow, withdraw and sell digital gold',
+        'AI stock analysis for NSE and BSE stocks',
+        'Loan and EMI planner with prepayment',
+        'Bill and subscription reminders',
+        'EMI, SIP, Lumpsum, SWP, FD and PPF calculators',
+        'File ITR with Quicko',
+        'Gift card offers with Hubble',
+      ],
+      publisher: { '@id': `${SITE_URL}/#organization` },
+    },
+    {
+      '@type': 'FAQPage',
+      '@id': `${SITE_URL}/#faq`,
+      mainEntity: FAQ_CATEGORIES.flatMap((category) =>
+        category.items.map((item) => ({
+          '@type': 'Question',
+          name: item.question,
+          acceptedAnswer: { '@type': 'Answer', text: item.answer },
+        }))
+      ),
+    },
+  ],
+};
 
 export default function Home() {
   return (
     <main className="relative min-h-screen w-full bg-[#080808] overflow-x-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA).replace(/</g, '\\u003c') }}
+      />
       <noscript>
         <style>{`.hero-intro-pending { visibility: visible; }`}</style>
       </noscript>

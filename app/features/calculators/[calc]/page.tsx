@@ -13,7 +13,14 @@ export async function generateMetadata({ params }: { params: Promise<{ calc: str
   const { calc } = await params;
   const c = CALCULATORS.find((x) => x.key === calc);
   if (!c) return {};
-  return { title: `${c.name} · BrokeNoMore`, description: c.blurb };
+  const path = `/features/calculators/${c.key}`;
+  const title = /calculator/i.test(c.name) ? c.name : `${c.name} Calculator`;
+  return {
+    title,
+    description: c.blurb,
+    alternates: { canonical: path },
+    openGraph: { url: path, title: `${title} | BrokeNoMore`, description: c.blurb },
+  };
 }
 
 export default async function CalculatorRoute({ params }: { params: Promise<{ calc: string }> }) {

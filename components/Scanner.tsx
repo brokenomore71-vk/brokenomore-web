@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { isLowPowerGraphics } from './lowPowerGraphics';
 
 const MAX_PINGS = 6;
 const INTRO_SECONDS = 2;
@@ -363,6 +364,9 @@ const Scanner: React.FC<ScannerProps> = ({
     const vao = gl.createVertexArray();
 
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    // Without a GPU every frame of this full-screen shader is drawn on the CPU, so it holds still:
+    // one frame, redrawn only when the size changes
+    const still = isLowPowerGraphics();
     const view = { width: 1, height: 1, ratio: 1 };
     const pointer = { x: 0, y: 0, inside: false };
     const mouse = { x: 0, y: 0, ready: false };
@@ -373,7 +377,7 @@ const Scanner: React.FC<ScannerProps> = ({
     let wave = 0;
     let sweep = -0.39;
     let clock = 0;
-    let introClock = settingsRef.current.intro && !reduce ? 0 : 1;
+    let introClock = settingsRef.current.intro && !reduce && !still ? 0 : 1;
     let raf = 0;
     let last = 0;
     let visible = true;
@@ -477,6 +481,7 @@ const Scanner: React.FC<ScannerProps> = ({
     };
 
     function wake() {
+      if (still) return;
       quiet = 0;
       if (!raf && shown()) {
         last = 0;

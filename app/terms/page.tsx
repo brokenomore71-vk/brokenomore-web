@@ -2,8 +2,10 @@ import type { Metadata } from 'next';
 import LegalLayout, { A, Callout, List, Section, Sub } from '@/components/legal/LegalLayout';
 
 export const metadata: Metadata = {
-  title: 'Terms & Conditions | BrokeNoMore',
-  description: 'The terms and conditions for using the BrokeNoMore mobile application.',
+  title: "Terms & Conditions",
+  description: "The terms and conditions for using the BrokeNoMore mobile application.",
+  alternates: { canonical: "/terms" },
+  openGraph: { url: "/terms", title: "Terms & Conditions | BrokeNoMore", description: "The terms and conditions for using the BrokeNoMore mobile application." },
 };
 
 const TOC = [

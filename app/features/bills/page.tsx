@@ -16,8 +16,10 @@ import BillsFlip from '@/components/billsPage/BillsFlip';
 // import BillsSection from '@/components/bills/BillsSection';
 
 export const metadata: Metadata = {
-  title: 'Bills & Subscriptions · BrokeNoMore',
-  description: "Every bill and subscription on one calendar: what's paid, what's overdue and what's coming up.",
+  title: "Bill Reminder & Subscription Tracker App",
+  description: "Never miss a due date. BrokeNoMore puts every bill and subscription on one calendar, shows what is paid, overdue and coming up, and reminds you before it is due.",
+  alternates: { canonical: "/features/bills" },
+  openGraph: { url: "/features/bills", title: "Bill Reminder & Subscription Tracker App | BrokeNoMore", description: "Never miss a due date. BrokeNoMore puts every bill and subscription on one calendar, shows what is paid, overdue and coming up, and reminds you before it is due." },
 };
 
 // Bills & Subscriptions: a tear-off calendar, one page a day, stopping on every day a bill is due

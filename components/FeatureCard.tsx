@@ -18,9 +18,9 @@ export default function FeatureCard({ feature, isActive }: FeatureCardProps) {
       } backdrop-blur-xl`}
     >
       <div className="w-full">
-        <h4 className="text-[13px] sm:text-[15px] md:text-[17px] font-semibold text-white tracking-tight leading-tight transition-colors">
+        <h3 className="text-[13px] sm:text-[15px] md:text-[17px] font-semibold text-white tracking-tight leading-tight transition-colors">
           {feature.name}
-        </h4>
+        </h3>
         <p className="text-[10.5px] sm:text-xs md:text-[13px] text-neutral-400 font-normal leading-snug tracking-tight mt-0.5 sm:mt-1 line-clamp-2">
           {feature.tagline}
         </p>

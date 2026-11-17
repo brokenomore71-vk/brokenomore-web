@@ -6,8 +6,10 @@ import FeaturePageShell from '@/components/FeaturePageShell';
 import CalculatorsHub from '@/components/calculatorsPage/CalculatorsHub';
 
 export const metadata: Metadata = {
-  title: 'Financial Calculators · BrokeNoMore',
-  description: 'EMI, SIP, Lumpsum, SWP, FD and PPF calculators. Key in your own amounts and see the result year by year.',
+  title: "EMI, SIP, Lumpsum, SWP, FD & PPF Calculators",
+  description: "Free online financial calculators: EMI, SIP, Lumpsum, SWP, FD and PPF. Key in your own amounts and see returns, interest and maturity value year by year.",
+  alternates: { canonical: "/features/calculators" },
+  openGraph: { url: "/features/calculators", title: "EMI, SIP, Lumpsum, SWP, FD & PPF Calculators | BrokeNoMore", description: "Free online financial calculators: EMI, SIP, Lumpsum, SWP, FD and PPF. Key in your own amounts and see returns, interest and maturity value year by year." },
 };
 
 // The app's six calculators: a grid of cards, each opening its own calculator
