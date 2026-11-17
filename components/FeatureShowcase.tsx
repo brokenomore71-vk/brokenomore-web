@@ -4,7 +4,6 @@ import React, { useState, useCallback, useEffect, useLayoutEffect, useRef } from
 import { motion } from 'motion/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import Phone3D from './Phone3D';
 import FeatureOrbit, { getOrbitStageWidth } from './FeatureOrbit';
 import { BROKENOMORE_FEATURES } from './featureScreens';
 import dynamic from 'next/dynamic';
@@ -15,7 +14,31 @@ import { jumpToPartner } from './partnerNav';
 const SplitStoryLayer = dynamic(() => import('./splitStory/SplitStoryLayer'));
 const SplitStoryCaptions = dynamic(() => import('./splitStory/SplitStoryLayer').then((m) => m.SplitStoryCaptions));
 import { CAPTIONS } from './splitStory/splitData';
-import { createSplitStoryRuntime } from './splitStory/timeline';
+import type { PhoneScreenController, SplitStoryRuntime } from './splitStory/timeline';
+import type { buildJourney as BuildJourney } from './journey';
+import { createPlayhead } from './playhead';
+
+// The 3D phone (three.js and its model loader) comes in its own chunk, after the page's own code,
+// so it doesn't hold up the first paint. The stand-in is the same empty box the phone renders
+// before its model has loaded.
+const Phone3D = dynamic(() => import('./Phone3D'), {
+  ssr: false,
+  loading: () => <div className="relative w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing select-none" style={{ touchAction: 'pan-y' }} />,
+});
+
+// The split story (its timeline and the 3D payment machine) is only loaded where it plays, not on
+// the home page's orbit part
+type LoadedStory = { runtime: SplitStoryRuntime; buildJourney: typeof BuildJourney; scrollPerUnit: number };
+const loadStory = () =>
+  Promise.all([import('./splitStory/timeline'), import('./journey')]).then(
+    ([timeline, journey]): LoadedStory => ({
+      runtime: timeline.createSplitStoryRuntime(),
+      buildJourney: journey.buildJourney,
+      scrollPerUnit: journey.SCROLL_PER_UNIT,
+    })
+  );
+// The phone's screen when no story has taken it over
+const idleScreen = (): PhoneScreenController => ({ active: false, dirty: false, draw: () => {} });
 // The stock and gold phone chapters are switched off for now (SafeGold has its own section).
 // import { type PhoneScreenController } from './splitStory/timeline';
 // import StockStoryLayer, { StockStoryCaptions } from './stockStory/StockStoryLayer';
@@ -24,7 +47,6 @@ import { createSplitStoryRuntime } from './splitStory/timeline';
 // import GoldStoryLayer, { GoldStoryCaptions } from './goldStory/GoldStoryLayer';
 // import { GOLD_CAPTIONS } from './goldStory/goldData';
 // import { createGoldStoryRuntime } from './goldStory/timeline';
-import { buildJourney, createPlayhead, SCROLL_PER_UNIT } from './journey';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -48,7 +70,7 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
   const headerRef = useRef<HTMLDivElement | null>(null);
   const phoneRef = useRef<HTMLDivElement | null>(null);
   const scrollMotionRef = useRef({ rotY: 0, face: 0 });
-  const [storyRuntime] = useState(createSplitStoryRuntime);
+  const [story, setStory] = useState<LoadedStory | null>(null);
   //   const [stockRuntime] = useState(createStockStoryRuntime);
   //   const [goldRuntime] = useState(createGoldStoryRuntime);
   //   // The phone's screen belongs to whichever story has taken it over most recently
@@ -75,8 +97,19 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
   //       return storyRuntime.screen.draw(ctx, width, height);
   //     },
   //   }));
-  const [journeyScreen] = useState(() => storyRuntime.screen);
-  const screenOverrideRef = useRef(journeyScreen);
+  const screenOverrideRef = useRef<PhoneScreenController>(idleScreen());
+  useEffect(() => {
+    if (!hasStory) return;
+    let cancelled = false;
+    loadStory().then((loaded) => {
+      if (cancelled) return;
+      screenOverrideRef.current = loaded.runtime.screen;
+      setStory(loaded);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasStory]);
   const orbitRenderPausedRef = useRef<boolean>(false);
   // The orbiting cards stop redrawing when the section is off screen, or once the story has
   // faded them out
@@ -311,7 +344,8 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
 
     // ---- The split part: pinned, scrolling plays the split story, and stops or reverses with
     // the user ----
-    if (hasStory) mm.add('(prefers-reduced-motion: no-preference)', () => {
+    if (hasStory && story) mm.add('(prefers-reduced-motion: no-preference)', () => {
+      const { runtime: storyRuntime, buildJourney, scrollPerUnit } = story;
       const section = sectionRef.current;
       const stage = stageRef.current;
       const header = headerRef.current;
@@ -344,7 +378,7 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
           pinRef.current = ScrollTrigger.create({
             trigger: section,
             start: 'top 72px',
-            end: `+=${journey.timeline.duration() * SCROLL_PER_UNIT}`,
+            end: `+=${journey.timeline.duration() * scrollPerUnit}`,
             pin: true,
             anticipatePin: 1,
             // Highest on the page of the pinned sections, so it is measured first
@@ -402,7 +436,7 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
         playhead?.kill();
         context?.revert();
         pinRef.current = null;
-        journeyScreen.active = false;
+        storyRuntime.screen.active = false;
         journeyStartedRef.current = false;
       };
     });
@@ -414,7 +448,7 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
       const scanner = document.querySelector<HTMLElement>('[data-bg-scanner]');
       if (scanner) scanner.style.visibility = '';
     };
-  }, [storyRuntime, journeyScreen, hasOrbit, hasStory]);
+  }, [story, hasOrbit, hasStory]);
 
   // The slideshow: steps through the features every 3 seconds, until the journey takes over
   const startTimer = useCallback(() => {
@@ -487,7 +521,7 @@ export default function FeatureShowcase({ part = 'features' }: { part?: 'orbit' 
         )}
 
         {/* Billing machine, bill and everything else the phone moves among in the split story */}
-        {hasStory && <SplitStoryLayer runtime={storyRuntime} />}
+        {hasStory && story && <SplitStoryLayer runtime={story.runtime} />}
 
         {/* Tickers, fundamentals, answers and the report around the phone in the stock story */}
         {/* <StockStoryLayer runtime={stockRuntime} /> */}

@@ -3,7 +3,7 @@
 import React, { useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { hurryWhenLeft } from '../journey';
+import { hurryWhenLeft } from '../playhead';
 
 gsap.registerPlugin(ScrollTrigger);
 

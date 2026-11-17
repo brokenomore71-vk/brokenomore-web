@@ -3,7 +3,20 @@
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import CardPocket3D from './CardPocket3D';
+import dynamic from 'next/dynamic';
+
+// The 3D card pocket (three.js) comes in its own chunk, after the page's own code. Until it has
+// loaded, the stand-in shows what the pocket itself shows before WebGL starts.
+const CardPocket3D = dynamic(() => import('./CardPocket3D'), {
+  ssr: false,
+  loading: () => (
+    <div className="relative w-full h-full">
+      <div className="absolute z-10 bottom-1 inset-x-0 flex justify-center items-center gap-2 pointer-events-none">
+        <p className="text-xs text-neutral-400">Tap any card to see both sides</p>
+      </div>
+    </div>
+  ),
+});
 
 gsap.registerPlugin(ScrollTrigger);
 
