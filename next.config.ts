@@ -1,10 +1,12 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
+  compress: true,
+  outputFileTracingRoot: path.join(__dirname),
   experimental: {
     cpus: 2,
-    // Puts the stylesheet straight into the HTML instead of a separate file the browser must
-    // download before it can draw anything (PageSpeed's "render-blocking requests")
+    // Inlines critical CSS into HTML to eliminate render-blocking CSS requests
     inlineCss: true,
   },
   images: {

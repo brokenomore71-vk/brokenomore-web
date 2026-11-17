@@ -325,8 +325,8 @@ export default function Navbar() {
             <Image
               src="/assets/images/main_logo.png"
               alt=""
-              width={32}
-              height={32}
+              width={34}
+              height={34}
               className="object-contain rounded-full"
             />
             <span className="font-bold text-base text-white">BrokeNoMore</span>
