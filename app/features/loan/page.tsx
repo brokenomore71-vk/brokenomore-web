@@ -4,8 +4,10 @@ import FeaturePageShell from '@/components/FeaturePageShell';
 import LoanTowers from '@/components/loanPage/LoanTowers';
 
 export const metadata: Metadata = {
-  title: 'Loan Planner · BrokeNoMore',
-  description: "Track every EMI, see the interest you'll pay, and find the fastest way out with prepayments.",
+  title: "Loan Planner & EMI Prepayment Calculator",
+  description: "Track every loan and EMI, see the total interest you will pay, and find the fastest way to close your loans with prepayments, with the BrokeNoMore loan planner.",
+  alternates: { canonical: "/features/loan" },
+  openGraph: { url: "/features/loan", title: "Loan Planner & EMI Prepayment Calculator | BrokeNoMore", description: "Track every loan and EMI, see the total interest you will pay, and find the fastest way to close your loans with prepayments, with the BrokeNoMore loan planner." },
 };
 
 // The Loan Planner, worked out on a desk calculator

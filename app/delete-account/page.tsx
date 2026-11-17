@@ -2,8 +2,10 @@ import type { Metadata } from 'next';
 import LegalLayout, { A, B, Callout, List, Section } from '@/components/legal/LegalLayout';
 
 export const metadata: Metadata = {
-  title: 'Delete Account | BrokeNoMore',
-  description: 'How to request deletion of your BNM (Broke No More) account and associated personal data.',
+  title: "Delete Account",
+  description: "How to request deletion of your BNM (Broke No More) account and associated personal data.",
+  alternates: { canonical: "/delete-account" },
+  openGraph: { url: "/delete-account", title: "Delete Account | BrokeNoMore", description: "How to request deletion of your BNM (Broke No More) account and associated personal data." },
 };
 
 const SUPPORT_EMAIL = 'support@brokenomore.in';

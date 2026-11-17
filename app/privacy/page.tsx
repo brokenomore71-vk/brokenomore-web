@@ -2,8 +2,10 @@ import type { Metadata } from 'next';
 import LegalLayout, { A, B, Callout, List, Section, Sub } from '@/components/legal/LegalLayout';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | BrokeNoMore',
-  description: 'How BNM (Broke No More) collects, uses, and protects user information.',
+  title: "Privacy Policy",
+  description: "How BNM (Broke No More) collects, uses, and protects user information.",
+  alternates: { canonical: "/privacy" },
+  openGraph: { url: "/privacy", title: "Privacy Policy | BrokeNoMore", description: "How BNM (Broke No More) collects, uses, and protects user information." },
 };
 
 const TOC = [

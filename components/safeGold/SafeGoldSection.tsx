@@ -3,7 +3,7 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { createPlayhead } from '../journey';
+import { createPlayhead } from '../playhead';
 import { CHART, GOLD, PORTFOLIO, SALE, SCENES, type GoldFrame, type Room, type ScreenPoint } from './goldData';
 import type { GoldScene } from './goldScene';
 
