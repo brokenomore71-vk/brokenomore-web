@@ -84,16 +84,10 @@ const STRUCTURED_DATA = {
 export default function Home() {
   return (
     <main className="relative min-h-screen w-full bg-[#080808] overflow-x-hidden">
-<<<<<<< HEAD
-=======
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA).replace(/</g, '\\u003c') }}
       />
-      <noscript>
-        <style>{`.hero-intro-pending { visibility: visible; }`}</style>
-      </noscript>
->>>>>>> 87acbd1cfc3d53fda9956a0a6a76193b1e656969
 
       {/* Background Interactive Scanner */}
       <div data-bg-scanner className="fixed inset-0 w-full h-full pointer-events-auto">

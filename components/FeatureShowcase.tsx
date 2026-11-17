@@ -7,9 +7,6 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import FeatureOrbit, { getOrbitStageWidth } from './FeatureOrbit';
 import { BROKENOMORE_FEATURES } from './featureScreens';
 import dynamic from 'next/dynamic';
-// The 3D phone (and three.js with it) loads on its own, after the page appears: it only flies in
-// once the visitor scrolls, and the box it fills keeps its size meanwhile
-const Phone3D = dynamic(() => import('./Phone3D'), { ssr: false });
 import { jumpToPartner } from './partnerNav';
 
 // The split story's layer only renders on the split part (/features), so the home page's

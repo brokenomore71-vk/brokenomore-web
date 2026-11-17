@@ -5,11 +5,6 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import dynamic from 'next/dynamic';
 
-<<<<<<< HEAD
-// The 3D card stack (and three.js with it) loads on its own, after the page appears: it's further
-// down the page, and the box it fills keeps its size meanwhile
-const CardPocket3D = dynamic(() => import('./CardPocket3D'), { ssr: false });
-=======
 // The 3D card pocket (three.js) comes in its own chunk, after the page's own code. Until it has
 // loaded, the stand-in shows what the pocket itself shows before WebGL starts.
 const CardPocket3D = dynamic(() => import('./CardPocket3D'), {
@@ -22,7 +17,6 @@ const CardPocket3D = dynamic(() => import('./CardPocket3D'), {
     </div>
   ),
 });
->>>>>>> 87acbd1cfc3d53fda9956a0a6a76193b1e656969
 
 gsap.registerPlugin(ScrollTrigger);
 
