@@ -197,6 +197,7 @@ export default function Navbar() {
     const baseItems: { name: string; link: string; menu?: "features" }[] = [
       { name: "Home", link: "/" },
       { name: "Features", link: "/features", menu: "features" },
+      { name: "About Us", link: "/about" },
     ];
     
     if (mounted && !loading && user) {
