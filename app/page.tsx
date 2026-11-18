@@ -11,6 +11,7 @@ import QuickoSection from '@/components/quicko/QuickoSection';
 import SponsorshipSection from '@/components/SponsorshipSection';
 import ContactSection from '@/components/ContactSection';
 import FAQSection from '@/components/FAQSection';
+import SectionStops from '@/components/SectionStops';
 import type { Metadata } from 'next';
 import { FAQ_CATEGORIES } from '@/lib/faqData';
 import { APP_STORE_URL, PLAY_STORE_URL, SITE_DESCRIPTION, SITE_NAME, SITE_URL, SUPPORT_EMAIL } from '@/lib/site';
@@ -162,6 +163,9 @@ export default function Home() {
       {/* Fades in on scroll to turn the background plain black behind the showcase and credit cards */}
       <div data-bg-fade className="fixed inset-0 bg-black opacity-0 pointer-events-none" aria-hidden="true" />
 
+      {/* Fast scrolls stop at the top of each of the last sections instead of flying past them */}
+      <SectionStops />
+
       {/* Sticky/Fixed Animated Navbar */}
       <div data-site-nav className="relative z-[100]">
         <Navbar />
@@ -274,17 +278,17 @@ export default function Home() {
         </div>
 
         {/* Partner with Us: sponsorships and affiliations */}
-        <div className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] pointer-events-auto">
+        <div data-scroll-stop className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] pointer-events-auto">
           <SponsorshipSection />
         </div>
 
         {/* Get in Touch: a support ticket that opens in the visitor's mail app */}
-        <div className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] pointer-events-auto">
+        <div data-scroll-stop className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] pointer-events-auto">
           <ContactSection />
         </div>
 
         {/* FAQs: answers to common questions about BrokeNoMore */}
-        <div className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] pointer-events-auto">
+        <div data-scroll-stop className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] pointer-events-auto">
           <FAQSection />
         </div>
 
