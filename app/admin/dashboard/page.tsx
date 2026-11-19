@@ -2,16 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
+  IconCalendarEvent,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
+  IconCreditCard,
   IconLayoutDashboard,
   IconLoader2,
   IconLogout,
   IconMail,
   IconMenu2,
+  IconPresentation,
   IconRefresh,
   IconSearch,
   IconUsers,
@@ -243,6 +247,22 @@ export default function AdminDashboard() {
             <IconUsers size={19} stroke={1.6} />
             Users
           </a>
+
+          <p className="px-3.5 pb-1 pt-5 text-[11px] font-medium uppercase tracking-wider text-[#5c5c63]">App content</p>
+          {[
+            { href: '/admin/content/credit-cards', label: 'Credit Cards', Icon: IconCreditCard },
+            { href: '/admin/content/festivals', label: 'Festivals', Icon: IconCalendarEvent },
+            { href: '/admin/content/feature-slides', label: 'Feature Slides', Icon: IconPresentation },
+          ].map(({ href, label, Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-[#a1a1aa] transition hover:bg-white/[0.04] hover:text-white"
+            >
+              <Icon size={19} stroke={1.6} />
+              {label}
+            </Link>
+          ))}
         </nav>
 
         <button
