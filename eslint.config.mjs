@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The admin backend is a separate Node service (deployed on Render)
+    "admin-api/**",
   ]),
 ]);
 
