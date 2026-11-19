@@ -1,0 +1,24 @@
+# Render Blueprint for the admin dashboard backend (admin-api/).
+# The website itself stays on Vercel; only admin-api runs on Render.
+# Secrets are marked sync: false, so Render asks for them when the Blueprint is created.
+services:
+  - type: web
+    name: brokenomore-admin-api
+    runtime: node
+    rootDir: admin-api
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - admin-api/**
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://brokenomore.in,https://www.brokenomore.in
