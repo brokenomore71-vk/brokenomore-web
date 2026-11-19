@@ -311,10 +311,9 @@ export class GoldScene {
     // Soft contact shadow under the piggy bank
     const shadowTex = canvasTexture(256, 256, (ctx) => {
       const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-      g.addColorStop(0, 'rgba(0,0,0,0.9)');
-      g.addColorStop(0.35, 'rgba(40,31,11,0.4)');
-      g.addColorStop(0.7, 'rgba(140,107,32,0.04)');
-      g.addColorStop(1, 'rgba(140,107,32,0)');
+      g.addColorStop(0, 'rgba(0,0,0,0.85)');
+      g.addColorStop(0.35, 'rgba(0,0,0,0.35)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, 256, 256);
     });

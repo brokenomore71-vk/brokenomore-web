@@ -1,894 +1,548 @@
 'use client';
 
-import React, { useEffect, useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
+import Image from 'next/image';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { createPlayhead } from '../playhead';
-import { CHART, GOLD, PORTFOLIO, SALE, SCENES, type GoldFrame, type Room, type ScreenPoint } from './goldData';
-import type { GoldScene } from './goldScene';
+import handsImage from '@/assets/digitalgold_image/Hands_Holding_a_Dark_Smartphone-removebg-preview.png';
+import phoneFrame from '@/assets/digitalgold_image/phone_frame.png';
+import { FEATURES, GoldFeatureCard, Sparkle } from './GoldFeatureCards';
+import GoldVault, { VAULT } from './GoldVault';
+import GoldWord from './GoldWord';
+import { STEPS, StepScene, StepText, StepToast, animateStepScene } from './GoldSteps';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const HIDDEN = { visibility: 'hidden' } as const;
-const CARD =
-  'rounded-2xl border border-[#D4AF37]/30 bg-[#0b0a08]/90 p-4 md:p-5 shadow-[0_18px_50px_rgba(0,0,0,0.7)] backdrop-blur-xl';
-const METAL = 'bg-[linear-gradient(120deg,#8C6B20_0%,#D4AF37_28%,#FFE9A3_50%,#D4AF37_72%,#8C6B20_100%)]';
-const inr = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`;
+// The gold "DIGITAL GOLD" starts in, and the dimmer gold it settles to once it is on the phone
+const GOLD = '#D4AF37';
+const GOLD_ON_SCREEN = '#9C7C2E';
 
-// The chart's line and the area under it, in a 260 × 64 box
-const chartPoints = CHART.map((v, i) => [(i / (CHART.length - 1)) * 260, 60 - ((v - 10) / 26) * 54] as const);
-const CHART_LINE = chartPoints.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
-const CHART_AREA = `${CHART_LINE} L260 64 L0 64 Z`;
+// Frame 1: where the text sits on the phone's screen: how much of the screen's width it spans, and
+// how far down the screen its middle is
+const TEXT_WIDTH_ON_SCREEN = 0.7;
+const TEXT_CENTRE_ON_SCREEN = 0.5;
 
-// Everything the timeline moves. Plain numbers, so GSAP can tween them and the scene can read them.
-// It starts with the piggy bank alone in the middle, facing you.
-function createState(narrow: boolean) {
-  return {
-    cam: { z: 10.8, y: 0.6 },
-    pig: { sx: 0.5, sy: narrow ? 0.5 : 0.58, z: 0, scale: 1, rotY: -1.18, value: 0.55 },
-    sheen: { v: -1 },
-    appears: DEPOSITS.map(() => ({ t: 0 })),
-    deposits: DEPOSITS.map(() => ({ t: 0 })),
-    returns: DEPOSITS.map(() => ({ t: 0 })),
-    emerge: { t: 0 },
-    withdraw: { coin: 0, morph: 0, pack: 0, drop: 0, lid: 0, away: 0 },
-    sell: { coin: 0, burst: 0, fade: 0 },
-    count: { v: 0 },
-  };
-}
-type GoldState = ReturnType<typeof createState>;
+// The phone's screen in the photo (728 x 343): left, top, width and height, as shares of the photo
+const SCREEN = { left: 0.2527, top: 0.1603, width: 0.5, height: 0.4373 };
+// Its corners, as shares of its width / height, so they match at any size (the zoomed phone uses
+// the same, so the two line up exactly when one takes over from the other)
+const SCREEN_RADIUS = '6.5% / 15.8%';
 
-// Each of the six circling coins drops into the slot in turn: the first on its own as the purchase,
-// the rest as the gold builds up. When each one starts, and how long its trip lasts (timeline units).
-const DEPOSITS = [
-  { at: 0.9, dur: 1.4 },
-  { at: 4.2, dur: 0.95 },
-  { at: 4.45, dur: 0.95 },
-  { at: 4.7, dur: 0.95 },
-  { at: 4.95, dur: 0.95 },
-  { at: 5.2, dur: 0.95 },
-];
-// Stretches cut out of the story (written in the times below, before the cut) to keep it short:
-// the moments where a card just sits there once its own animation is done, and the lull after the
-// last coin goes in
-const CUTS: [number, number][] = [
-  [2.35, 2.65],
-  [3.3, 3.7],
-  [6.2, 6.8],
-  [8.6, 9.0],
-  [10.5, 10.8],
-  [12.85, 13.05],
-  [14.15, 14.4],
-  [16.5, 16.7],
-  [17.4, 17.6],
-  [19.1, 19.5],
-];
-const squeeze = (t: number) => CUTS.reduce((s, [a, b]) => s - Math.min(Math.max(t - a, 0), b - a), t);
-// The four steps, and where each one starts and ends on the timeline
-export const STEPS = [
-  { label: 'Buy', from: 0.4, to: 3.8 },
-  { label: 'Grow', from: 4.0, to: 9.0 },
-  { label: 'Withdraw', from: 9.2, to: 14.4 },
-  { label: 'Sell', from: 14.8, to: 17.6 },
-];
-// Scroll distance per beat. Every beat gets the same distance, however long its animation, so one
-// scroll always moves exactly one beat on
-const SCROLL_PER_BEAT = 220;
-// Whatever the scroll, the story plays at this pace (a medium one: each step takes 2 to 3 seconds)
-// Withdraw and Sell pack more into each beat (coin, bar, box, send-off) than Buy and Grow (one long
-// coin drop), so from Withdraw on the story plays slower, to feel the same as the first two steps
-const LATE_STEPS_PACE = 0.8;
-const PACE = {
-  watchingSpeed: 1 / 0.33,
-  paceAt: (time: number) => (time >= LOGO_UNITS + squeeze(STEPS[2].from - 0.1) ? LATE_STEPS_PACE : 1),
-};
-// Where each scroll comes to rest (story time). One beat per scroll: either coins moving or one
-// card showing, never both: the first coin goes in, the purchase card; the rest of the coins go
-// in, the portfolio card; a coin rises out into the portfolio, it comes out as a boxed bar, the
-// withdraw card; a coin streams into a ₹, the sold card; then the closing frame
-// Three scrolls: Buy and Grow together, stopping on the portfolio card; Withdraw, stopping on the
-// withdraw card; then Sell, through to the closing frame
-const STOPS = [8.6, 14.15].map(squeeze);
-// The moment each coin passes through the slot
-// Before the story, the SafeGold logo flies from the middle up to the corner (timeline units)
-const LOGO_UNITS = 1.2;
-// When each coin passes through the slot: inside the story, and on the whole timeline
-const STORY_LANDINGS = DEPOSITS.map((d) => squeeze(d.at + d.dur * 0.93));
-const LANDINGS = STORY_LANDINGS.map((t) => LOGO_UNITS + t);
+// Frame 2's phone: phone_frame.png (phone.png, 1880 x 836, with its screen cut out) and where its
+// screen sits in it, in the image's pixels
+const PHONE = { w: 1880, h: 836, screen: { x: 113, y: 71, w: 1658, h: 678 } };
+// The cut-out's corners (128px), as shares of the screen's width / height
+const PHONE_SCREEN_RADIUS = `${(128 / PHONE.screen.w) * 100}% / ${(128 / PHONE.screen.h) * 100}%`;
 
-function buildTimeline(root: HTMLElement, S: GoldState, narrow: boolean) {
-  const story = gsap.timeline({ paused: true, defaults: { ease: 'none' } });
-  // Places everything with the CUTS taken out: a tween that spans a cut is shortened to match
-  const tl = {
-    to: (target: gsap.TweenTarget, vars: gsap.TweenVars, at: number) => {
-      const start = squeeze(at);
-      const duration = Math.max(squeeze(at + Number(vars.duration ?? 0.5)) - start, 0.01);
-      return story.to(target, { ...vars, duration }, start);
-    },
-    set: (target: gsap.TweenTarget, vars: gsap.TweenVars, at: number) => story.set(target, vars, squeeze(at)),
-  };
-  const one =(k: string) => root.querySelector<HTMLElement>(`[data-g="${k}"]`)!;
-  const captions = Array.from(root.querySelectorAll<HTMLElement>('[data-g="caption"]'));
-  const closing = captions[captions.length - 1];
-  const txn = one('txn');
-  const dash = one('dash');
-  const portfolio = one('portfolio');
-  const withdrawCard = one('withdraw-card');
-  const sold = one('sold');
-  const fills = { withdraw: one('fill-withdraw'), sell: one('fill-sell') };
-  const labels = { withdraw: one('label-withdraw'), sell: one('label-sell') };
-  const cta = one('cta');
-  // On desktop the balance card stays fully visible beside the closing caption; on phones it
-  // makes way for the caption
-  const faint = narrow ? { autoAlpha: 0, scale: 0.92 } : { autoAlpha: 1, scale: 1 };
+// When frame 2 (the zoom into the phone) starts, in timeline units
+const ZOOM_AT = 1.15;
 
-  // ---- The opening frame: just the piggy bank ----
-  gsap.set(captions, { autoAlpha: 0, y: 18 });
-  gsap.set(cta, { autoAlpha: 0, y: 12 });
-  gsap.set([txn, dash, withdrawCard, sold], { autoAlpha: 0, y: 24 });
-  gsap.set(portfolio, { autoAlpha: 0, scale: 0.92, clipPath: 'circle(75% at 50% 50%)' });
-  gsap.set([fills.withdraw, fills.sell], { autoAlpha: 0 });
-  gsap.set(one('check'), { strokeDashoffset: 1 });
-  gsap.set(one('chart-line'), { strokeDashoffset: 1 });
-  gsap.set(one('chart-area'), { autoAlpha: 0 });
-  gsap.set(one('route'), { strokeDashoffset: 1 });
-  gsap.set(one('sold-check'), { strokeDashoffset: 1 });
-
-  const captionIn = (el: HTMLElement, at: number) => tl.to(el, { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power2.out' }, at);
-  const captionOut = (el: HTMLElement, at: number) => tl.to(el, { autoAlpha: 0, y: -18, duration: 0.35, ease: 'power2.in' }, at);
-  const cardIn = (el: HTMLElement, at: number) => tl.to(el, { autoAlpha: 1, y: 0, duration: 0.55, ease: 'power3.out' }, at);
-  const cardOut = (el: HTMLElement, at: number) => tl.to(el, { autoAlpha: 0, y: -16, duration: 0.4, ease: 'power2.in' }, at);
-  const press = (which: 'withdraw' | 'sell', on: number, off: number) => {
-    tl.to(fills[which], { autoAlpha: 1, duration: 0.3 }, on);
-    tl.to(labels[which], { color: '#120d02', duration: 0.3 }, on);
-    tl.to(fills[which], { autoAlpha: 0, duration: 0.3 }, off);
-    tl.to(labels[which], { color: GOLD.highlight, duration: 0.3 }, off);
-  };
-  // The piggy bank stays in the middle throughout. On phones it rides higher while cards are
-  // showing beneath it.
-  const pigY = (sy: number, at: number) => {
-    if (narrow) tl.to(S.pig, { sy, duration: 1, ease: 'power2.inOut' }, at);
-  };
-
-
-  // ============ The coins come out from behind the piggy bank, one by one, into orbit ============
-  S.appears.forEach((a, i) => tl.to(a, { t: 1, duration: 0.8 }, i * 0.18));
-  tl.to(S.pig, { rotY: -0.55, duration: 2.5, ease: 'power1.inOut' }, 0.2);
-  tl.to(S.cam, { z: 8.4, y: 0.75, duration: 1.8, ease: 'power2.inOut' }, 0.2);
-  tl.to(S.sheen, { v: 1, duration: 1.6, ease: 'power1.inOut' }, 0.6);
-  pigY(0.4, 1.2);
-
-  // ============ Step 1. Buy ============
-  // The first coin leaves its orbit for the slot...
-  captionIn(captions[1], 0.4);
-  tl.to(S.deposits[0], { t: 1, duration: DEPOSITS[0].dur }, DEPOSITS[0].at);
-  // ...then, once it is in, the purchase card
-  cardIn(txn, 2.7);
-  tl.to(one('check'), { strokeDashoffset: 0, duration: 0.4, ease: 'power2.out' }, 2.85);
-  cardOut(txn, 3.7);
-  captionOut(captions[1], 3.7);
-
-  // ============ Step 2. Grow ============
-  // The rest of the coins follow, and the gold builds up...
-  captionIn(captions[2], 4.0);
-  DEPOSITS.slice(1).forEach((d, i) => tl.to(S.deposits[i + 1], { t: 1, duration: d.dur }, d.at));
-  tl.to(S.pig, { value: 1, duration: 2.8, ease: 'power1.inOut' }, 4.1);
-  tl.to(S.sheen, { v: -1, duration: 1.4, ease: 'power1.inOut' }, 5.4);
-  // ...then the portfolio card, counting up
-  cardIn(dash, 7.0);
-  tl.to(S.count, { v: 1, duration: 1.4, ease: 'power1.inOut' }, 7.1);
-  tl.to(one('chart-line'), { strokeDashoffset: 0, duration: 1.4, ease: 'power1.inOut' }, 7.1);
-  tl.to(one('chart-area'), { autoAlpha: 1, duration: 0.6 }, 8.0);
-  cardOut(dash, 9.0);
-  captionOut(captions[2], 9.0);
-
-  // ============ Step 3. Withdraw ============
-  // A coin rises out of the piggy bank and becomes the portfolio...
-  captionIn(captions[4], 9.3);
-  tl.to(S.cam, { z: 9.8, y: 0.7, duration: 0.8, ease: 'power2.inOut' }, 9.2);
-  tl.to(S.pig, { rotY: -1.0, duration: 0.8, ease: 'power2.inOut' }, 9.2);
-  pigY(0.32, 9.2);
-  tl.to(S.emerge, { t: 1, duration: 1.2 }, 9.2);
-  tl.set(portfolio, { clipPath: 'circle(0% at 50% 50%)', scale: 1 }, 10.05);
-  tl.to(portfolio, { autoAlpha: 1, duration: 0.01 }, 10.1);
-  tl.to(portfolio, { clipPath: 'circle(75% at 50% 50%)', duration: 0.4, ease: 'power2.out' }, 10.1);
-  // ...Withdraw is pressed and a coin comes out of it, turns into a bar and is boxed...
-  press('withdraw', 10.8, 14.4);
-  tl.to(S.withdraw, { coin: 1, duration: 0.7 }, 10.9);
-  tl.to(portfolio, { autoAlpha: 0, duration: 0.3 }, 11.3);
-  tl.to(S.withdraw, { morph: 1, duration: 0.6, ease: 'power1.inOut' }, 11.5);
-  tl.to(S.withdraw, { pack: 1, duration: 0.4 }, 11.9);
-  tl.to(S.withdraw, { drop: 1, duration: 0.4 }, 12.2);
-  tl.to(S.withdraw, { lid: 1, duration: 0.3 }, 12.55);
-  // ...then the withdraw card, as the box is sent on its way
-  cardIn(withdrawCard, 13.05);
-  tl.to(one('route'), { strokeDashoffset: 0, duration: 0.7, ease: 'power1.inOut' }, 13.25);
-  tl.to(S.withdraw, { away: 1, duration: 0.7, ease: 'power1.in' }, 13.45);
-  cardOut(withdrawCard, 14.4);
-  captionOut(captions[4], 14.4);
-  tl.to(portfolio, { autoAlpha: 1, duration: 0.3 }, 14.6);
-
-  // ============ Step 4. Sell ============
-  // Sell is pressed and a coin streams into a ₹...
-  captionIn(captions[5], 14.8);
-  press('sell', 14.8, 17.6);
-  tl.to(S.sell, { coin: 1, duration: 0.7 }, 15.0);
-  tl.to(portfolio, { autoAlpha: 0, duration: 0.3 }, 15.5);
-  tl.to(S.sell, { burst: 1, duration: 0.9 }, 15.6);
-  // ...then the sold card
-  cardIn(sold, 16.7);
-  tl.to(one('sold-check'), { strokeDashoffset: 0, duration: 0.4, ease: 'power2.out' }, 16.9);
-  tl.to(S.sell, { fade: 1, duration: 0.4 }, 17.0);
-  cardOut(sold, 17.6);
-  captionOut(captions[5], 17.6);
-
-  // ============ The finished picture: the coins rise back out into orbit ============
-  tl.to(S.pig, { rotY: -1.18, duration: 1.2, ease: 'power2.inOut' }, 17.8);
-  pigY(0.5, 17.8);
-  tl.to(S.cam, { z: 10.8, y: 0.6, duration: 1.4, ease: 'power2.inOut' }, 17.8);
-  S.returns.forEach((r, i) => tl.to(r, { t: 1, duration: 0.9 }, 17.9 + i * 0.15));
-  tl.to(portfolio, { ...faint, duration: 0.7, ease: 'power2.inOut' }, 18.2);
-  captionIn(closing, 18.3);
-  tl.to(cta, { autoAlpha: 1, y: 0, duration: 0.4, ease: 'power2.out' }, 18.5);
-  tl.to(S.sheen, { v: 1, duration: 1.2, ease: 'power1.inOut' }, 18.6);
-  tl.to({}, { duration: 0.01 }, 19.8);
-
-  // Numbers on the cards that count up
-  const balance = one('dash-grams');
-  const value = one('dash-value');
-  const sync = () => {
-    balance.textContent = `${(PORTFOLIO.grams * S.count.v).toFixed(3)} g`;
-    value.textContent = inr(PORTFOLIO.value * S.count.v);
-  };
-  sync();
-
-  // ---- The whole: the logo flies up to the corner as the piggy bank fades in, then the story ----
-  const whole = gsap.timeline({ paused: true, defaults: { ease: 'none' } });
-  const bigLogo = one('big-logo');
-  const slot = one('logo-slot');
-  const canvas = root.querySelector('canvas');
-  const toSlot = () => {
-    const s = root.getBoundingClientRect();
-    const t = slot.getBoundingClientRect();
-    return {
-      x: t.left + t.width / 2 - s.left - root.clientWidth / 2,
-      y: t.top + t.height / 2 - s.top - root.clientHeight * 0.45,
-      scale: slot.offsetHeight / bigLogo.offsetHeight,
-    };
-  };
-  const target = toSlot();
-  whole.to(bigLogo, { x: target.x, y: target.y, scale: target.scale, duration: LOGO_UNITS, ease: 'power2.inOut' }, 0);
-  if (canvas) {
-    gsap.set(canvas, { autoAlpha: 0 });
-    whole.to(canvas, { autoAlpha: 1, duration: 0.6, ease: 'power1.out' }, LOGO_UNITS - 0.5);
+// An element's layout position inside `root`, ignoring any transforms on the way (so it can be
+// measured while things are mid-animation)
+function offsetIn(el: HTMLElement, root: HTMLElement) {
+  let x = 0;
+  let y = 0;
+  let node: HTMLElement | null = el;
+  while (node && node !== root) {
+    x += node.offsetLeft;
+    y += node.offsetTop;
+    node = node.offsetParent as HTMLElement | null;
   }
-  whole.add(story.paused(false), LOGO_UNITS);
-  whole.eventCallback('onUpdate', sync);
-  return whole;
+  return { x, y };
 }
-
-// The title rises in, letter by letter, in the middle, once, as the section arrives
-function playLogoIntro(root: HTMLElement) {
-  const q = (k: string) => Array.from(root.querySelectorAll<HTMLElement>(`[data-g="${k}"]`));
-  const bigLogo = q('big-logo')[0];
-  gsap.set(bigLogo, { xPercent: -50, yPercent: -50, x: 0, y: 0, scale: 1 });
-  gsap.set(q('g-letter'), { yPercent: 110, autoAlpha: 0 });
-  gsap.set(q('g-shine'), { xPercent: -120 });
-  const intro = gsap.timeline({ paused: true });
-  intro
-    .to(q('g-letter'), { yPercent: 0, autoAlpha: 1, duration: 0.7, ease: 'power4.out', stagger: 0.06 })
-    .to(q('g-shine'), { xPercent: 120, duration: 1.2, ease: 'power2.inOut' }, '-=0.25');
-  return intro;
-}
-
-function centerOf(el: Element | null, origin: DOMRect): ScreenPoint {
-  if (!el) return { x: origin.width / 2, y: origin.height / 2 };
-  const r = el.getBoundingClientRect();
-  return { x: r.left + r.width / 2 - origin.left, y: r.top + r.height / 2 - origin.top };
+function rectIn(el: HTMLElement, root: HTMLElement) {
+  const { x, y } = offsetIn(el, root);
+  const w = el.offsetWidth;
+  const h = el.offsetHeight;
+  return { x, y, w, h, cx: x + w / 2, cy: y + h / 2 };
 }
 
 export default function SafeGoldSection() {
   const sectionRef = useRef<HTMLElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const stateRef = useRef<GoldState>(createState(false));
-  const timeRef = useRef(0);
-  const narrowRef = useRef(false);
 
-  // The scroll story: pinned, and played by scrolling, forwards and backwards
   useLayoutEffect(() => {
     const section = sectionRef.current;
     if (!section) return;
+    const q = (k: string) => section.querySelector<HTMLElement>(`[data-g="${k}"]`)!;
+    const qa = (k: string) => Array.from(section.querySelectorAll<HTMLElement>(`[data-g="${k}"]`));
+    const logo = q('logo');
+    const word = q('word');
+    const letters = qa('letter');
+    const shine = q('shine');
+    const hands = q('hands');
+    const sharp = q('sharp');
+    const blurred = q('blurred');
+    const screen = q('screen');
+    const headline = q('headline');
+    const device = q('device');
+    const bezel = q('bezel');
+    const content = q('content');
+    const panel = q('panel');
+    const list = q('list');
+    const listView = q('list-view');
+    const vault = q('vault');
+    const screenTitle = q('screen-title');
+    const door = section.querySelector<SVGGElement>('[data-g="vault-door"]')!;
+    const openDoor = section.querySelector<SVGGElement>('[data-g="vault-open-door"]')!;
+    const wheel = section.querySelector<SVGGElement>('[data-g="vault-wheel"]')!;
+    // Frame 3's pieces
+    const stepScreens = qa('step-screen');
+    const stepToasts = qa('step-toast');
+    const stepTexts = qa('step-text');
+    const toastBars = stepToasts.map((t) => t.querySelector<HTMLElement>('[data-g="toast-bar"]')!);
+    const panelCards = Array.from(panel.querySelectorAll<HTMLElement>('[data-g="card"]'));
+    const mgrid = q('mgrid');
+
+    // Frame 1: where the logo has to go (from the middle of the section) to sit on the photo's screen
+    const toScreen = () => {
+      const s = rectIn(screen, section);
+      const l = rectIn(logo, section);
+      return {
+        x: s.cx - l.cx,
+        y: s.y + s.h * TEXT_CENTRE_ON_SCREEN - l.cy,
+        scale: (s.w * TEXT_WIDTH_ON_SCREEN) / word.offsetWidth,
+      };
+    };
+    // Frame 2: the logo stays where it is on the screen as the phone zooms, growing with it
+    const toZoomed = () => {
+      const d = rectIn(device, section);
+      const s = rectIn(screen, section);
+      const l = rectIn(logo, section);
+      return {
+        x: d.cx - l.cx,
+        y: d.y + d.h * TEXT_CENTRE_ON_SCREEN - l.cy,
+        scale: ((s.w * TEXT_WIDTH_ON_SCREEN) / word.offsetWidth) * (d.w / s.w),
+      };
+    };
+    // The zoomed phone, put back over the photo's screen
+    const deviceOnScreen = () => {
+      const d = rectIn(device, section);
+      const s = rectIn(screen, section);
+      return { x: s.cx - d.cx, y: s.cy - d.cy, scale: s.w / d.w };
+    };
+    // The photo, grown about its screen's middle so its phone grows with the zoomed one
+    const handsZoomed = () => {
+      const d = rectIn(device, section);
+      const s = rectIn(screen, section);
+      return { x: d.cx - s.cx, y: d.cy - s.cy, scale: (d.w / s.w) * 1.04 };
+    };
+    // How far the card list scrolls: up by exactly one card (so none is left cut off under the
+    // heading), or less if the list already fits
+    // Frame 3: the phone shrinks a little and slides left, so its right edge sits at 54% of the
+    // width and its Dynamic Island end runs off the screen (on small screens it stays put, and the
+    // words go below it)
+    const SIDE_SCALE = 0.78;
+    const toSide = () => {
+      if (window.innerWidth < 640) {
+        // Small screens: the phone grows a little and slides left too, its right edge near the
+        // screen's edge and its Dynamic Island end running off the left (the words stay below it)
+        const d = rectIn(device, section);
+        const scale = 1.35;
+        return { x: section.clientWidth * 0.97 - d.cx - (d.w * scale) / 2, scale };
+      }
+      const d = rectIn(device, section);
+      return { x: section.clientWidth * 0.54 - d.cx - (d.w * SIDE_SCALE) / 2, scale: SIDE_SCALE };
+    };
+    const listTravel = () => {
+      const second = list.children[1] as HTMLElement | undefined;
+      return Math.min(second?.offsetTop ?? 0, Math.max(0, list.scrollHeight - listView.clientHeight));
+    };
+
     const mm = gsap.matchMedia();
+
     mm.add('(prefers-reduced-motion: no-preference)', () => {
-      let context: gsap.Context | null = null;
-      let playhead: ReturnType<typeof createPlayhead> | null = null;
-      let pin: ScrollTrigger | null = null;
-      let story: gsap.core.Timeline | null = null;
-      let toStory: (progress: number) => number = (p) => p;
-      let beatCount = 1;
+      // ---- 1. Arriving from the credit cards: the title rises in, letter by letter, once ----
+      gsap.set(letters, { yPercent: 110, autoAlpha: 0 });
+      gsap.set(shine, { xPercent: -120 });
+      gsap.set(hands, {
+        autoAlpha: 0,
+        scale: 0.94,
+        y: 30,
+        transformOrigin: `${(SCREEN.left + SCREEN.width / 2) * 100}% ${(SCREEN.top + SCREEN.height / 2) * 100}%`,
+      });
+      gsap.set(blurred, { autoAlpha: 0 });
+      gsap.set(headline, { autoAlpha: 0, y: 24 });
+      gsap.set([device, bezel, content], { autoAlpha: 0 });
+      gsap.set(device, { transformOrigin: '50% 50%' });
 
-      const build = () => {
-        const place = pin?.progress ?? 0;
-        toStory = (progress: number) => progress;
-        const wasPinned = !!pin && window.scrollY >= pin.start;
-        playhead?.kill();
-        context?.revert();
-        // Below lg the cards sit under the piggy bank instead of beside it (matches the lg: classes)
-        narrowRef.current = window.innerWidth < 1024;
-        const state = createState(narrowRef.current);
-        stateRef.current = state;
-        context = gsap.context(() => {
-          const tl = buildTimeline(section, state, narrowRef.current);
-          // The logo's own entrance plays once, on arrival; the flight to the corner is scrolled
-          const intro = playLogoIntro(section);
-          ScrollTrigger.create({ trigger: section, start: 'top 75%', once: true, onEnter: () => intro.play() });
-          const onUpdate = tl.eventCallback('onUpdate') as () => void;
-          tl.eventCallback('onUpdate', () => {
-            onUpdate();
-            timeRef.current = tl.time();
-          });
-          story = tl;
-          playhead = createPlayhead(tl, PACE);
-          // Scroll is split evenly between the beats; within a beat it maps onto that beat's stretch
-          // of the timeline
-          const marks = [0, ...STOPS.map((t) => LOGO_UNITS + t), tl.duration()];
-          const beats = marks.length - 1;
-          beatCount = beats;
-          toStory = (progress: number) => {
-            const at = Math.min(Math.max(progress, 0), 1) * beats;
-            const k = Math.min(Math.floor(at), beats - 1);
-            return (marks[k] + (marks[k + 1] - marks[k]) * (at - k)) / tl.duration();
-          };
-          pin = ScrollTrigger.create({
-            trigger: section,
-            start: 'top 72px',
-            end: `+=${beats * SCROLL_PER_BEAT}`,
-            pin: true,
-            anticipatePin: 1,
-            refreshPriority: 2,
-            onUpdate: (self) => playhead?.follow(toStory(self.progress)),
-            // Any scroll, however small, carries on to the next step in that direction
-            snap: {
-              snapTo: marks.map((_, k) => k / beats),
-              directional: true,
-              delay: 0.05,
-              duration: { min: 0.25, max: 0.6 },
-              ease: 'power1.inOut',
-              inertia: false,
+      const intro = gsap.timeline({ paused: true });
+      intro
+        .to(letters, { yPercent: 0, autoAlpha: 1, duration: 0.7, ease: 'power4.out', stagger: 0.05 })
+        .to(shine, { xPercent: 120, duration: 1.1, ease: 'power2.inOut' }, '-=0.2');
+      const arrival = ScrollTrigger.create({ trigger: section, start: 'top 75%', once: true, onEnter: () => intro.play() });
+
+      // The vault's door swings about its hinge and its wheel turns about its middle. Tweened as
+      // plain numbers and written to the SVG's own transform attributes, with the pivots spelled
+      // out, rather than left to GSAP to work out from the drawing.
+      const { cx, cy } = VAULT.door;
+      // shut: how far the shut door is still across the opening (1) before folding in to its hinge;
+      // open: how far the open door has swung out from the hinge (0 to 1)
+      const pose = { shut: 1, open: 0, turn: 0 };
+      const drawVault = () => {
+        const h = VAULT.hingeX;
+        door.setAttribute('transform', `translate(${h} 0) scale(${Math.max(pose.shut, 0.001)} 1) translate(${-h} 0)`);
+        openDoor.setAttribute('transform', `translate(${h} 0) scale(${Math.max(pose.open, 0.001)} 1) translate(${-h} 0)`);
+        wheel.setAttribute('transform', `rotate(${pose.turn} ${cx} ${cy})`);
+      };
+      drawVault();
+      gsap.set(screenTitle, { autoAlpha: 0, y: 16 });
+      gsap.set(vault, { autoAlpha: 0, y: 24, scale: 0.92 });
+      // It floats gently, all the time (on a wrapper, so the scroll's own moves stay separate)
+      gsap.to(vault.firstElementChild, { y: -6, duration: 2.2, ease: 'sine.inOut', yoyo: true, repeat: -1 });
+
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: section,
+          start: 'top 72px',
+          // About 1.25 screens of scrolling per timeline unit: frames 1 and 2, a scroll for each of
+          // frame 3's steps, then frame 4
+          end: '+=970%',
+          pin: true,
+          anticipatePin: 1,
+          // Pinned sections work out their positions top to bottom (Hubble 3, this 2, Quicko 1)
+          refreshPriority: 2,
+          scrub: 0.7,
+          invalidateOnRefresh: true,
+        },
+      });
+
+      // ---- 2. Frame 1: the phone comes up, the title goes into it, the headline comes in above ----
+      tl
+        .to({}, { duration: 0.15 }, 0)
+        .to(hands, { autoAlpha: 1, scale: 1, y: 0, duration: 0.35, ease: 'power2.out' }, 0.15)
+        .to(logo, { x: () => toScreen().x, y: () => toScreen().y, scale: () => toScreen().scale, duration: 0.45, ease: 'power2.inOut' }, 0.3)
+        .to(word, { color: GOLD_ON_SCREEN, duration: 0.45, ease: 'none' }, 0.3)
+        .to(headline, { autoAlpha: 1, y: 0, duration: 0.25, ease: 'power2.out' }, 0.65)
+        .to({}, { duration: 0.25 }, 0.9);
+
+      // ---- 3. Frame 2: into the phone. It fills the view, the hands blur away behind it, the
+      // vault and the headline come up on the screen and the features come in down the side ----
+      const Z = ZOOM_AT;
+      tl
+        // The sharp phone takes over from the photo's screen, in exactly the same place
+        .set(device, { autoAlpha: 1 }, Z)
+        .fromTo(
+          device,
+          { x: () => deviceOnScreen().x, y: () => deviceOnScreen().y, scale: () => deviceOnScreen().scale },
+          { x: 0, y: 0, scale: 1, duration: 0.6, ease: 'power2.inOut', immediateRender: true },
+          Z
+        )
+        .to(bezel, { autoAlpha: 1, duration: 0.3, ease: 'none' }, Z + 0.1)
+        // The photo's blacked-out screen, now hidden behind the zoomed phone, goes, so it doesn't
+        // show once the phone moves aside in frame 3
+        .set(screen, { autoAlpha: 0 }, Z + 0.6)
+        .to(hands, { x: () => handsZoomed().x, y: () => handsZoomed().y, scale: () => handsZoomed().scale, duration: 0.6, ease: 'power2.inOut' }, Z)
+        .to(sharp, { autoAlpha: 0, duration: 0.45, ease: 'none' }, Z + 0.05)
+        .to(blurred, { autoAlpha: 1, duration: 0.45, ease: 'none' }, Z + 0.05)
+        .to(headline, { autoAlpha: 0, y: -24, duration: 0.25, ease: 'power1.in' }, Z)
+        // "DIGITAL GOLD" grows with the phone, then gives way to the screen's own headline
+        .to(logo, { x: () => toZoomed().x, y: () => toZoomed().y, scale: () => toZoomed().scale, duration: 0.6, ease: 'power2.inOut' }, Z)
+        .to(logo, { autoAlpha: 0, duration: 0.2, ease: 'none' }, Z + 0.35)
+        // The screen lights up, the headline comes in at its top and the vault rises below it
+        .to(content, { autoAlpha: 1, duration: 0.3, ease: 'none' }, Z + 0.4)
+        .to(screenTitle, { autoAlpha: 1, y: 0, duration: 0.3, ease: 'power2.out' }, Z + 0.5)
+        .to(vault, { autoAlpha: 1, y: 0, scale: 1, duration: 0.35, ease: 'power2.out' }, Z + 0.55)
+        // Its wheel turns, then its door swings open on the gold inside: squashing to edge-on,
+        // then on past the hinge, showing its back
+        .to(pose, { turn: 270, duration: 0.35, ease: 'power1.inOut', onUpdate: drawVault }, Z + 0.8)
+        .to(pose, { shut: 0, duration: 0.22, ease: 'power2.in', onUpdate: drawVault }, Z + 1.12)
+        .to(pose, { open: 1, duration: 0.22, ease: 'power2.out', onUpdate: drawVault }, Z + 1.32)
+        // The features come in down the side, then the list moves up to show the last of them
+        .fromTo(panel, { autoAlpha: 0, x: 24 }, { autoAlpha: 1, x: 0, duration: 0.3, ease: 'power2.out', immediateRender: true }, Z + 0.5)
+        .fromTo(
+          qa('card'),
+          { autoAlpha: 0, y: 24 },
+          { autoAlpha: 1, y: 0, duration: 0.3, ease: 'power2.out', stagger: 0.07, immediateRender: true },
+          Z + 0.58
+        )
+        .to(list, { y: () => -listTravel(), duration: 0.5, ease: 'power1.inOut' }, Z + 1.05)
+        // Holds on the finished frame a moment
+        .to({}, { duration: 0.2 }, Z + 1.55);
+
+      // ---- 4. Frame 3: what the app does, one step per scroll. The phone slides left, and each
+      // step (buy, sell, withdraw) brings its screen, its toast, its card in the side panel and its
+      // words beside the phone ----
+      const F = Z + 1.75;
+      const STEP = 0.9;
+      const ring = (on: boolean) => `inset 0 0 0 1.5px rgba(212,175,55,${on ? 0.9 : 0})`;
+      gsap.set([...stepScreens, ...stepToasts, ...stepTexts], { autoAlpha: 0 });
+      gsap.set(toastBars, { scaleX: 0 });
+      gsap.set(panelCards, { boxShadow: ring(false) });
+      tl
+        .to([screenTitle, vault], { autoAlpha: 0, y: -16, duration: 0.25, ease: 'power1.in' }, F)
+        .to(mgrid, { autoAlpha: 0, duration: 0.2, ease: 'none' }, F)
+        // The blurred hands behind go, leaving plain black
+        .to(hands, { autoAlpha: 0, duration: 0.35, ease: 'none' }, F)
+        .to(device, { x: () => toSide().x, scale: () => toSide().scale, duration: 0.55, ease: 'power2.inOut' }, F);
+      STEPS.forEach((step, i) => {
+        const at = F + 0.35 + i * STEP;
+        tl
+          .fromTo(stepScreens[i], { autoAlpha: 0, y: 24 }, { autoAlpha: 1, y: 0, duration: 0.25, ease: 'power2.out', immediateRender: false }, at)
+          .fromTo(stepTexts[i], { autoAlpha: 0, y: 24 }, { autoAlpha: 1, y: 0, duration: 0.25, ease: 'power2.out', immediateRender: false }, at + 0.05)
+          .fromTo(stepToasts[i], { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, duration: 0.2, ease: 'power2.out', immediateRender: false }, at + 0.1)
+          .to(toastBars[i], { scaleX: 1, duration: 0.5, ease: 'none' }, at + 0.15)
+          // Its card in the side panel lights up; the others dim
+          .to(
+            panelCards,
+            {
+              opacity: (k: number) => (k === step.card ? 1 : 0.4),
+              boxShadow: (k: number) => ring(k === step.card),
+              duration: 0.2,
+              ease: 'none',
             },
-          });
-        }, section);
-        ScrollTrigger.sort();
-        ScrollTrigger.refresh();
-        if (pin && wasPinned) {
-          window.scrollTo({ top: pin.start + (pin.end - pin.start) * place, behavior: 'instant' });
-          playhead?.jump(toStory(place));
+            at
+          );
+        // Its illustration plays out on the screen
+        animateStepScene(tl, stepScreens[i], i, at);
+        // ...and goes again for the next one (the last one stays)
+        if (i < STEPS.length - 1) {
+          tl.to([stepScreens[i], stepToasts[i], stepTexts[i]], { autoAlpha: 0, y: -16, duration: 0.18, ease: 'power1.in' }, at + STEP - 0.2);
         }
-      };
-      build();
+      });
+      // Holds on the last step a moment
+      const E = F + 0.35 + STEPS.length * STEP + 0.3;
 
-      const onRevealPartner = () => {
-        if (story && toStory) {
-          story.progress(1);
-          playhead?.jump(toStory(1));
-        }
-      };
-      window.addEventListener('reveal-partner', onRevealPartner);
+      // ---- 5. Frame 4: G O L D. The phone and its words go; a heading comes up, then four tiles,
+      // one letter in each, with a feature under each ----
+      const f4 = q('f4');
+      const f4Heading = q('f4-heading');
+      const f4Tiles = qa('f4-tile');
+      const f4Letters = qa('f4-letter');
+      gsap.set(f4, { autoAlpha: 0 });
+      gsap.set(f4Heading, { autoAlpha: 0, y: 24 });
+      gsap.set(f4Tiles, { autoAlpha: 0, y: 60 });
+      gsap.set(f4Letters, { scale: 0.55, autoAlpha: 0, transformOrigin: '50% 60%' });
+      tl.to(device, { autoAlpha: 0, x: () => toSide().x - 160, duration: 0.35, ease: 'power2.in' }, E)
+        .to(stepTexts[STEPS.length - 1], { autoAlpha: 0, y: -16, duration: 0.2, ease: 'power1.in' }, E)
+        .set(f4, { autoAlpha: 1 }, E + 0.2)
+        .to(f4Heading, { autoAlpha: 1, y: 0, duration: 0.3, ease: 'power2.out' }, E + 0.2)
+        .to(f4Tiles, { autoAlpha: 1, y: 0, duration: 0.35, ease: 'power2.out', stagger: 0.1 }, E + 0.35)
+        .to(f4Letters, { autoAlpha: 1, scale: 1, duration: 0.35, ease: 'back.out(1.6)', stagger: 0.1 }, E + 0.45)
+        // Holds on the word before the page moves on
+        .to({}, { duration: 0.35 }, E + 1.0);
 
-      // While a beat is still playing, the page holds still: wheel, touch and keyboard scrolling are
-      // ignored until the animation has caught up with the scroll, so every beat is seen in full
-      // (including the last one, before the page moves on past the section)
-      const playing = () => {
-        if (!pin || !story) return false;
-        const y = window.scrollY;
-        if (y < pin.start - 1 || y > pin.end + 1) return false;
-        return Math.abs(story.time() - toStory(pin.progress) * story.duration()) > 0.02;
-      };
-      // Inside the story the browser never scrolls by itself: each gesture (a wheel flick, a swipe,
-      // a key) moves exactly one beat, and only once the beat before it has finished. A single hard
-      // flick or a trackpad's momentum used to carry the page through several beats, or right past
-      // the section, in one go. A flick from outside stops at the story's edge instead of flying
-      // through it. The page only scrolls on past an edge once the story there has finished.
-      const ARRIVAL_QUIET_MS = 400;
-      let arrivedAt = 0;
-      const markY = (k: number) => (pin ? Math.round(pin.start + ((pin.end - pin.start) * k) / beatCount) : 0);
-      const gate = (e: Event, delta: number, mayStep: boolean) => {
-        if (!pin || !story || delta === 0) return false;
-        const y = window.scrollY;
-        const dir = Math.sign(delta);
-        const prevent = () => e.cancelable && e.preventDefault();
-        if (y < pin.start - 1 || y > pin.end + 1) {
-          if (dir > 0 && y < pin.start - 1 && y + delta > pin.start) {
-            prevent();
-            window.scrollTo({ top: pin.start, behavior: 'instant' });
-            arrivedAt = performance.now();
-          } else if (dir < 0 && y > pin.end + 1 && y + delta < pin.end) {
-            prevent();
-            window.scrollTo({ top: pin.end, behavior: 'instant' });
-            arrivedAt = performance.now();
-          }
-          return false;
-        }
-        const busy = playing();
-        if (!busy && ((dir > 0 && y >= pin.end - 1) || (dir < 0 && y <= pin.start + 1))) return false;
-        prevent();
-        // The momentum of the flick that brought the page here doesn't start the story by itself
-        if (busy || !mayStep || performance.now() - arrivedAt < ARRIVAL_QUIET_MS) return false;
-        const at = pin.progress * beatCount;
-        const k = dir > 0 ? Math.floor(at + 0.01) + 1 : Math.ceil(at - 0.01) - 1;
-        window.scrollTo({ top: markY(Math.min(Math.max(k, 0), beatCount)), behavior: 'instant' });
-        return true;
-      };
-      const LINE_PX = 16;
-      const onWheel = (e: WheelEvent) => {
-        const scale = e.deltaMode === 1 ? LINE_PX : e.deltaMode === 2 ? window.innerHeight : 1;
-        // Wheel events keep coming while the page is held, so a quiet stretch counts as arrival too
-        if (performance.now() - arrivedAt < ARRIVAL_QUIET_MS) arrivedAt = performance.now();
-        gate(e, e.deltaY * scale, true);
-      };
-      // A swipe moves one beat once it has gone far enough to mean it
-      const SWIPE_PX = 24;
-      let touchY = 0;
-      let swiped = false;
-      const onTouchStart = (e: TouchEvent) => {
-        touchY = e.touches[0]?.clientY ?? 0;
-        swiped = false;
-      };
-      const onTouchMove = (e: TouchEvent) => {
-        const delta = touchY - (e.touches[0]?.clientY ?? touchY);
-        if (gate(e, delta, !swiped && Math.abs(delta) > SWIPE_PX)) swiped = true;
-      };
-      const KEY_DIR: Record<string, number> = { ' ': 1, PageDown: 1, ArrowDown: 1, End: 1, PageUp: -1, ArrowUp: -1, Home: -1 };
-      const onKey = (e: KeyboardEvent) => {
-        const el = e.target as HTMLElement | null;
-        if (el?.closest('input, textarea, select, [contenteditable="true"]')) return;
-        const dir = e.key === ' ' && e.shiftKey ? -1 : KEY_DIR[e.key];
-        if (!dir || !pin) return;
-        const y = window.scrollY;
-        // Keys only steer inside the story; elsewhere they scroll as usual
-        if (y < pin.start - 1 || y > pin.end + 1) return;
-        gate(e, dir, true);
-      };
-      window.addEventListener('wheel', onWheel, { passive: false });
-      window.addEventListener('touchstart', onTouchStart, { passive: true });
-      window.addEventListener('touchmove', onTouchMove, { passive: false });
-      window.addEventListener('keydown', onKey);
+      ScrollTrigger.sort();
+      document.fonts?.ready.then(() => ScrollTrigger.refresh());
 
-      let lastWidth = window.innerWidth;
-      let lastHeight = window.innerHeight;
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      const onResize = () => {
-        clearTimeout(timer);
-        timer = setTimeout(() => {
-          if (window.innerWidth === lastWidth && Math.abs(window.innerHeight - lastHeight) < 120) return;
-          lastWidth = window.innerWidth;
-          lastHeight = window.innerHeight;
-          build();
-        }, 250);
-      };
-      window.addEventListener('resize', onResize);
       return () => {
-        clearTimeout(timer);
-        window.removeEventListener('resize', onResize);
-        window.removeEventListener('reveal-partner', onRevealPartner);
-        window.removeEventListener('wheel', onWheel);
-        window.removeEventListener('touchstart', onTouchStart);
-        window.removeEventListener('touchmove', onTouchMove);
-        window.removeEventListener('keydown', onKey);
-        playhead?.kill();
-        context?.revert();
+        arrival.kill();
+        intro.kill();
       };
     });
+
+    // Reduced motion: the finished frame (inside the phone, the vault open), without the animation
+    mm.add('(prefers-reduced-motion: reduce)', () => {
+      // (the open door is drawn open by default; only the shut one has to go)
+      gsap.set([hands, headline, logo, door], { autoAlpha: 0 });
+    });
+
     return () => mm.revert();
   }, []);
 
-
-
-  // The 3D scene loads only as the section comes near, and draws only while it is on screen
-  useEffect(() => {
-    const section = sectionRef.current;
-    const canvas = canvasRef.current;
-    if (!section || !canvas || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-    let scene: GoldScene | null = null;
-    let visible = false;
-    let cancelled = false;
-    let resizeObserver: ResizeObserver | null = null;
-    // Wall-clock seconds, so the piggy bank and its coins keep floating once the story has stopped
-    let drift = 0;
-    let frameSeconds = 0;
-    let cardsTop: number | null = null;
-
-    const q = (k: string) => section.querySelector<HTMLElement>(`[data-g="${k}"]`);
-    const all = (k: string) => Array.from(section.querySelectorAll<HTMLElement>(`[data-g="${k}"]`));
-    // The captions the story actually shows (see buildTimeline)
-    const shownCaptions = all('caption').filter((_, i) => i !== 0 && i !== 3);
-    const cardEls = ['txn', 'dash', 'withdraw-card', 'sold', 'portfolio'].map(q).filter((el): el is HTMLElement => !!el);
-
-    // The parts of the canvas that no text or card ever covers, for the piggy bank to fit inside
-    const measureRoom = (origin: DOMRect, narrow: boolean): Room[] => {
-      const gap = 16;
-      const W = origin.width;
-      const H = origin.height;
-      const captions = q('captions');
-      const headlines = q('headlines');
-      const cards = q('cards');
-      if (!captions || !headlines || !cards) return [];
-      const capTop = captions.getBoundingClientRect().top - origin.top;
-      const textBottom = shownCaptions.reduce((b, c) => Math.max(b, capTop + c.offsetTop + c.offsetHeight), capTop);
-      const cardsRect = cards.getBoundingClientRect();
-      if (narrow) {
-        // The cards sit under the piggy bank only while one is showing; it eases into the space
-        // they leave, and back out of their way before the next one fades in
-        const showingH = cardEls
-          .filter((el) => el.style.visibility !== 'hidden' && Number(el.style.opacity || 1) > 0.02)
-          .reduce((h, el) => Math.max(h, el.offsetHeight), 0);
-        const target = showingH > 0 ? cardsRect.bottom - origin.top - showingH : H;
-        cardsTop = cardsTop === null ? target : cardsTop + (target - cardsTop) * Math.min(1, frameSeconds / 0.18);
-        return [{ left: gap, top: textBottom + gap, right: W - gap, bottom: cardsTop - gap }];
-      }
-      const steps = q('steps')?.getBoundingClientRect();
-      const bottom = (steps && steps.height > 0 ? steps.top - origin.top : H) - gap;
-      const cardsRight = cardsRect.right - origin.left;
-      const textRight = headlines.getBoundingClientRect().right - origin.left;
-      return [
-        // Beside the cards, under the headline
-        { left: cardsRight + gap * 2, top: textBottom + gap, right: W - gap, bottom },
-        // Beside both, full height
-        { left: Math.max(cardsRight, textRight) + gap * 2, top: gap, right: W - gap, bottom },
-      ];
-    };
-
-    const tick = (_time: number, deltaMs: number) => {
-      frameSeconds = Math.min(deltaMs, 100) / 1000;
-      drift += frameSeconds;
-      if (!scene || !visible) return;
-      const S = stateRef.current;
-      const origin = canvas.getBoundingClientRect();
-      const narrow = narrowRef.current;
-      const frame: GoldFrame = {
-        time: timeRef.current,
-        drift,
-        room: measureRoom(origin, narrow),
-        keepLeftOfBench: !narrow,
-        appears: S.appears.map((a) => a.t),
-        cam: S.cam,
-        pig: S.pig,
-        sheen: S.sheen.v,
-        deposits: S.deposits.map((d) => d.t),
-        returns: S.returns.map((r) => r.t),
-        landings: LANDINGS,
-        emerge: S.emerge.t,
-        withdraw: S.withdraw,
-        sell: S.sell,
-        anchors: {
-          portfolio: centerOf(section.querySelector('[data-g="portfolio"]'), origin),
-          withdraw: centerOf(section.querySelector('[data-g="btn-withdraw"]'), origin),
-          sell: centerOf(section.querySelector('[data-g="btn-sell"]'), origin),
-          // The withdraw and sell pieces play out beside the piggy bank, never over it
-          rupee: { x: origin.width * (narrow ? 0.5 : 0.79), y: origin.height * (narrow ? 0.52 : 0.48) },
-          bench: { x: origin.width * (narrow ? 0.5 : 0.79), y: origin.height * (narrow ? 0.58 : 0.56) },
-        },
-      };
-      scene.render(frame);
-    };
-
-    const load = () => {
-      import('./goldScene')
-        .then(({ GoldScene }) => {
-          if (cancelled) return;
-          try {
-            scene = new GoldScene(canvas);
-          } catch (error) {
-            console.warn('SafeGold scene unavailable:', error);
-            return;
-          }
-          resizeObserver = new ResizeObserver(() => scene?.resize(canvas.clientWidth, canvas.clientHeight));
-          resizeObserver.observe(canvas);
-          scene.resize(canvas.clientWidth, canvas.clientHeight);
-          gsap.ticker.add(tick);
-        })
-        .catch((error) => console.warn('SafeGold scene failed to load:', error));
-    };
-
-    const near = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          near.disconnect();
-          load();
-        }
-      },
-      { rootMargin: '150% 0px' }
-    );
-    near.observe(section);
-    const onScreen = new IntersectionObserver((entries) => {
-      visible = entries.some((e) => e.isIntersecting);
-    });
-    onScreen.observe(section);
-
-    return () => {
-      cancelled = true;
-      near.disconnect();
-      onScreen.disconnect();
-      resizeObserver?.disconnect();
-      gsap.ticker.remove(tick);
-      scene?.dispose();
-    };
-  }, []);
-
   return (
-    <>
-      <section
-        ref={sectionRef}
-        data-safegold
-        aria-label="SafeGold"
-        className="relative w-full h-[calc(100svh-72px)] overflow-hidden select-none motion-reduce:hidden"
-        style={{
-          background:
-            'radial-gradient(ellipse 50% 55% at 50% 60%, #15100a 0%, #0c0a07 40%, rgba(0,0,0,0) 100%)',
-        }}
-      >
-        {/* The portfolio sits behind the 3D scene, so the coin can rise out of it */}
-        <div className="absolute z-0 bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 w-[min(340px,calc(100%-24px))] sm:w-[min(340px,calc(100%-32px))] lg:bottom-auto lg:left-[5%] lg:translate-x-0 lg:top-1/2 lg:-translate-y-1/2 lg:w-[320px]">
-          <div data-g="portfolio" style={HIDDEN} className={`${CARD} pointer-events-auto`}>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#A3A3A3]">Total gold balance</p>
-                <p className="mt-2 text-4xl font-semibold tracking-tight text-[#F5F5F5] tabular-nums">
-                  {PORTFOLIO.grams.toFixed(3)}
-                  <span className="ml-1 text-lg font-medium text-[#A3A3A3]">g</span>
-                </p>
-                <p className="mt-1 text-sm text-[#A3A3A3]">
-                  ≈ {inr(PORTFOLIO.value)} · {PORTFOLIO.karat}
-                </p>
-              </div>
-              <CoinStack />
+    <section
+      ref={sectionRef}
+      id="digital-gold"
+      data-safegold
+      aria-label="Digital Gold"
+      className="relative w-full h-[calc(100svh-72px)] overflow-hidden bg-black text-white select-none"
+    >
+      {/* The headline, above the phone (comes in once the title is on the screen) */}
+      <div data-g="headline" className="absolute inset-x-0 top-5 sm:top-8 z-40 px-3 xs:px-4 text-center">
+        <h2 className="text-2xl xs:text-[28px] font-semibold tracking-tight leading-[1.1] text-[#E5E5E5] sm:text-4xl md:text-5xl">
+          Your money deserves to grow.
+        </h2>
+        <p className="mx-auto mt-2 sm:mt-3 max-w-xl text-xs xs:text-sm sm:text-base tracking-tight text-neutral-400">
+          Start your journey with digital gold. Invest in 24K gold, one purchase at a time.
+        </p>
+      </div>
+
+      {/* The hands holding the phone, below the headline (blurred behind the zoomed phone later) */}
+      <div className="absolute inset-x-0 bottom-0 top-[110px] xs:top-[120px] sm:top-[150px] md:top-[170px] z-10 flex items-center justify-center px-3">
+        <div
+          data-g="hands"
+          className="relative shrink-0 aspect-[728/343] will-change-[transform,opacity]"
+          // The phone is only the middle half of the photo, so on narrow screens the photo runs
+          // past the sides (cropping the hands) to keep the phone a good size
+          style={{ width: 'min(1040px, 130vw, calc((100svh - 72px - 190px) * 2.12))' }}
+        >
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              maskImage: 'linear-gradient(to bottom, black 0%, black 78%, transparent 98%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 78%, transparent 98%)',
+            }}
+          >
+            <div data-g="sharp" className="absolute inset-0">
+              <Image src={handsImage} alt="Hands holding a phone" fill sizes="(max-width: 800px) 130vw, 1040px" className="object-contain object-center" />
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {(['withdraw', 'sell'] as const).map((which) => (
-                <span
-                  key={which}
-                  data-g={`btn-${which}`}
-                  className="relative flex items-center justify-center overflow-hidden rounded-full border border-[#D4AF37]/60 py-2 text-[13px] font-semibold"
-                >
-                  <span data-g={`fill-${which}`} style={HIDDEN} className={`absolute inset-0 ${METAL}`} />
-                  <span data-g={`label-${which}`} className="relative text-[#FFE9A3]">
-                    {which === 'withdraw' ? 'Withdraw Gold' : 'Sell Gold'}
-                  </span>
-                </span>
-              ))}
+            {/* The same photo, blurred and dimmed, for behind the zoomed phone */}
+            <div data-g="blurred" className="absolute inset-0 blur-[6px] brightness-[0.55]" aria-hidden="true">
+              <Image src={handsImage} alt="" fill sizes="(max-width: 800px) 130vw, 1040px" className="object-contain object-center" />
             </div>
-            <p className="mt-3 text-[10px] text-[#A3A3A3]/70">Illustrative values</p>
           </div>
+
+          {/* The phone's screen, blacked out */}
+          <div
+            data-g="screen"
+            className="absolute bg-black pointer-events-none"
+            style={{
+              left: `${SCREEN.left * 100}%`,
+              top: `${SCREEN.top * 100}%`,
+              width: `${SCREEN.width * 100}%`,
+              height: `${SCREEN.height * 100}%`,
+              borderRadius: SCREEN_RADIUS,
+            }}
+          />
         </div>
+      </div>
 
-        <canvas ref={canvasRef} className="absolute inset-0 z-10 block h-full w-full" aria-hidden="true" />
-
-        {/* The title: big in the middle at first, then it flies up into the corner */}
-        <div data-g="big-logo" className="pointer-events-none absolute left-1/2 top-[45%] z-30" style={{ transform: 'translate(-50%, -50%)' }}>
-          <div className="relative overflow-hidden">
-            <SafeGoldLogo animated className="text-[28px] sm:text-[56px] lg:text-[72px]" />
-            <span data-g="g-shine" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-[#FFE9A3]/40 to-transparent mix-blend-overlay" />
-          </div>
-        </div>
-
-        {/* Headlines, down the left under the logo */}
-        <div data-g="headlines" className="absolute left-4 right-4 top-6 sm:top-8 lg:left-[5%] lg:right-auto lg:top-6 lg:w-[min(42rem,58vw)] z-20 pointer-events-none">
-          <span data-g="logo-slot" className="inline-flex invisible">
-            <SafeGoldLogo className="text-[20px] sm:text-[24px]" />
-          </span>
-          <div data-g="captions" className="relative mt-2">
-            {SCENES.map((scene, i) => (
-              <div key={scene.title} data-g="caption" className="absolute inset-x-0 top-0 text-left">
-                <h2 className="text-[20px] xs:text-[24px] sm:text-3xl lg:text-4xl font-semibold text-[#F5F5F5] tracking-tight leading-[1.15]">{scene.title}</h2>
-                <p className="max-w-xl text-xs xs:text-sm sm:text-base text-[#A3A3A3] tracking-tight mt-1.5 sm:mt-2">{scene.body}</p>
-                {i === SCENES.length - 1 && (
-                  <a
-                    data-g="cta"
-                    href="#safegold"
-                    style={HIDDEN}
-                    className={`pointer-events-auto mt-4 sm:mt-5 inline-flex items-center gap-2 rounded-full ${METAL} bg-[length:220%_100%] bg-[position:0%_0] px-5 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-[#120d02] shadow-[0_8px_24px_rgba(212,175,55,0.18)] transition-[background-position,transform,box-shadow] duration-700 ease-out hover:bg-[position:100%_0] hover:shadow-[0_10px_30px_rgba(212,175,55,0.3)] active:scale-[0.97]`}
-                  >
-                    Explore SafeGold
-                    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden="true">
-                      <path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </a>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Cards to the left of the piggy bank on desktop, below it on phones */}
-        <div data-g="cards" className="absolute z-20 bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 w-[min(340px,calc(100%-24px))] sm:w-[min(340px,calc(100%-32px))] lg:bottom-auto lg:left-[5%] lg:translate-x-0 lg:top-1/2 lg:-translate-y-1/2 lg:w-[320px] pointer-events-none">
-          <div className="relative">
-            <div data-g="txn" style={HIDDEN} className={`${CARD} absolute inset-x-0 bottom-0 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2`}>
-              <div className="flex items-center gap-3">
-                <svg viewBox="0 0 40 40" className="h-10 w-10 shrink-0" aria-hidden="true">
-                  <circle cx="20" cy="20" r="18" fill="none" stroke={GOLD.primary} strokeOpacity="0.45" strokeWidth="1.5" />
-                  <path data-g="check" d="M12.5 20.5l5 5 10-11" fill="none" stroke={GOLD.champagne} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray="1" />
-                </svg>
-                <div>
-                  <p className="text-[15px] font-semibold tracking-tight text-[#F5F5F5]">Gold Purchase Successful</p>
-                  <p className="text-[13px] text-[#A3A3A3]">24K Digital Gold</p>
-                </div>
-              </div>
-              <div className="mt-3 flex items-center justify-between border-t border-[#D4AF37]/15 pt-3 text-[13px]">
-                <span className="text-[#A3A3A3]">Status</span>
-                <span className="font-medium text-[#F5D76E]">Investment Added</span>
-              </div>
-            </div>
-
-            <div data-g="dash" style={HIDDEN} className={`${CARD} absolute inset-x-0 bottom-0 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2`}>
-              <p className="text-[15px] font-semibold tracking-tight text-[#F5F5F5]">Your Gold Portfolio</p>
-              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-[13px]">
-                <div>
-                  <dt className="text-[#A3A3A3]">Gold Balance</dt>
-                  <dd data-g="dash-grams" className="font-semibold text-[#F5F5F5] tabular-nums">0.000 g</dd>
-                </div>
-                <div>
-                  <dt className="text-[#A3A3A3]">Investment Value</dt>
-                  <dd data-g="dash-value" className="font-semibold text-[#F5F5F5] tabular-nums">₹0</dd>
-                </div>
-                <div>
-                  <dt className="text-[#A3A3A3]">Gold Type</dt>
-                  <dd className="font-semibold text-[#F5F5F5]">{PORTFOLIO.karat}</dd>
-                </div>
-                <div>
-                  <dt className="text-[#A3A3A3]">Portfolio Status</dt>
-                  <dd className="font-semibold text-[#F5D76E]">{PORTFOLIO.status}</dd>
-                </div>
-              </dl>
-              <svg viewBox="0 0 260 64" className="mt-3 h-14 w-full overflow-visible max-lg:[@media(max-height:720px)]:hidden" preserveAspectRatio="none" aria-hidden="true">
-                <defs>
-                  <linearGradient id="sg-area" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0" stopColor={GOLD.primary} stopOpacity="0.28" />
-                    <stop offset="1" stopColor={GOLD.primary} stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <path data-g="chart-area" d={CHART_AREA} fill="url(#sg-area)" />
-                <path data-g="chart-line" d={CHART_LINE} fill="none" stroke={GOLD.champagne} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray="1" vectorEffect="non-scaling-stroke" />
-              </svg>
-              <p className="mt-2 text-[10px] text-[#A3A3A3]/70 max-lg:[@media(max-height:720px)]:hidden">Illustrative values, not live data</p>
-            </div>
-
-            <div data-g="withdraw-card" style={HIDDEN} className={`${CARD} absolute inset-x-0 bottom-0 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2`}>
-              <p className="text-[15px] font-semibold tracking-tight text-[#F5F5F5]">Withdraw Physical Gold</p>
-              <p className="mt-1 text-[13px] text-[#A3A3A3]">Convert your digital gold into physical gold.</p>
-              <ul className="mt-3 space-y-2.5 text-[13px] text-[#F5F5F5]">
-                <li className="flex items-center gap-2.5">
-                  <IconBar />
-                  Choose your preferred available coin or bar.
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <IconPin />
-                  Delivered to your selected address.
-                </li>
-              </ul>
-              {/* Package on its way to the address */}
-              <div className="mt-4 flex items-center gap-2">
-                <IconPackage />
-                <svg viewBox="0 0 160 8" className="h-2 flex-1" preserveAspectRatio="none" aria-hidden="true">
-                  <path d="M2 4H158" stroke={GOLD.primary} strokeOpacity="0.25" strokeWidth="1.5" strokeDasharray="3 4" />
-                  <path data-g="route" d="M2 4H158" stroke={GOLD.champagne} strokeWidth="1.5" pathLength={1} strokeDasharray="1" />
-                </svg>
-                <IconPin />
-              </div>
-            </div>
-
-            <div data-g="sold" style={HIDDEN} className={`${CARD} absolute inset-x-0 bottom-0 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2`}>
-              <div className="flex items-center gap-3">
-                <span data-g="sold-icon" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#D4AF37]/50 text-xl font-semibold text-[#F5D76E]">
-                  ₹
-                </span>
-                <div>
-                  <p className="text-[15px] font-semibold tracking-tight text-[#F5F5F5]">Gold Sold Successfully</p>
-                  <p className="flex items-center gap-1.5 text-[13px] text-[#A3A3A3]">
-                    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden="true">
-                      <path data-g="sold-check" d="M3.5 8.5l3 3 6-7" fill="none" stroke={GOLD.champagne} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray="1" />
-                    </svg>
-                    Amount credited
+      {/* Frame 2: the phone, zoomed in. Laid out at its full size (so it stays sharp) and shrunk
+          onto the photo's screen until the zoom starts. */}
+      <div className="pointer-events-none absolute inset-0 z-[25] flex flex-col items-center justify-center gap-9 px-3">
+        <div
+          data-g="device"
+          className="relative shrink-0 will-change-transform"
+          // The frame image runs 13% wider and 23% taller than the screen, so the screen is sized
+          // to leave room for it
+          style={{ width: 'min(84vw, 1400px, calc((100svh - 144px) * 1.98))', aspectRatio: `${PHONE.screen.w} / ${PHONE.screen.h}` }}
+        >
+          <div className="absolute inset-0 overflow-hidden bg-black" style={{ borderRadius: PHONE_SCREEN_RADIUS }}>
+            <div data-g="content" className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_38%_58%,#18130a,#070707_75%)]">
+              {/* The free part of the screen (clear of the Dynamic Island and the side panel): the
+                  headline at the top, and the vault below it */}
+              <div className="absolute bottom-[4%] left-[8%] right-[6%] top-[6%] flex flex-col items-center sm:right-[27%]">
+                <div data-g="screen-title" className="shrink-0 text-center">
+                  <h3 className="text-[12px] sm:text-[20px] md:text-[26px] lg:text-[34px] font-semibold tracking-tight leading-[1.1] text-[#F5F5F5]">
+                    Start small. Build something <span className="text-[#F5D76E]">golden.</span>
+                  </h3>
+                  <p className="mx-auto mt-1 lg:mt-2 hidden max-w-[34em] text-[10px] md:text-[12px] lg:text-[15px] leading-snug tracking-tight text-neutral-400 sm:block">
+                    Buy digital gold, track your holdings, withdraw physical gold or sell when you need to. Your gold
+                    journey starts here.
                   </p>
                 </div>
+                <div data-g="vault" className="mt-[2%] min-h-0 w-full flex-1">
+                  <div className="flex h-full w-full items-center justify-center">
+                    {/* Its wall fades out at the edges, into the screen */}
+                    <GoldVault
+                      className="h-full max-w-full"
+                      style={{
+                        maskImage: 'radial-gradient(ellipse 50% 50% at 50% 48%, black 72%, transparent 100%)',
+                        WebkitMaskImage: 'radial-gradient(ellipse 50% 50% at 50% 48%, black 72%, transparent 100%)',
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
-              <dl className="mt-3 space-y-1.5 border-t border-[#D4AF37]/15 pt-3 text-[13px]">
-                <div className="flex justify-between">
-                  <dt className="text-[#A3A3A3]">Gold Sold</dt>
-                  <dd className="font-semibold text-[#F5F5F5] tabular-nums">{SALE.grams}</dd>
+
+              {/* Frame 3: in the same free part of the screen, the app's screens, one per step,
+                  with a toast along the bottom */}
+              <div className="absolute bottom-[4%] left-[8%] right-[6%] top-[6%] sm:right-[27%]">
+                {STEPS.map((s, i) => (
+                  <div key={s.key} data-g="step-screen" className="absolute inset-x-0 top-0 bottom-0 flex items-center justify-center sm:bottom-[22%]" style={{ visibility: 'hidden' }}>
+                    <StepScene step={i} />
+                  </div>
+                ))}
+                {STEPS.map((s, i) => (
+                  <div key={s.key} data-g="step-toast" className="absolute bottom-0 left-1/2 hidden w-[72%] max-w-[460px] -translate-x-1/2 sm:block" style={{ visibility: 'hidden' }}>
+                    <StepToast step={i} />
+                  </div>
+                ))}
+              </div>
+
+              {/* What digital gold lets you do, down the right (moved below the phone on small screens) */}
+              <div
+                data-g="panel"
+                className="absolute inset-y-0 right-0 hidden w-[24%] flex-col bg-[#090909]/95 px-[1.1%] pt-[2.2%] sm:flex"
+              >
+                <p className="flex items-start gap-1.5 lg:gap-2 px-1 pb-[5%] text-[10px] md:text-[12px] lg:text-[15px] font-semibold leading-snug text-[#F5F5F5]">
+                  <Sparkle className="mt-0.5 h-3.5 w-3.5 lg:h-5 lg:w-5 shrink-0" />
+                  What you can do with digital gold
+                </p>
+                <div
+                  data-g="list-view"
+                  className="relative min-h-0 flex-1 overflow-hidden"
+                  // The next card peeks in at the bottom, fading out
+                  style={{
+                    maskImage: 'linear-gradient(to bottom, black 92%, transparent)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, black 92%, transparent)',
+                  }}
+                >
+                  <div data-g="list" className="flex flex-col gap-2 lg:gap-3 pb-3 will-change-transform">
+                    {FEATURES.map((_, i) => (
+                      <GoldFeatureCard key={i} step={i} />
+                    ))}
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <dt className="text-[#A3A3A3]">Sale Value</dt>
-                  <dd className="font-semibold text-[#F5D76E] tabular-nums">{SALE.value}</dd>
-                </div>
-              </dl>
-              <p className="mt-2 text-[10px] text-[#A3A3A3]/70">Illustrative values, not live prices</p>
+              </div>
             </div>
+          </div>
+
+          {/* The phone's frame (phone.png with its screen cut out, keeping the Dynamic Island), over
+              the screen and lined up with it */}
+          <div
+            data-g="bezel"
+            className="pointer-events-none absolute"
+            style={{
+              left: `${(-PHONE.screen.x / PHONE.screen.w) * 100}%`,
+              top: `${(-PHONE.screen.y / PHONE.screen.h) * 100}%`,
+              width: `${(PHONE.w / PHONE.screen.w) * 100}%`,
+              height: `${(PHONE.h / PHONE.screen.h) * 100}%`,
+            }}
+          >
+            <Image src={phoneFrame} alt="" fill sizes="(max-width: 640px) 96vw, 1600px" className="object-fill" />
           </div>
         </div>
 
-      </section>
-
-      {/* Without motion, the journey is simply listed */}
-      <div className="hidden motion-reduce:block w-full max-w-4xl mx-auto mt-16 px-4">
-        <p className="text-sm font-medium text-[#D4AF37]">SafeGold</p>
-        <ol className="mt-4 grid gap-6 sm:grid-cols-2">
-          {SCENES.map((scene) => (
-            <li key={scene.title}>
-              <h3 className="text-xl font-semibold text-[#F5F5F5] tracking-tight">{scene.title}</h3>
-              <p className="text-sm text-[#A3A3A3] tracking-tight mt-1">{scene.body}</p>
-            </li>
+        {/* Small screens: the features, below the phone */}
+        <div data-g="mgrid" className="grid w-full max-w-[420px] grid-cols-2 gap-2 sm:hidden">
+          {FEATURES.map((_, i) => (
+            <GoldFeatureCard key={i} step={i} compact />
           ))}
-        </ol>
-        <a href="#safegold" className={`mt-6 inline-flex rounded-full ${METAL} px-6 py-2.5 text-sm font-semibold text-[#120d02] pointer-events-auto`}>
-          Explore SafeGold
-        </a>
+        </div>
       </div>
-    </>
-  );
-}
 
-function CoinStack() {
-  return (
-    <svg viewBox="0 0 64 64" className="h-14 w-14 shrink-0" aria-hidden="true">
-      <defs>
-        <linearGradient id="sg-coin" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor={GOLD.dark} />
-          <stop offset="0.45" stopColor={GOLD.highlight} />
-          <stop offset="1" stopColor={GOLD.dark} />
-        </linearGradient>
-      </defs>
-      {[0, 1, 2, 3, 4].map((i) => (
-        <g key={i} transform={`translate(${i % 2 ? 2 : 0} ${46 - i * 7})`}>
-          <rect x="10" y="0" width="42" height="7" fill="url(#sg-coin)" />
-          <ellipse cx="31" cy="0" rx="21" ry="5" fill={GOLD.primary} stroke={GOLD.highlight} strokeOpacity="0.6" strokeWidth="0.75" />
-          <ellipse cx="31" cy="7" rx="21" ry="5" fill="url(#sg-coin)" />
-        </g>
-      ))}
-    </svg>
-  );
-}
+      {/* Frame 3: what each step does, beside the phone (below it on small screens) */}
+      <div className="pointer-events-none absolute inset-x-5 bottom-[14%] z-30 sm:inset-x-auto sm:bottom-0 sm:left-[59%] sm:right-[5%] sm:top-0 sm:flex sm:items-center">
+        <div className="relative w-full">
+          {STEPS.map((s, i) => (
+            <div key={s.key} data-g="step-text" className={i === 0 ? 'relative' : 'absolute inset-x-0 top-0'} style={{ visibility: 'hidden' }}>
+              <StepText step={i} />
+            </div>
+          ))}
+        </div>
+      </div>
 
-const iconProps = { viewBox: '0 0 20 20', className: 'h-5 w-5 shrink-0', fill: 'none', stroke: GOLD.primary, strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
-function IconBar() {
-  return (
-    <svg {...iconProps} aria-hidden="true">
-      <path d="M5 7h10l2.5 7h-15z" />
-      <path d="M8 10.5h4" />
-    </svg>
-  );
-}
-function IconPin() {
-  return (
-    <svg {...iconProps} aria-hidden="true">
-      <path d="M10 17.5s5.5-4.8 5.5-9a5.5 5.5 0 0 0-11 0c0 4.2 5.5 9 5.5 9z" />
-      <circle cx="10" cy="8.5" r="2" />
-    </svg>
-  );
-}
-function IconPackage() {
-  return (
-    <svg {...iconProps} aria-hidden="true">
-      <path d="M3 6.5 10 3l7 3.5v7L10 17l-7-3.5z" />
-      <path d="M3 6.5 10 10l7-3.5M10 10v7" />
-    </svg>
-  );
-}
+      {/* Frame 4: G O L D, four tiles with a feature under each, and a heading above */}
+      <div data-g="f4" className="pointer-events-none absolute inset-0 z-30" style={{ visibility: 'hidden' }}>
+        <GoldWord />
+      </div>
 
-// The section's title in gold, set letter by letter so it can rise in
-function SafeGoldLogo({ animated = false, className = '' }: { animated?: boolean; className?: string }) {
-  const k = (name: string) => (animated ? name : undefined);
-  return (
-    <span className={`flex items-center font-bold leading-none tracking-[0.18em] text-[#D4AF37] ${className}`} aria-label="Digital Gold" role="img">
-      <span className="flex" aria-hidden="true">
-        {'DIGITAL GOLD'.split('').map((letter, i) => (
-          <span key={i} className="inline-block overflow-hidden pb-[0.08em]">
-            <span data-g={k('g-letter')} className="inline-block">
-              {letter === ' ' ? '\u00A0' : letter}
-            </span>
+      {/* "DIGITAL GOLD": big in the middle at first, then on the phone's screen, then its title */}
+      <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+        <div data-g="logo" className="relative overflow-hidden px-3 xs:px-4 py-2 will-change-transform">
+          <span
+            data-g="word"
+            className="flex text-[30px] xs:text-[36px] sm:text-[60px] lg:text-[84px] font-bold uppercase leading-none tracking-[0.08em] whitespace-nowrap"
+            style={{ color: GOLD }}
+            aria-label="Digital Gold"
+            role="img"
+          >
+            {'DIGITAL GOLD'.split('').map((letter, i) => (
+              <span key={i} className="inline-block overflow-hidden pb-[0.1em]">
+                <span data-g="letter" className="inline-block" aria-hidden="true">
+                  {letter === ' ' ? ' ' : letter}
+                </span>
+              </span>
+            ))}
           </span>
-        ))}
-      </span>
-    </span>
+          {/* A light that sweeps across it once, as on Offers */}
+          <span
+            data-g="shine"
+            className="pointer-events-none absolute inset-y-0 left-0 w-full bg-gradient-to-r from-transparent via-white/25 to-transparent mix-blend-overlay"
+          />
+        </div>
+      </div>
+    </section>
   );
 }
