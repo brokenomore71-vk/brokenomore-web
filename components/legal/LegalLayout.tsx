@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Navbar from '@/app/components/Navbar';
+import Footer from '@/components/Footer';
 import LegalToc from './LegalToc';
 
 // Shared frame for the Privacy, Terms and Delete Account pages: the navbar, a title block, a
@@ -73,6 +74,8 @@ export default function LegalLayout({
           </nav>
         </article>
       </div>
+
+      <Footer />
     </main>
   );
 }

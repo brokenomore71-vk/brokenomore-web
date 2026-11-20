@@ -1,4 +1,5 @@
 import Navbar from '@/app/components/Navbar';
+import Footer from '@/components/Footer';
 import { FEATURE_PAGES } from '@/lib/featurePages';
 import FeatureScroll from '@/components/FeatureScroll';
 
@@ -19,6 +20,7 @@ export default function FeaturePageShell({ slug, bleed = true, children }: { slu
           </div>
         </FeatureScroll>
       </div>
+      <Footer />
     </main>
   );
 }
