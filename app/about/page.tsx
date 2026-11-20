@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Navbar from '@/app/components/Navbar';
-import LogoMark from '@/components/about/LogoMark';
 
 const DESCRIPTION =
   'BrokeNoMore is a free personal finance app for India, built by Kushagra Gandhi and Vruddhi Madhani. Track, split, save, invest and plan your money, all in one place.';
@@ -14,8 +13,20 @@ export const metadata: Metadata = {
 };
 
 const FOUNDERS = [
-  { name: 'Kushagra Gandhi', role: 'Co-founder', photo: '/assets/images/founders/kushagra.jpeg', accent: 'from-[#E33CF0]/40' },
-  { name: 'Vruddhi Madhani', role: 'Co-founder', photo: '/assets/images/founders/vruddhi.jpeg', accent: 'from-[#22B8F0]/40' },
+  {
+    name: 'Kushagra Gandhi',
+    role: 'Co-founder',
+    photo: '/assets/images/founders/kushagra.jpeg',
+    accent: 'from-[#E33CF0]/40',
+    linkedin: 'https://www.linkedin.com/in/kushagra-gandhi-841274259/',
+  },
+  {
+    name: 'Vruddhi Madhani',
+    role: 'Co-founder',
+    photo: '/assets/images/founders/vruddhi.jpeg',
+    accent: 'from-[#22B8F0]/40',
+    linkedin: 'https://www.linkedin.com/in/vruddhi-madhani-116815299/',
+  },
 ];
 
 export default function AboutPage() {
@@ -31,7 +42,17 @@ export default function AboutPage() {
 
       {/* The mark and what the app does */}
       <section className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-6 px-4 pt-28 sm:px-6 sm:pt-32 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-12 lg:pt-36">
-        <LogoMark className="mx-auto w-full max-w-[440px]" />
+        <div className="lm-float mx-auto w-full max-w-[540px]">
+          <Image
+            src="/assets/images/about-logo.png"
+            alt="The BrokeNoMore logo"
+            width={1024}
+            height={1024}
+            priority
+            sizes="(min-width: 1024px) 540px, 90vw"
+            className="h-auto w-full select-none"
+          />
+        </div>
 
         <div className="text-center lg:text-left">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#A890E6]">About us</p>
@@ -57,8 +78,15 @@ export default function AboutPage() {
 
         <div className="mt-10 grid gap-6 sm:grid-cols-2 sm:gap-8">
           {FOUNDERS.map((f) => (
-            <figure
+            <a
               key={f.name}
+              href={f.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${f.name} on LinkedIn (opens in a new tab)`}
+              className="block rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A890E6] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080808]"
+            >
+            <figure
               className="group relative overflow-hidden rounded-3xl border border-white/10 bg-[#0f0f10] transition-colors duration-300 hover:border-white/20"
             >
               <div className="relative aspect-[4/5] w-full overflow-hidden">
@@ -78,6 +106,7 @@ export default function AboutPage() {
                 <p className="mt-0.5 text-sm text-neutral-300">{f.role}</p>
               </figcaption>
             </figure>
+            </a>
           ))}
         </div>
       </section>
