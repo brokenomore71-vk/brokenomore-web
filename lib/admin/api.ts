@@ -125,7 +125,10 @@ export function mediaUrl(value: string | null | undefined): string {
   if (!v) return '';
   if (/^https?:\/\//i.test(v)) return v;
   if (v.startsWith('/static/')) return `${API_BASE}${v}`;
-  if (v.startsWith('assets/')) return encodeURI(`${ASSET_BUCKET}/assets/${v}`);
+  // Uploaded from this panel: in the public bucket, where the app also loads it from
+  if (v.startsWith('assets/cms/')) return encodeURI(`${ASSET_BUCKET}/${v}`);
+  // Shipped inside the app: previewed from the copy in public/app-assets/ (same folder layout as the app)
+  if (v.startsWith('assets/')) return encodeURI(`/app-assets/${v.slice('assets/'.length)}`);
   return '';
 }
 
