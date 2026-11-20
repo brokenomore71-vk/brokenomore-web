@@ -239,14 +239,6 @@ export default function AdminDashboard() {
             <IconLayoutDashboard size={19} stroke={1.6} />
             Dashboard
           </a>
-          <a
-            href="#users"
-            onClick={() => setNavOpen(false)}
-            className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-[#a1a1aa] transition hover:bg-white/[0.04] hover:text-white"
-          >
-            <IconUsers size={19} stroke={1.6} />
-            Users
-          </a>
 
           <p className="px-3.5 pb-1 pt-5 text-[11px] font-medium uppercase tracking-wider text-[#5c5c63]">App content</p>
           {[

@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { IconChevronDown } from '@tabler/icons-react';
 import ContentManager, { type FormProps } from '@/components/admin/ContentManager';
-import { ColorInput, Field, Grid, MediaField, Section, Select, TextArea, TextInput } from '@/components/admin/ui';
+import { ColorInput, Field, Grid, MediaField, Section, Select, SizeNote, TextArea, TextInput } from '@/components/admin/ui';
 import { isVideo } from '@/lib/admin/api';
 import { cn } from '@/lib/utils';
 
@@ -80,23 +80,11 @@ function SlideForm({ value, onChange, errors, isNew, disabled }: FormProps<Slide
   const action = value.action || { type: 'navigate', target: '' };
   const e = (k: string) => errors[k];
 
-  const setTemplate = (template_type: string) => {
-    const mat = template_type === 'pedestal_mat';
-    onChange({
-      ...value,
-      template_type,
-      mat_color: mat ? value.mat_color || '#3D3D3D' : value.mat_color,
-      bottom_element: { ...value.bottom_element, type: mat ? 'phone_on_mat' : value.bottom_element.type === 'phone_on_mat' ? 'logo_with_action' : value.bottom_element.type },
-      main_illustration: { ...value.main_illustration, alignment: mat ? 'bottom_right' : value.main_illustration.alignment },
-    });
-  };
-
   return (
     <div className="flex flex-col gap-6">
+      {/* No template picker: slides are pre-made videos. New slides use the standard video layout
+          (loan_planner); existing slides keep the layout they already have. */}
       <Section title="Layout">
-        <Field label="Template" error={e('template_type')}>
-          <Select value={value.template_type} onChange={(ev) => setTemplate(ev.target.value)} disabled={disabled} options={TEMPLATES} />
-        </Field>
         <Grid>
           <Field label="Seconds on screen" error={e('duration_seconds')}>
             <TextInput type="number" min={1} max={60} value={value.duration_seconds} onChange={(ev) => onChange({ ...value, duration_seconds: Number(ev.target.value) })} disabled={disabled} />
@@ -113,7 +101,7 @@ function SlideForm({ value, onChange, errors, isNew, disabled }: FormProps<Slide
       </Section>
 
       <Section title="Text">
-        <Field label="Title" required error={e('header.title')} hint="Press Enter for a line break, as on the slide.">
+        <Field label="Title" error={e('header.title')} hint="Optional. Leave empty if the video already shows the title. Press Enter for a line break.">
           <TextArea rows={3} value={value.header.title} onChange={(ev) => header({ title: ev.target.value })} invalid={!!e('header.title')} disabled={disabled} placeholder={'Loan\nPlanner'} />
         </Field>
         <Field label="Subtitle" error={e('header.subtitle')}>
@@ -134,6 +122,9 @@ function SlideForm({ value, onChange, errors, isNew, disabled }: FormProps<Slide
 
       {t.partner && (
         <Section title="Partner badge" description="Logo and name shown beside the title.">
+          <SizeNote size="square, e.g. 96 × 96 px" required={false}>
+            shown small beside the title (the current Quicko logo is 37 × 37). Transparent PNG or WebP works best.
+          </SizeNote>
           <Field label="Partner logo" error={e('header.partner_badge.logo_image')}>
             <MediaField
               kind="feature-slides"
@@ -150,12 +141,11 @@ function SlideForm({ value, onChange, errors, isNew, disabled }: FormProps<Slide
       )}
 
       <Section title="Media">
-        <Field
-          label={t.mat ? 'Animation (bottom right)' : 'Main video or image'}
-          required
-          error={e('main_illustration.source')}
-          hint="MP4/WebM video under 30 MB, or a PNG/JPEG/WebP image under 5 MB."
-        >
+        <SizeNote size="720 × 1280 px (portrait, 9:16)">
+          the size of all current slide videos. Any other size is refused. MP4/WebM video under 30 MB (the current ones run
+          10 s), or a PNG/JPEG/WebP image under 5 MB.
+        </SizeNote>
+        <Field label={t.mat ? 'Animation (bottom right)' : 'Main video or image'} required error={e('main_illustration.source')}>
           <MediaField
             kind="feature-slides"
             allowVideo
@@ -163,19 +153,28 @@ function SlideForm({ value, onChange, errors, isNew, disabled }: FormProps<Slide
             pick={(r) => (isVideo(r.url) ? r.asset_path : r.url)}
             value={value.main_illustration.source}
             onChange={(source) => onChange({ ...value, main_illustration: { ...value.main_illustration, source } })}
+            requiredSize={{ width: 720, height: 1280 }}
             invalid={!!e('main_illustration.source')}
             disabled={disabled}
-            previewClass="h-36 w-24"
+            previewClass="h-[160px] w-[90px]"
           />
         </Field>
         {t.corner && (
-          <Field label="Corner image" error={e('bottom_element.corner_image')} hint="Optional illustration in the bottom-right corner.">
-            <MediaField kind="feature-slides" value={value.bottom_element.corner_image || ''} onChange={(corner_image) => bottom({ corner_image })} disabled={disabled} />
-          </Field>
+          <>
+            <SizeNote size="about 240 × 170 px, landscape" required={false}>
+              optional illustration in the bottom-right corner (current ones are 150–240 px wide). Transparent PNG or WebP.
+            </SizeNote>
+            <Field label="Corner image" error={e('bottom_element.corner_image')}>
+              <MediaField kind="feature-slides" value={value.bottom_element.corner_image || ''} onChange={(corner_image) => bottom({ corner_image })} disabled={disabled} previewClass="h-[85px] w-[120px]" />
+            </Field>
+          </>
         )}
         {t.mat && (
           <>
-            <Field label="Phone image" error={e('bottom_element.phone_image')} hint="The phone standing on the mat.">
+            <SizeNote size="square, e.g. 256 × 256 px" required={false}>
+              the phone standing on the mat (the current one is 85 × 85). Transparent PNG or WebP.
+            </SizeNote>
+            <Field label="Phone image" error={e('bottom_element.phone_image')}>
               <MediaField kind="feature-slides" value={value.bottom_element.phone_image || ''} onChange={(phone_image) => bottom({ phone_image })} disabled={disabled} previewClass="h-24 w-24" />
             </Field>
             <Field label="Mat colour" error={e('mat_color')}>
@@ -271,7 +270,7 @@ function SlideForm({ value, onChange, errors, isNew, disabled }: FormProps<Slide
               </Field>
             </Grid>
             {!t.mat && (
-              <Field label="Logo (bottom left)" error={e('bottom_element.logo_image')}>
+              <Field label="Logo (bottom left)" error={e('bottom_element.logo_image')} hint="Square, like the current 84 × 84 px white logo. Transparent PNG or WebP.">
                 <MediaField kind="feature-slides" value={value.bottom_element.logo_image || ''} onChange={(logo_image) => bottom({ logo_image })} disabled={disabled} previewClass="h-14 w-14" />
               </Field>
             )}

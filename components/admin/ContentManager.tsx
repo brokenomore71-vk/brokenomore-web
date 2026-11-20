@@ -4,8 +4,10 @@
 // its form; this handles loading, search, on/off, reordering, deleting and saving.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   IconAlertTriangle,
+  IconArrowLeft,
   IconArrowDown,
   IconArrowUp,
   IconGripVertical,
@@ -50,6 +52,7 @@ type Editor<T> = { item: Item<T> | null; draft: T; initial: string; errors: Reco
 
 export default function ContentManager<T extends Record<string, unknown>>(props: Props<T>) {
   const { kind, title, description, noun, blank, rowTitle, rowMeta, rowMedia, searchText, Form, toRecord, headerExtra } = props;
+  const router = useRouter();
   const session = useAdminSession();
   const writable = !!session?.writable;
   const toast = useToast();
@@ -64,6 +67,9 @@ export default function ContentManager<T extends Record<string, unknown>>(props:
   const [toDelete, setToDelete] = useState<Item<T> | null>(null);
   const [deleting, setDeleting] = useState(false);
   const dragFrom = useRef<number | null>(null);
+  const editorBody = useRef<HTMLDivElement>(null);
+  // The error message sits at the top of the editor: bring it into view whatever was scrolled
+  const showErrors = () => requestAnimationFrame(() => editorBody.current?.scrollTo({ top: 0, behavior: 'smooth' }));
   const [dragOver, setDragOver] = useState<number | null>(null);
 
   const load = useCallback(async () => {
@@ -123,9 +129,11 @@ export default function ContentManager<T extends Record<string, unknown>>(props:
     } catch (e) {
       if (e instanceof ApiError && e.status === 422) {
         setEditor({ ...editor, errors: e.fieldErrors });
+        showErrors();
         toast('error', 'Some fields need fixing. Nothing was saved.');
       } else if (e instanceof ApiError && e.status === 409) {
         setEditor({ ...editor, conflict: true });
+        showErrors();
       } else {
         toast('error', e instanceof Error ? e.message : 'Saving failed');
       }
@@ -188,6 +196,14 @@ export default function ContentManager<T extends Record<string, unknown>>(props:
 
   return (
     <div className="flex flex-col gap-6">
+      <button
+        type="button"
+        onClick={() => (window.history.length > 1 ? router.back() : router.push('/admin/dashboard'))}
+        className="-mb-2 inline-flex items-center gap-1.5 self-start rounded-lg py-1 pr-2 text-sm text-[#a1a1aa] transition hover:text-white"
+      >
+        <IconArrowLeft size={17} />
+        Back
+      </button>
       <header className="flex flex-col sm:flex-row sm:items-end gap-4 justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{title}</h1>
@@ -348,7 +364,7 @@ export default function ContentManager<T extends Record<string, unknown>>(props:
                 </ul>
               </div>
             )}
-            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-6">
+            <div ref={editorBody} className="flex-1 overflow-y-auto px-5 sm:px-6 py-6">
               <Form
                 value={editor.draft}
                 onChange={(draft) => setEditor((ed) => (ed ? { ...ed, draft } : ed))}

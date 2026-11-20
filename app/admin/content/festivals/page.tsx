@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { IconPlus, IconX } from '@tabler/icons-react';
 import ContentManager, { type FormProps } from '@/components/admin/ContentManager';
 import { useAdminSession } from '@/components/admin/AdminShell';
-import { Button, Field, Grid, IconButton, MediaField, Section, Select, TextInput, useToast } from '@/components/admin/ui';
+import { Button, Field, Grid, IconButton, MediaField, Section, Select, SizeNote, TextInput, useToast } from '@/components/admin/ui';
 import { adminApi } from '@/lib/admin/api';
 
 type Festival = {
@@ -74,18 +74,22 @@ function FestivalForm({ value, onChange, errors, isNew, disabled }: FormProps<Fe
   return (
     <div className="flex flex-col gap-6">
       <Section title="Banner">
-        <Field label="Banner image" required error={errors.image || errors.server_image_url} hint="Same shape as the existing festival banners. PNG/JPEG/WebP under 5 MB.">
+        <SizeNote size="2048 × 768 px">
+          wide landscape, the same size as the current banners. Any other size is refused. PNG, JPEG or WebP, under 5 MB.
+        </SizeNote>
+        <Field label="Banner image" required error={errors.image || errors.server_image_url}>
           <MediaField
             kind="festivals"
             value={value.image}
             previewValue={value.server_image_url || value.image}
             // The app loads "image" through its asset loader (bucket path) and falls back to "server_image_url" (full URL)
             pick={(r) => r.asset_path}
+            requiredSize={{ width: 2048, height: 768 }}
             onChange={(v) => onChange({ ...value, image: v, server_image_url: v ? value.server_image_url : '' })}
             onUploaded={(r) => onChange({ ...value, image: r.asset_path, server_image_url: r.url })}
             invalid={!!errors.image}
             disabled={disabled}
-            previewClass="h-24 w-44"
+            previewClass="h-[68px] w-[181px]"
           />
         </Field>
         <Grid>
@@ -226,7 +230,7 @@ export default function FestivalsPage() {
       kind="festivals"
       title="Festivals"
       noun="festival"
-      description="Festival banners on the app's dashboard. A banner appears on the days you set; hidden festivals never appear."
+      description="Festival banners on the app's dashboard. A banner appears on the days you set; hidden festivals never appear. Banner images must be exactly 2048 × 768 px."
       blank={blank}
       Form={FestivalForm}
       headerExtra={<DisplaySettings />}
