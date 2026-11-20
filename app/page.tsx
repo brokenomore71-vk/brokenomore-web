@@ -11,6 +11,7 @@ import QuickoSection from '@/components/quicko/QuickoSection';
 import SponsorshipSection from '@/components/SponsorshipSection';
 import ContactSection from '@/components/ContactSection';
 import FAQSection from '@/components/FAQSection';
+import Footer from '@/components/Footer';
 import SectionStops from '@/components/SectionStops';
 import type { Metadata } from 'next';
 import { FAQ_CATEGORIES } from '@/lib/faqData';
@@ -290,6 +291,11 @@ export default function Home() {
         {/* FAQs: answers to common questions about BrokeNoMore */}
         <div data-scroll-stop className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] pointer-events-auto">
           <FAQSection />
+        </div>
+
+        {/* Footer */}
+        <div className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] pointer-events-auto">
+          <Footer />
         </div>
 
 

@@ -204,12 +204,6 @@ export default function Navbar() {
       baseItems.push({ name: "Dashboard", link: "/dashboard" });
     }
     
-    baseItems.push(
-      { name: "Privacy", link: "/privacy" },
-      { name: "Terms", link: "/terms" },
-      { name: "Delete Account", link: "/delete-account" }
-    );
-    
     return baseItems;
   }, [user, loading, mounted]);
 

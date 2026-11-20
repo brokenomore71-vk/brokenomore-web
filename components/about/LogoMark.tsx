@@ -2,34 +2,43 @@
 
 import { useState } from 'react';
 
-// The BrokeNoMore mark for the About page, drawn flat as an SVG traced from the logo, in soft
-// silver. It builds itself: the infinity loop draws on, the bars rise one after another, the lock
-// appears and its shackle drops shut, and the sparkles pop in. After that the sparkles twinkle, the
-// lock clicks open and shut now and then, a band of light passes over the metal, and the whole mark
-// floats gently. A click plays it again. The animations live in globals.css under "lm-".
+// The BrokeNoMore mark for the About page. What you see is the logo artwork itself
+// (public/assets/images/about-logo.webp, from assets/logos/logo.png), so it matches the logo
+// exactly; the animation comes from masks that reveal each part of it in turn. The infinity loop
+// draws on, the bars rise one after another, the lock appears and its shackle drops shut, and the
+// sparkles pop in. After that the sparkles twinkle, the lock clicks open and shut now and then, a
+// band of light passes over the mark, and the whole mark floats gently. A click plays it again.
+// The animations live in globals.css under "lm-".
+//
+// Every number below is in the artwork's own 1024 × 1024 pixels, measured from the image.
 
-// Geometry, in the logo's 512 × 512 drawing: two loops of radius r centred R either side of the
-// crossing, joined by the tangent lines that cross in the middle
-const CX = 255;
-const CY = 274;
-const R = 110;
-const r = 92;
+const SRC = '/assets/images/about-logo.webp';
+const SIZE = 1024;
+
+// The loop: two circles of centre-line radius r, their centres R either side of the crossing,
+// joined by the tangent lines that cross in the middle
+const CX = 511.5;
+const CY = 478;
+const R = 199.5;
+const r = 155;
 const theta = Math.asin(r / R);
 const tx = R - r * Math.sin(theta);
 const ty = r * Math.cos(theta);
-const GAP = 27; // where the under strand stops short of the crossing, each side
+const len = Math.hypot(tx, ty);
+// Where the under strand stops short of the crossing, each side
+const GAP_IN = 60;
+const GAP_OUT = 50;
 
 const f = (n: number) => n.toFixed(1);
 const T1 = [CX + tx, CY - ty];
 const T2 = [CX + tx, CY + ty];
 const T3 = [CX - tx, CY - ty];
 const T4 = [CX - tx, CY + ty];
-const len = Math.hypot(tx, ty);
-const G1 = [CX - (tx / len) * GAP, CY - (ty / len) * GAP];
-const G2 = [CX + (tx / len) * GAP, CY + (ty / len) * GAP];
+const G1 = [CX - (tx / len) * GAP_IN, CY - (ty / len) * GAP_IN];
+const G2 = [CX + (tx / len) * GAP_OUT, CY + (ty / len) * GAP_OUT];
 
-// One stroke: from the gap up to the left loop, round it, straight over the crossing, round the
-// right loop, and back towards the gap
+// The pen's path for the loop: from the gap up to the left loop, round it, straight over the
+// crossing, round the right loop, and back towards the gap
 const LOOP = [
   `M${f(G1[0])} ${f(G1[1])}`,
   `L${f(T3[0])} ${f(T3[1])}`,
@@ -39,94 +48,116 @@ const LOOP = [
   `L${f(G2[0])} ${f(G2[1])}`,
 ].join(' ');
 
-// A four-pointed sparkle with curved sides
-const sparkle = (cx: number, cy: number, w: number, h: number) => {
-  const k = 0.16;
-  return `M${cx} ${cy - h} Q${cx + w * k} ${cy - h * k} ${cx + w} ${cy} Q${cx + w * k} ${cy + h * k} ${cx} ${cy + h} Q${cx - w * k} ${cy + h * k} ${cx - w} ${cy} Q${cx - w * k} ${cy - h * k} ${cx} ${cy - h}Z`;
-};
-
-const BARS = [
-  { x: 100, h: 48 },
-  { x: 132, h: 70 },
-  { x: 164, h: 97 },
-];
-const BAR_BOTTOM = 330;
-const SPARKLES = [
-  { d: sparkle(384, 118, 38, 47), delay: 1.9 },
-  { d: sparkle(193, 405, 29, 36), delay: 2.05 },
-  { d: sparkle(257, 437, 23, 29), delay: 2.2 },
-];
-
-function Shapes({ silver }: { silver: string }) {
-  return (
-    <>
-      <path className="lm-draw" d={LOOP} pathLength={1} fill="none" stroke={silver} strokeWidth={22} strokeLinecap="round" />
-      {BARS.map((b, i) => (
-        <rect
-          key={b.x}
-          className="lm-bar"
-          style={{ animationDelay: `${0.95 + i * 0.13}s` }}
-          x={b.x}
-          y={BAR_BOTTOM - b.h}
-          width={21}
-          height={b.h}
-          rx={5}
-          fill={silver}
-        />
-      ))}
-      <g className="lm-lock">
-        <path className="lm-shackle" d="M346 262 V246 a23 23 0 0 1 46 0 V262" fill="none" stroke={silver} strokeWidth={12} strokeLinecap="round" />
-        <path
-          fillRule="evenodd"
-          fill={silver}
-          d="M338 258 h62 a9 9 0 0 1 9 9 v52 a9 9 0 0 1 -9 9 h-62 a9 9 0 0 1 -9 -9 v-52 a9 9 0 0 1 9 -9Z M369 279 a8 8 0 0 0 -3.5 15.2 V306 a3.5 3.5 0 0 0 7 0 V294.2 A8 8 0 0 0 369 279Z"
-        />
-      </g>
-      {SPARKLES.map((s, i) => (
-        <path key={i} className="lm-spark" style={{ animationDelay: `${s.delay}s, ${s.delay + 0.7}s` }} d={s.d} fill={silver} />
-      ))}
-    </>
-  );
+interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
+const box = (x0: number, y0: number, x1: number, y1: number, pad = 4): Box => ({
+  x: x0 - pad,
+  y: y0 - pad,
+  w: x1 - x0 + pad * 2,
+  h: y1 - y0 + pad * 2,
+});
+
+const BARS = [box(224, 485, 261, 562), box(278, 455, 317, 575), box(337, 410, 375, 567)];
+const SHACKLE = box(651, 395, 772, 455, 3);
+const BODY = box(651, 455, 772, 560, 3);
+const LOCK = box(651, 395, 772, 560, 3);
+const SPARKLES = [
+  { b: box(644, 163, 776, 298, 3), delay: 1.9 },
+  { b: box(336, 672, 431, 780, 3), delay: 2.05 },
+  { b: box(454, 729, 526, 810, 3), delay: 2.2 },
+];
+
+// Transforms are worked out around fixed points of the artwork (its bottom edge, its centre)
+const origin = (b: Box, ox: number, oy: number) => ({
+  transformBox: 'view-box' as const,
+  transformOrigin: `${f(b.x + b.w * ox)}px ${f(b.y + b.h * oy)}px`,
+});
 
 export default function LogoMark({ className = '' }: { className?: string }) {
   // Changing the key mounts the drawing afresh, which restarts every animation
   const [run, setRun] = useState(0);
+  const id = (k: string) => `lm-${k}-${run}`;
+  const art = (clip: string) => (
+    <image href={SRC} x={0} y={0} width={SIZE} height={SIZE} clipPath={`url(#${id(clip)})`} />
+  );
+
   return (
     <div className={`lm-float ${className}`}>
       <svg
         key={run}
-        viewBox="30 55 452 425"
+        viewBox={`0 0 ${SIZE} ${SIZE}`}
         className="h-auto w-full cursor-pointer select-none"
         role="img"
         aria-label="The BrokeNoMore logo"
         onClick={() => setRun((n) => n + 1)}
       >
         <defs>
-          {/* Brushed silver: light and dark bands running diagonally across the whole mark */}
-          <linearGradient id="lm-silver" gradientUnits="userSpaceOnUse" x1="60" y1="90" x2="460" y2="470">
-            <stop offset="0" stopColor="#FFFFFF" />
-            <stop offset="0.22" stopColor="#C3C7CF" />
-            <stop offset="0.45" stopColor="#F2F3F6" />
-            <stop offset="0.68" stopColor="#9DA2AC" />
-            <stop offset="0.86" stopColor="#E4E6EA" />
-            <stop offset="1" stopColor="#B4B9C2" />
-          </linearGradient>
+          {/* The loop is uncovered by a pen that follows it; the bars, lock and sparkles inside
+              its reach are kept out, as they come in on their own */}
+          <mask id={id('loop')} maskUnits="userSpaceOnUse" x={0} y={0} width={SIZE} height={SIZE}>
+            <path className="lm-draw" d={LOOP} pathLength={1} fill="none" stroke="#fff" strokeWidth={64} />
+            {[...BARS, LOCK, ...SPARKLES.map((s) => s.b)].map((b, i) => (
+              <rect key={i} x={b.x} y={b.y} width={b.w} height={b.h} fill="#000" />
+            ))}
+          </mask>
+          {BARS.map((b, i) => (
+            <clipPath key={i} id={id(`bar${i}`)}>
+              <rect x={b.x} y={b.y} width={b.w} height={b.h} />
+            </clipPath>
+          ))}
+          <clipPath id={id('shackle')}>
+            <rect x={SHACKLE.x} y={SHACKLE.y} width={SHACKLE.w} height={SHACKLE.h} />
+          </clipPath>
+          <clipPath id={id('body')}>
+            <rect x={BODY.x} y={BODY.y} width={BODY.w} height={BODY.h} />
+          </clipPath>
+          {SPARKLES.map((s, i) => (
+            <clipPath key={i} id={id(`spark${i}`)}>
+              <rect x={s.b.x} y={s.b.y} width={s.b.w} height={s.b.h} />
+            </clipPath>
+          ))}
           {/* The passing band of light, kept inside the mark's own outline */}
-          <linearGradient id="lm-sheen-band" x1="0" y1="0" x2="1" y2="0">
+          <linearGradient id={id('sheen-band')} x1="0" y1="0" x2="1" y2="0">
             <stop offset="0" stopColor="#fff" stopOpacity="0" />
-            <stop offset="0.5" stopColor="#fff" stopOpacity="0.9" />
+            <stop offset="0.5" stopColor="#fff" stopOpacity="0.55" />
             <stop offset="1" stopColor="#fff" stopOpacity="0" />
           </linearGradient>
-          <mask id="lm-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
-            <Shapes silver="#fff" />
+          <mask id={id('shape')} maskUnits="userSpaceOnUse" x={0} y={0} width={SIZE} height={SIZE} style={{ maskType: 'alpha' }}>
+            <image href={SRC} x={0} y={0} width={SIZE} height={SIZE} />
           </mask>
         </defs>
 
-        <Shapes silver="url(#lm-silver)" />
+        {/* The loop */}
+        <image href={SRC} x={0} y={0} width={SIZE} height={SIZE} mask={`url(#${id('loop')})`} />
 
-        <g mask="url(#lm-mask)" aria-hidden="true">
-          <rect className="lm-sheen" x="-160" y="0" width="120" height="512" fill="url(#lm-sheen-band)" transform="skewX(-20)" />
+        {/* The bars, rising from their feet */}
+        {BARS.map((b, i) => (
+          <g key={i} className="lm-bar" style={{ ...origin(b, 0.5, 1), animationDelay: `${0.95 + i * 0.13}s` }}>
+            {art(`bar${i}`)}
+          </g>
+        ))}
+
+        {/* The lock: the body pops in, the shackle drops shut */}
+        <g className="lm-lock" style={origin(LOCK, 0.5, 1)}>
+          {art('body')}
+          <g className="lm-shackle">{art('shackle')}</g>
+        </g>
+
+        {/* The sparkles */}
+        {SPARKLES.map((s, i) => (
+          <g key={i} className="lm-spark" style={{ ...origin(s.b, 0.5, 0.5), animationDelay: `${s.delay}s, ${s.delay + 0.7}s` }}>
+            {art(`spark${i}`)}
+          </g>
+        ))}
+
+        <g mask={`url(#${id('shape')})`} aria-hidden="true">
+          <g transform="scale(2)">
+            <rect className="lm-sheen" x="-160" y="0" width="120" height="512" fill={`url(#${id('sheen-band')})`} transform="skewX(-20)" />
+          </g>
         </g>
       </svg>
     </div>
