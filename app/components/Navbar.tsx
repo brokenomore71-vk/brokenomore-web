@@ -27,7 +27,9 @@ const afterPageLoad = () =>
     else window.addEventListener("load", idle, { once: true });
   });
 
-export default function Navbar() {
+// `hideAtTop`: hidden while the page is at the very top, sliding in once the visitor scrolls (the
+// home page, where it comes in with the hero's first scroll animation)
+export default function Navbar({ hideAtTop = false }: { hideAtTop?: boolean }) {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -208,7 +210,7 @@ export default function Navbar() {
   }, [user, loading, mounted]);
 
   return (
-    <ResizableNavbar>
+    <ResizableNavbar hideAtTop={hideAtTop}>
       {/* Desktop Navigation */}
       <NavBody>
         {/* Brand Logo */}

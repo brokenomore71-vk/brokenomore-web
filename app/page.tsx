@@ -129,7 +129,9 @@ export default function Home() {
 
       {/* Sticky/Fixed Animated Navbar */}
       <div data-site-nav className="relative z-[100]">
-        <Navbar />
+        {/* Hidden on first open; it slides in with the hero's first scroll (the headline growing and
+            the phone tilting) */}
+        <Navbar hideAtTop />
       </div>
 
       {/* Predictive Prosperity: cinematic scroll-triggered hero */}

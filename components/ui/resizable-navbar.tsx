@@ -14,6 +14,11 @@ import { FeaturesMenu } from "./features-menu";
 interface NavbarProps {
   children: React.ReactNode;
   className?: string;
+  /**
+   * Hidden while the page is at the very top; slides in (slowly, in step with the home page's first
+   * scroll animation) once the visitor scrolls, and hides again back at the top
+   */
+  hideAtTop?: boolean;
 }
 
 interface NavBodyProps {
@@ -51,7 +56,7 @@ interface MobileNavMenuProps {
   onClose: () => void;
 }
 
-export const ResizableNavbar = ({ children, className }: NavbarProps) => {
+export const ResizableNavbar = ({ children, className, hideAtTop = false }: NavbarProps) => {
   // Use window scroll directly so it reliably detects scrolling anywhere on the page
   const { scrollY } = useScroll();
   const [visible, setVisible] = useState<boolean>(false);
@@ -63,12 +68,18 @@ export const ResizableNavbar = ({ children, className }: NavbarProps) => {
       setVisible(false);
     }
   });
+  const hidden = hideAtTop && !visible;
 
   return (
     <motion.header
-      // Fixed sticky header that stays at the top of the viewport at all times
+      // Fixed sticky header that stays at the top of the viewport (with `hideAtTop`, only once the
+      // visitor has scrolled)
+      aria-hidden={hidden || undefined}
+      inert={hidden || undefined}
       className={cn(
-        "fixed inset-x-0 top-0 z-[100] w-full transition-all duration-300 pointer-events-auto",
+        "fixed inset-x-0 top-0 z-[100] w-full transition-all",
+        hideAtTop ? "duration-[1200ms] ease-out" : "duration-300",
+        hidden ? "pointer-events-none -translate-y-full opacity-0" : "pointer-events-auto translate-y-0 opacity-100",
         className,
       )}
     >
