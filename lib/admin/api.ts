@@ -132,8 +132,9 @@ export function mediaUrl(value: string | null | undefined): string {
   if (!v) return '';
   if (/^https?:\/\//i.test(v)) return v;
   if (v.startsWith('/static/')) return `${API_BASE}${v}`;
-  // Uploaded from this panel: in the public bucket, where the app also loads it from
-  if (v.startsWith('assets/cms/')) return encodeURI(`${ASSET_BUCKET}/${v}`);
+  // Uploaded from this panel: in the public bucket under assets/assets/cms/, where the app's getGcpAssetUrl
+  // also looks ("assets/x" -> <bucket>/assets/assets/x)
+  if (v.startsWith('assets/cms/')) return encodeURI(`${ASSET_BUCKET}/assets/${v}`);
   // Shipped inside the app: previewed from the copy in public/app-assets/ (same folder layout as the app)
   if (v.startsWith('assets/')) return encodeURI(`/app-assets/${v.slice('assets/'.length)}`);
   return '';
