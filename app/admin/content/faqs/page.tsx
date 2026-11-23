@@ -5,10 +5,10 @@
 // add one, or rename one (every question in it moves along).
 
 import { useCallback, useEffect, useState } from 'react';
-import { IconCheck, IconPencil, IconPlus, IconX } from '@tabler/icons-react';
+import { IconCheck, IconPencil, IconPlus, IconTrash, IconX } from '@tabler/icons-react';
 import ContentManager, { type FormProps } from '@/components/admin/ContentManager';
 import { useAdminSession } from '@/components/admin/AdminShell';
-import { Button, Field, IconButton, Section, Select, TextArea, TextInput, Toggle, useToast } from '@/components/admin/ui';
+import { Button, ConfirmDialog, Field, IconButton, Section, Select, TextArea, TextInput, Toggle, useToast } from '@/components/admin/ui';
 import { adminApi, refreshWebsite, type FaqCategory } from '@/lib/admin/api';
 
 type Faq = {
@@ -33,6 +33,7 @@ function where(f: Faq) {
 const errorText = (e: unknown) => (e instanceof Error ? e.message : 'Something went wrong');
 
 function CategoriesPanel({ onRenamed, changes }: { onRenamed: () => void; changes: number }) {
+  // onRenamed: the questions list must reload (after a rename or a delete)
   const session = useAdminSession();
   const writable = !!session?.writable;
   const toast = useToast();
@@ -40,6 +41,7 @@ function CategoriesPanel({ onRenamed, changes }: { onRenamed: () => void; change
   const [newName, setNewName] = useState('');
   const [editing, setEditing] = useState<{ old: string; name: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [toDelete, setToDelete] = useState<FaqCategory | null>(null);
 
   const load = useCallback(() => {
     adminApi.faqCategories().then((r) => setCategories(r.categories)).catch(() => setCategories([]));
@@ -74,6 +76,29 @@ function CategoriesPanel({ onRenamed, changes }: { onRenamed: () => void; change
       toast('success', `Renamed "${editing.old}" to "${name}".`);
     } catch (e) {
       toast('error', errorText(e));
+      load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!toDelete) return;
+    setBusy(true);
+    try {
+      const r = await adminApi.deleteFaqCategory(toDelete.name);
+      setCategories(r.categories);
+      onRenamed();
+      toast(
+        'success',
+        r.deleted_questions
+          ? `Deleted "${toDelete.name}" and its ${r.deleted_questions} ${r.deleted_questions === 1 ? 'question' : 'questions'}.`
+          : `Deleted "${toDelete.name}".`,
+      );
+      setToDelete(null);
+    } catch (e) {
+      toast('error', errorText(e));
+      setToDelete(null);
       load();
     } finally {
       setBusy(false);
@@ -125,6 +150,9 @@ function CategoriesPanel({ onRenamed, changes }: { onRenamed: () => void; change
                   <IconButton label={`Rename ${c.name}`} onClick={() => setEditing({ old: c.name, name: c.name })} disabled={!writable || busy}>
                     <IconPencil size={16} />
                   </IconButton>
+                  <IconButton label={`Delete ${c.name}`} onClick={() => setToDelete(c)} disabled={!writable || busy} className="hover:text-[#fca5a5]">
+                    <IconTrash size={16} />
+                  </IconButton>
                 </>
               )}
             </li>
@@ -146,6 +174,30 @@ function CategoriesPanel({ onRenamed, changes }: { onRenamed: () => void; change
           <IconPlus size={16} /> Add category
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={!!toDelete}
+        title="Delete category?"
+        body={
+          toDelete && toDelete.count > 0 ? (
+            <>
+              <strong className="text-white">{toDelete.name}</strong> and its{' '}
+              <strong className="text-white">
+                {toDelete.count} {toDelete.count === 1 ? 'question' : 'questions'}
+              </strong>{' '}
+              will be removed from the website and the app. This can&apos;t be undone.
+            </>
+          ) : (
+            <>
+              <strong className="text-white">{toDelete?.name}</strong> has no questions and will be removed.
+            </>
+          )
+        }
+        confirmLabel={toDelete && toDelete.count > 0 ? `Delete category and ${toDelete.count} ${toDelete.count === 1 ? 'question' : 'questions'}` : 'Delete category'}
+        busy={busy}
+        onConfirm={remove}
+        onCancel={() => setToDelete(null)}
+      />
     </div>
   );
 }

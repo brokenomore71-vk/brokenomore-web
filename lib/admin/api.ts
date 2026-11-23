@@ -115,6 +115,11 @@ export const adminApi = {
   faqCategories: () => request<{ categories: FaqCategory[] }>('/admin/content/faqs/categories'),
   addFaqCategory: (name: string) =>
     request<{ categories: FaqCategory[] }>('/admin/content/faqs/categories', { method: 'POST', body: JSON.stringify({ name }) }),
+  deleteFaqCategory: (name: string) =>
+    request<{ categories: FaqCategory[]; deleted_questions: number }>(
+      `/admin/content/faqs/categories?name=${encodeURIComponent(name)}`,
+      { method: 'DELETE' },
+    ),
   renameFaqCategory: (oldName: string, newName: string) =>
     request<{ categories: FaqCategory[] }>('/admin/content/faqs/categories', {
       method: 'PUT',
