@@ -10,6 +10,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   IconCalendarEvent,
   IconCreditCard,
+  IconHelpCircle,
   IconLayoutDashboard,
   IconLoader2,
   IconLogout,
@@ -30,6 +31,7 @@ export const CONTENT_NAV = [
   { href: '/admin/content/credit-cards', label: 'Credit Cards', icon: IconCreditCard },
   { href: '/admin/content/festivals', label: 'Festivals', icon: IconCalendarEvent },
   { href: '/admin/content/feature-slides', label: 'Feature Slides', icon: IconPresentation },
+  { href: '/admin/content/faqs', label: 'FAQs', icon: IconHelpCircle },
 ];
 
 type State = { stage: 'loading' } | { stage: 'error'; message: string } | { stage: 'ready'; info: SessionInfo };

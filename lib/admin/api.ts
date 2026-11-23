@@ -1,13 +1,13 @@
 'use client';
 
-// Client for the app content API (credit cards, festivals, feature slides). It lives in the app's FastAPI backend
+// Client for the app content API (credit cards, festivals, feature slides, FAQs). It lives in the app's FastAPI backend
 // on Cloud Run (chatbot_backend/app/routers/admin_content.py), next to the JSON the app reads, not in admin-api.
 // Every request carries the admin session's access token; the backend accepts app_metadata.role = "admin",
 // the same rule as the rest of /admin.
 
 import { adminSupabase } from '@/lib/admin/client';
 
-export type Kind = 'credit-cards' | 'festivals' | 'feature-slides';
+export type Kind = 'credit-cards' | 'festivals' | 'feature-slides' | 'faqs';
 
 export type Item<T = Record<string, unknown>> = {
   id: string;
@@ -118,6 +118,14 @@ export const adminApi = {
     return request<UploadResult>('/admin/content/uploads', { method: 'POST', body: form });
   },
 };
+
+/** Make the website show content changes on its next page load (see app/api/admin/revalidate). Best effort:
+ * if it fails, the website still catches up within a minute. */
+export async function refreshWebsite(): Promise<void> {
+  try {
+    await fetch('/api/admin/revalidate', { method: 'POST', headers: await authHeader() });
+  } catch {}
+}
 
 /** A URL the browser can load for a value stored in the JSON (full URL, bucket asset path, or backend /static path). */
 export function mediaUrl(value: string | null | undefined): string {

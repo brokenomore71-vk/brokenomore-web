@@ -15,6 +15,7 @@ import {
   IconLogout,
   IconMail,
   IconMenu2,
+  IconHelpCircle,
   IconPresentation,
   IconRefresh,
   IconSearch,
@@ -245,6 +246,7 @@ export default function AdminDashboard() {
             { href: '/admin/content/credit-cards', label: 'Credit Cards', Icon: IconCreditCard },
             { href: '/admin/content/festivals', label: 'Festivals', Icon: IconCalendarEvent },
             { href: '/admin/content/feature-slides', label: 'Feature Slides', Icon: IconPresentation },
+            { href: '/admin/content/faqs', label: 'FAQs', Icon: IconHelpCircle },
           ].map(({ href, label, Icon }) => (
             <Link
               key={href}
