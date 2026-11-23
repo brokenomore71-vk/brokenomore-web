@@ -3,7 +3,7 @@
 // Small building blocks shared by the admin panel's pages and forms.
 
 import React, { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
-import { IconAlertTriangle, IconCheck, IconLoader2, IconPhoto, IconUpload, IconX } from '@tabler/icons-react';
+import { IconAlertTriangle, IconCheck, IconLoader2, IconPhoto, IconRuler2, IconUpload, IconX } from '@tabler/icons-react';
 import { adminApi, ApiError, isVideo, mediaUrl, type Kind, type UploadResult } from '@/lib/admin/api';
 import { cn } from '@/lib/utils';
 
@@ -260,7 +260,18 @@ export function ChipsInput({
 
 // ---------------------------------------------------------------------------------------------- media
 
-export function MediaPreview({ value, className, alt = '' }: { value: string; className?: string; alt?: string }) {
+export function MediaPreview({
+  value,
+  className,
+  alt = '',
+  play = false,
+}: {
+  value: string;
+  className?: string;
+  alt?: string;
+  /** Videos: play in a loop (editor) or show a still of the first frame (lists, so a page doesn't stream them all) */
+  play?: boolean;
+}) {
   const url = mediaUrl(value);
   // Remembers which URL failed, so a new value gets a fresh try
   const [failedUrl, setFailedUrl] = useState('');
@@ -278,10 +289,42 @@ export function MediaPreview({ value, className, alt = '' }: { value: string; cl
     );
   }
   if (isVideo(url)) {
-    return <video src={url} className={cn('object-cover bg-black', className)} muted loop autoPlay playsInline onError={setFailed} />;
+    return play ? (
+      <video src={url} className={cn('object-cover bg-black', className)} muted loop autoPlay playsInline onError={setFailed} />
+    ) : (
+      <video src={`${url}#t=0.5`} className={cn('object-cover bg-black', className)} muted playsInline preload="metadata" onError={setFailed} />
+    );
   }
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={url} alt={alt} className={cn('object-contain bg-[#1C1C20]', className)} onError={setFailed} loading="lazy" />;
+}
+
+/** Pixel size of a video file, read from its metadata, or null if the browser can't read it. */
+function videoSize(file: File): Promise<{ width: number; height: number } | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement('video');
+    const done = (size: { width: number; height: number } | null) => {
+      URL.revokeObjectURL(url);
+      resolve(size);
+    };
+    v.preload = 'metadata';
+    v.onloadedmetadata = () => done(v.videoWidth ? { width: v.videoWidth, height: v.videoHeight } : null);
+    v.onerror = () => done(null);
+    v.src = url;
+  });
+}
+
+/** Pixel size of an image file, or null if the browser can't read it (the backend checks again anyway). */
+async function imageSize(file: File): Promise<{ width: number; height: number } | null> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const size = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return size;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -295,6 +338,7 @@ export function MediaField({
   onUploaded,
   pick = (r) => r.url,
   previewValue,
+  requiredSize,
   allowVideo = false,
   previewClass = 'h-24 w-40',
   invalid,
@@ -307,6 +351,8 @@ export function MediaField({
   pick?: (r: UploadResult) => string;
   /** What to preview when it differs from the stored value (e.g. a festival's server_image_url) */
   previewValue?: string;
+  /** Exact pixel size an uploaded image or video must have */
+  requiredSize?: { width: number; height: number };
   allowVideo?: boolean;
   previewClass?: string;
   invalid?: boolean;
@@ -330,6 +376,16 @@ export function MediaField({
       setError(`That file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is ${limit} MB.`);
       return;
     }
+    if (requiredSize) {
+      const size = video ? await videoSize(file) : await imageSize(file);
+      if (size && (size.width !== requiredSize.width || size.height !== requiredSize.height)) {
+        setError(
+          `This ${video ? 'video' : 'image'} is ${size.width} × ${size.height} px. It must be exactly ${requiredSize.width} × ${requiredSize.height} px.`,
+        );
+        if (fileRef.current) fileRef.current.value = '';
+        return;
+      }
+    }
     setBusy(true);
     try {
       const result = await adminApi.upload(kind, file, video ? 'video' : 'image');
@@ -347,7 +403,7 @@ export function MediaField({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex gap-3 items-start">
-        <MediaPreview value={previewValue || value} className={cn('rounded-lg border border-white/[0.06] shrink-0', previewClass)} />
+        <MediaPreview value={previewValue || value} play className={cn('rounded-lg border border-white/[0.06] shrink-0', previewClass)} />
         <div className="flex flex-col gap-2 min-w-0 flex-1">
           <input
             ref={fileRef}
@@ -452,4 +508,19 @@ export function Section({ title, description, children }: { title: string; descr
 
 export function Grid({ children, cols = 2 }: { children: React.ReactNode; cols?: 2 | 3 }) {
   return <div className={cn('grid grid-cols-1 gap-4', cols === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3')}>{children}</div>;
+}
+
+/** Size requirement shown above an upload, so it's seen before choosing a file. */
+export function SizeNote({ size, required = true, children }: { size: string; required?: boolean; children?: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2.5 rounded-xl border border-[#6E5BFF]/30 bg-[#6E5BFF]/10 px-3.5 py-2.5 text-xs leading-relaxed text-[#c9c4ff]">
+      <IconRuler2 size={16} className="mt-px shrink-0" />
+      <p>
+        <span className="font-semibold text-white">
+          {required ? 'Required size' : 'Recommended size'}: {size}
+        </span>
+        {children && <> · {children}</>}
+      </p>
+    </div>
+  );
 }

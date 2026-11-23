@@ -1,13 +1,13 @@
 'use client';
 
-// Client for the app content API (credit cards, festivals, feature slides). It lives in the app's FastAPI backend
+// Client for the app content API (credit cards, festivals, feature slides, FAQs). It lives in the app's FastAPI backend
 // on Cloud Run (chatbot_backend/app/routers/admin_content.py), next to the JSON the app reads, not in admin-api.
 // Every request carries the admin session's access token; the backend accepts app_metadata.role = "admin",
 // the same rule as the rest of /admin.
 
 import { adminSupabase } from '@/lib/admin/client';
 
-export type Kind = 'credit-cards' | 'festivals' | 'feature-slides';
+export type Kind = 'credit-cards' | 'festivals' | 'feature-slides' | 'faqs';
 
 export type Item<T = Record<string, unknown>> = {
   id: string;
@@ -119,13 +119,24 @@ export const adminApi = {
   },
 };
 
+/** Make the website show content changes on its next page load (see app/api/admin/revalidate). Best effort:
+ * if it fails, the website still catches up within a minute. */
+export async function refreshWebsite(): Promise<void> {
+  try {
+    await fetch('/api/admin/revalidate', { method: 'POST', headers: await authHeader() });
+  } catch {}
+}
+
 /** A URL the browser can load for a value stored in the JSON (full URL, bucket asset path, or backend /static path). */
 export function mediaUrl(value: string | null | undefined): string {
   const v = (value || '').trim();
   if (!v) return '';
   if (/^https?:\/\//i.test(v)) return v;
   if (v.startsWith('/static/')) return `${API_BASE}${v}`;
-  if (v.startsWith('assets/')) return encodeURI(`${ASSET_BUCKET}/assets/${v}`);
+  // Uploaded from this panel: in the public bucket, where the app also loads it from
+  if (v.startsWith('assets/cms/')) return encodeURI(`${ASSET_BUCKET}/${v}`);
+  // Shipped inside the app: previewed from the copy in public/app-assets/ (same folder layout as the app)
+  if (v.startsWith('assets/')) return encodeURI(`/app-assets/${v.slice('assets/'.length)}`);
   return '';
 }
 

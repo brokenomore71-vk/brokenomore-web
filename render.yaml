@@ -5,6 +5,7 @@ services:
   - type: web
     name: brokenomore-admin-api
     runtime: node
+    plan: free
     rootDir: admin-api
     buildCommand: npm install
     startCommand: npm start

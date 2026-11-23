@@ -10,8 +10,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   IconCalendarEvent,
   IconCreditCard,
+  IconHelpCircle,
   IconLayoutDashboard,
-  IconLayoutGrid,
   IconLoader2,
   IconLogout,
   IconMenu2,
@@ -28,10 +28,10 @@ const AdminContext = createContext<SessionInfo | null>(null);
 export const useAdminSession = () => useContext(AdminContext);
 
 export const CONTENT_NAV = [
-  { href: '/admin/content', label: 'All content', icon: IconLayoutGrid, exact: true },
   { href: '/admin/content/credit-cards', label: 'Credit Cards', icon: IconCreditCard },
   { href: '/admin/content/festivals', label: 'Festivals', icon: IconCalendarEvent },
   { href: '/admin/content/feature-slides', label: 'Feature Slides', icon: IconPresentation },
+  { href: '/admin/content/faqs', label: 'FAQs', icon: IconHelpCircle },
 ];
 
 type State = { stage: 'loading' } | { stage: 'error'; message: string } | { stage: 'ready'; info: SessionInfo };
@@ -151,8 +151,8 @@ function Frame({ info, onSignOut, children }: { info: SessionInfo; onSignOut: ()
             Dashboard
           </Link>
           <p className="px-3.5 pb-1 pt-5 text-[11px] font-medium uppercase tracking-wider text-[#5c5c63]">App content</p>
-          {CONTENT_NAV.map(({ href, label, icon: Icon, exact }) => (
-            <Link key={href} href={href} onClick={closeNav} className={link(exact ? pathname === href : !!pathname?.startsWith(href))}>
+          {CONTENT_NAV.map(({ href, label, icon: Icon }) => (
+            <Link key={href} href={href} onClick={closeNav} className={link(!!pathname?.startsWith(href))}>
               <Icon size={19} stroke={1.6} />
               {label}
             </Link>

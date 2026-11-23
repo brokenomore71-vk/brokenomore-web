@@ -14,7 +14,8 @@ import FAQSection from '@/components/FAQSection';
 import Footer from '@/components/Footer';
 import SectionStops from '@/components/SectionStops';
 import type { Metadata } from 'next';
-import { FAQ_CATEGORIES } from '@/lib/faqData';
+import type { FAQCategory } from '@/lib/faqData';
+import { getWebFaqs } from '@/lib/faqs';
 import { APP_STORE_URL, PLAY_STORE_URL, SITE_DESCRIPTION, SITE_NAME, SITE_URL, SUPPORT_EMAIL } from '@/lib/site';
 
 export const metadata: Metadata = {
@@ -23,8 +24,8 @@ export const metadata: Metadata = {
 };
 
 // What search engines read about the site, the app and the FAQ (schema.org structured data).
-// Not shown on the page.
-const STRUCTURED_DATA = {
+// Not shown on the page. The FAQ part follows the FAQs shown, which an admin edits (lib/faqs.ts).
+const structuredData = (faqs: FAQCategory[]) => ({
   '@context': 'https://schema.org',
   '@graph': [
     {
@@ -106,7 +107,7 @@ const STRUCTURED_DATA = {
     {
       '@type': 'FAQPage',
       '@id': `${SITE_URL}/#faq`,
-      mainEntity: FAQ_CATEGORIES.flatMap((category) =>
+      mainEntity: faqs.flatMap((category) =>
         category.items.map((item) => ({
           '@type': 'Question',
           name: item.question,
@@ -115,14 +116,18 @@ const STRUCTURED_DATA = {
       ),
     },
   ],
-};
+});
 
-export default function Home() {
+// Rebuilt at most once a minute, so FAQ changes from the admin panel appear without a deploy
+export const revalidate = 60;
+
+export default async function Home() {
+  const faqs = await getWebFaqs();
   return (
     <main className="relative min-h-screen w-full bg-[#080808] overflow-x-hidden">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA).replace(/</g, '\\u003c') }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData(faqs)).replace(/</g, '\\u003c') }}
       />
 
       {/* Background Interactive Scanner */}
@@ -288,10 +293,12 @@ export default function Home() {
           <ContactSection />
         </div>
 
-        {/* FAQs: answers to common questions about BrokeNoMore */}
-        <div data-scroll-stop className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] pointer-events-auto">
-          <FAQSection />
-        </div>
+        {/* FAQs: answers to common questions about BrokeNoMore, managed in /admin/content/faqs */}
+        {faqs.length > 0 && (
+          <div data-scroll-stop className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] pointer-events-auto">
+            <FAQSection categories={faqs} />
+          </div>
+        )}
 
         {/* Footer */}
         <div className="-mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] pointer-events-auto">

@@ -4,8 +4,10 @@
 // its form; this handles loading, search, on/off, reordering, deleting and saving.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   IconAlertTriangle,
+  IconArrowLeft,
   IconArrowDown,
   IconArrowUp,
   IconGripVertical,
@@ -37,19 +39,28 @@ type Props<T> = {
   blank: () => T;
   rowTitle: (d: T) => string;
   rowMeta: (d: T) => React.ReactNode;
-  rowMedia: (d: T) => string;
+  /** Thumbnail in the list. Leave out for content without images. */
+  rowMedia?: (d: T) => string;
   mediaClass?: string;
+  /** Separate on/off switches for boolean fields (e.g. FAQs: website, app) in place of the single live switch.
+   * The record is live while any of them is on. */
+  toggles?: { field: keyof T & string; label: string; where: string }[];
   searchText: (d: T) => string;
   Form: React.ComponentType<FormProps<T>>;
   /** Before saving: turn the form's working copy into the record sent to the server. */
   toRecord?: (d: T) => T;
   headerExtra?: React.ReactNode;
+  /** Toast after a save; says when the change reaches users */
+  savedMessage?: string;
+  /** After any change is saved (add, edit, switch, delete, reorder) */
+  onChanged?: () => void;
 };
 
 type Editor<T> = { item: Item<T> | null; draft: T; initial: string; errors: Record<string, string>; conflict: boolean };
 
 export default function ContentManager<T extends Record<string, unknown>>(props: Props<T>) {
-  const { kind, title, description, noun, blank, rowTitle, rowMeta, rowMedia, searchText, Form, toRecord, headerExtra } = props;
+  const { kind, title, description, noun, blank, rowTitle, rowMeta, rowMedia, searchText, Form, toRecord, headerExtra, toggles } = props;
+  const router = useRouter();
   const session = useAdminSession();
   const writable = !!session?.writable;
   const toast = useToast();
@@ -64,6 +75,9 @@ export default function ContentManager<T extends Record<string, unknown>>(props:
   const [toDelete, setToDelete] = useState<Item<T> | null>(null);
   const [deleting, setDeleting] = useState(false);
   const dragFrom = useRef<number | null>(null);
+  const editorBody = useRef<HTMLDivElement>(null);
+  // The error message sits at the top of the editor: bring it into view whatever was scrolled
+  const showErrors = () => requestAnimationFrame(() => editorBody.current?.scrollTo({ top: 0, behavior: 'smooth' }));
   const [dragOver, setDragOver] = useState<number | null>(null);
 
   const load = useCallback(async () => {
@@ -118,14 +132,17 @@ export default function ContentManager<T extends Record<string, unknown>>(props:
         const saved = await adminApi.create<T>(kind, record);
         setItems((list) => [...(list || []), saved]);
       }
-      toast('success', `${editor.item ? 'Saved' : 'Added'}. The app picks it up the next time it loads this content.`);
+      props.onChanged?.();
+      toast('success', props.savedMessage || `${editor.item ? 'Saved' : 'Added'}. The app picks it up the next time it loads this content.`);
       setEditor(null);
     } catch (e) {
       if (e instanceof ApiError && e.status === 422) {
         setEditor({ ...editor, errors: e.fieldErrors });
+        showErrors();
         toast('error', 'Some fields need fixing. Nothing was saved.');
       } else if (e instanceof ApiError && e.status === 409) {
         setEditor({ ...editor, conflict: true });
+        showErrors();
       } else {
         toast('error', e instanceof Error ? e.message : 'Saving failed');
       }
@@ -139,9 +156,27 @@ export default function ContentManager<T extends Record<string, unknown>>(props:
     try {
       const saved = await adminApi.setActive<T>(kind, item.id, !item.is_active, item.rev);
       replaceItem(saved);
+      props.onChanged?.();
       toast('success', `${rowTitle(item.data)} is now ${saved.is_active ? 'live in the app' : 'hidden from the app'}.`);
     } catch (e) {
       toast('error', e instanceof Error ? e.message : 'Could not change status');
+      if (e instanceof ApiError && e.status === 409) load();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // One of the `toggles` switches: saved as a normal edit of the record, so the rev check still applies
+  const toggleField = async (item: Item<T>, field: keyof T & string, where: string) => {
+    setBusyId(item.id);
+    const on = item.data[field] === false;
+    try {
+      const saved = await adminApi.update<T>(kind, item.id, { ...item.data, [field]: on }, item.rev);
+      replaceItem(saved);
+      props.onChanged?.();
+      toast('success', `${rowTitle(item.data)} is now ${on ? 'shown on' : 'hidden from'} ${where}.`);
+    } catch (e) {
+      toast('error', e instanceof Error ? e.message : 'Could not change visibility');
       if (e instanceof ApiError && e.status === 409) load();
     } finally {
       setBusyId(null);
@@ -154,6 +189,7 @@ export default function ContentManager<T extends Record<string, unknown>>(props:
     try {
       await adminApi.remove(kind, toDelete.id, toDelete.rev);
       setItems((list) => (list ? list.filter((i) => i.id !== toDelete.id) : list));
+      props.onChanged?.();
       toast('success', `Deleted ${rowTitle(toDelete.data)}.`);
       setToDelete(null);
     } catch (e) {
@@ -177,6 +213,7 @@ export default function ContentManager<T extends Record<string, unknown>>(props:
     try {
       const res = await adminApi.reorder<T>(kind, next.map((i) => i.id));
       setItems(res.items);
+      props.onChanged?.();
     } catch (e) {
       setItems(previous);
       toast('error', e instanceof Error ? e.message : 'Could not reorder');
@@ -188,6 +225,14 @@ export default function ContentManager<T extends Record<string, unknown>>(props:
 
   return (
     <div className="flex flex-col gap-6">
+      <button
+        type="button"
+        onClick={() => (window.history.length > 1 ? router.back() : router.push('/admin/dashboard'))}
+        className="-mb-2 inline-flex items-center gap-1.5 self-start rounded-lg py-1 pr-2 text-sm text-[#a1a1aa] transition hover:text-white"
+      >
+        <IconArrowLeft size={17} />
+        Back
+      </button>
       <header className="flex flex-col sm:flex-row sm:items-end gap-4 justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{title}</h1>
@@ -266,27 +311,48 @@ export default function ContentManager<T extends Record<string, unknown>>(props:
                   {canReorder ? <IconGripVertical size={16} className="cursor-grab" aria-hidden /> : null}
                   <span className="text-[11px] tabular-nums">{index + 1}</span>
                 </div>
-                <MediaPreview value={rowMedia(item.data)} className={cn('rounded-md shrink-0', props.mediaClass || 'h-12 w-20')} />
+                {rowMedia && <MediaPreview value={rowMedia(item.data)} className={cn('rounded-md shrink-0', props.mediaClass || 'h-12 w-20')} />}
                 <button className="flex-1 min-w-0 text-left" onClick={() => openEditor(item)}>
                   <p className="text-[13px] font-medium text-[#f4f4f5] truncate">{rowTitle(item.data) || item.id}</p>
                   <div className="text-xs text-[#8b8b94] truncate mt-0.5">{rowMeta(item.data)}</div>
                 </button>
-                <span
-                  className={cn(
-                    'hidden md:inline-flex whitespace-nowrap text-[11px] font-medium rounded-full px-2.5 py-1',
-                    item.is_active ? 'bg-[#22C55E]/15 text-[#86efac]' : 'bg-white/[0.06] text-[#a1a1aa]',
-                  )}
-                >
-                  {item.is_active ? 'Live' : 'Hidden'}
-                </span>
+                {!toggles && (
+                  <span
+                    className={cn(
+                      'hidden md:inline-flex whitespace-nowrap text-[11px] font-medium rounded-full px-2.5 py-1',
+                      item.is_active ? 'bg-[#22C55E]/15 text-[#86efac]' : 'bg-white/[0.06] text-[#a1a1aa]',
+                    )}
+                  >
+                    {item.is_active ? 'Live' : 'Hidden'}
+                  </span>
+                )}
                 {/* On a phone these wrap onto their own line under the title */}
                 <div className="flex items-center gap-1 sm:gap-3 w-full sm:w-auto justify-end">
-                  <Toggle
-                    checked={item.is_active}
-                    onChange={() => toggleActive(item)}
-                    label={item.is_active ? 'Hide from app' : 'Show in app'}
-                    disabled={!writable || busyId === item.id}
-                  />
+                  {toggles ? (
+                    <div className="flex items-center gap-3 sm:gap-4 mr-auto sm:mr-1">
+                      {toggles.map((t) => {
+                        const on = item.data[t.field] !== false;
+                        return (
+                          <span key={t.field} className="flex items-center gap-2">
+                            <span className={cn('text-xs font-medium', on ? 'text-[#e4e4e7]' : 'text-[#6b6b73]')}>{t.label}</span>
+                            <Toggle
+                              checked={on}
+                              onChange={() => toggleField(item, t.field, t.where)}
+                              label={on ? `Hide from ${t.where}` : `Show on ${t.where}`}
+                              disabled={!writable || busyId === item.id}
+                            />
+                          </span>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <Toggle
+                      checked={item.is_active}
+                      onChange={() => toggleActive(item)}
+                      label={item.is_active ? 'Hide from app' : 'Show in app'}
+                      disabled={!writable || busyId === item.id}
+                    />
+                  )}
                   <div className="flex items-center">
                     <IconButton label="Move up" onClick={() => move(index, index - 1)} disabled={!canReorder || index === 0}>
                       <IconArrowUp size={16} />
@@ -348,7 +414,7 @@ export default function ContentManager<T extends Record<string, unknown>>(props:
                 </ul>
               </div>
             )}
-            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-6">
+            <div ref={editorBody} className="flex-1 overflow-y-auto px-5 sm:px-6 py-6">
               <Form
                 value={editor.draft}
                 onChange={(draft) => setEditor((ed) => (ed ? { ...ed, draft } : ed))}
