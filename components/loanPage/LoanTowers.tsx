@@ -2,7 +2,7 @@
 
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
-import { glideBetweenLabels, pinned } from '../scrollSteps';
+import { stepThroughLabels, pinned } from '../scrollSteps';
 import { useTypeOnShow } from '../useTypeOnShow';
 import { Gradient } from '../IntroHero';
 import type { TowerLoan, TowersScene } from './towersScene';
@@ -112,8 +112,7 @@ export default function LoanTowers() {
       const tl = gsap.timeline({
         defaults: { ease: 'power2.out' },
         scrollTrigger: {
-          ...pinned(section, STEPS, 9),
-          end: () => `+=${window.innerHeight * 1.1 * STEPS}`,
+          ...pinned(section, 9),
           // If the reader scrolls before the fly-in's done, finish it straight away
           onUpdate: (st) => {
             if (st.progress > 0.01 && opening.isActive()) opening.progress(1);
@@ -150,7 +149,7 @@ export default function LoanTowers() {
       tl.to(s, { free: 1, duration: 0.4 }, 4.55);
       tl.to(q('[data-free]'), { autoAlpha: 1, duration: 0.3 }, 4.6);
       tl.fromTo(q('[data-free] > div'), { scale: 0.8 }, { scale: 1, duration: 0.4, ease: 'back.out(2)', immediateRender: false }, 4.6);
-      const unglide = glideBetweenLabels(tl, 1.2);
+      const unglide = stepThroughLabels(tl, 1);
       return () => {
         unglide();
         opening.kill();

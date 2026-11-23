@@ -4,7 +4,7 @@ import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import gsap from 'gsap';
 import { Gradient } from '../IntroHero';
-import { glideBetweenLabels, pinned } from '../scrollSteps';
+import { stepThroughLabels, pinned } from '../scrollSteps';
 import { useTypeOnShow } from '../useTypeOnShow';
 import { Mark, STATUS_COLOR, SUBS, TOTAL, rupees } from './BillsCity';
 
@@ -222,7 +222,7 @@ export default function BillsOrbit() {
       introTl.to(one('hud'), { autoAlpha: 1, y: 0, duration: 0.4 }, 2);
 
       // ---- One step per scroll: time moves ----
-      const tl = gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { ...pinned(section, STEPS, 9), end: () => `+=${window.innerHeight * 0.7 * STEPS}` } });
+      const tl = gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: pinned(section, 9) });
       for (let c = 0; c <= STEPS; c++) tl.addLabel(`s${c}`, c);
       for (let c = 1; c <= STEPS; c++) {
         tl.fromTo(caps[c - 1], { autoAlpha: 1, y: 0 }, { autoAlpha: 0, y: -14, duration: 0.15, immediateRender: false }, c - 1 + 0.03);
@@ -289,7 +289,7 @@ export default function BillsOrbit() {
       tl.to(one('ring-paid'), { strokeDasharray: `${(PAID_TOTAL + OVERDUE.amount) / TOTAL} 1`, duration: 0.35, ease: 'power2.out' }, 4.6);
       tl.set({}, {}, STEPS);
 
-      const unglide = glideBetweenLabels(tl);
+      const unglide = stepThroughLabels(tl);
       return () => {
         unglide();
         introTl.kill();

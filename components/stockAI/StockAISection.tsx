@@ -13,7 +13,7 @@ import { ReportPanel } from './report';
 import { CrystalMark } from './AiCore';
 import type { Ticker } from './aiCoreScene';
 import IntroHero, { Gradient } from '../IntroHero';
-import { glideBetweenLabels, pinned, usePointerVars } from '../scrollSteps';
+import { stepThroughLabels, pinned, usePointerVars } from '../scrollSteps';
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
@@ -126,7 +126,7 @@ function ExploreAct() {
         onUpdate: () => {
           typed.textContent = 'hindu'.slice(0, Math.round(text.n));
         },
-        scrollTrigger: pinned(section, EXPLORE_CAPTIONS.length - 1, 10),
+        scrollTrigger: pinned(section, 10),
       });
       const caption = (k: number, at: number) => {
         tl.to(captions[k - 1], { autoAlpha: 0, y: -14, duration: 0.2 }, at);
@@ -158,7 +158,7 @@ function ExploreAct() {
       tl.to(search, { rotationX: 8, rotationY: -10, duration: 0.6, ease: 'power2.inOut' }, 2.2);
       tl.addLabel('open', 3);
       tl.set({}, {}, 3); // the timeline ends on its last label
-      const unglide = glideBetweenLabels(tl);
+      const unglide = stepThroughLabels(tl);
       ScrollTrigger.sort();
       return unglide;
     });
@@ -247,8 +247,6 @@ const ANSWERS = [
 const DECK_W = 440;
 const DECK_H = 610;
 const DECK_STEPS = 6;
-// Scroll per step, as a share of the screen's height
-const STAGE_STEP = 0.55;
 
 const tint = (hex: string, a: number) => {
   const n = parseInt(hex.slice(1), 16);
@@ -406,7 +404,7 @@ function StockStage() {
           setReached((r) => Math.max(r, (page + 1) * per));
           setReportOn(t > reportAt - 0.5);
         },
-        scrollTrigger: { ...pinned(section, reportAt, 9), end: () => `+=${window.innerHeight * STAGE_STEP * reportAt}` },
+        scrollTrigger: pinned(section, 9),
       });
       const head = (k: number, at: number) => {
         tl.to(heads[k - 1], { autoAlpha: 0, y: -14, duration: 0.2 }, at);
@@ -438,7 +436,7 @@ function StockStage() {
       tl.addLabel('report', reportAt);
       tl.set({}, {}, reportAt);
 
-      const unglide = glideBetweenLabels(tl);
+      const unglide = stepThroughLabels(tl);
       ScrollTrigger.sort();
       return unglide;
     });

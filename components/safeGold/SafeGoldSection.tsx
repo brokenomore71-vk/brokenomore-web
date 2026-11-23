@@ -10,6 +10,7 @@ import { FEATURES, GoldFeatureCard, Sparkle } from './GoldFeatureCards';
 import GoldVault, { VAULT } from './GoldVault';
 import GoldWord from './GoldWord';
 import { createPlayhead } from '../playhead';
+import { PX_PER_SECOND, stepScroll } from '../stepScroll';
 import { STEPS, StepScene, StepText, StepToast, animateStepScene } from './GoldSteps';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -38,8 +39,6 @@ const PHONE_SCREEN_RADIUS = `${(128 / PHONE.screen.w) * 100}% / ${(128 / PHONE.s
 // When frame 2 (the zoom into the phone) starts, in timeline units
 const ZOOM_AT = 1.15;
 
-// Scroll, in pixels, from one checkpoint to the next (a checkpoint is a finished frame or step)
-const SCROLL_PER_CHECKPOINT = 260;
 // How fast the story plays towards a checkpoint, in timeline units a second
 const WATCHING_SPEED = 1 / 0.7;
 
@@ -315,41 +314,27 @@ export default function SafeGoldSection() {
         // Holds on the word before the page moves on
         .to({}, { duration: 0.35 }, E + 1.0);
 
-      // ---- Checkpoints: where the story comes to rest, mapped to set scroll positions ----
+      // ---- Checkpoints: where the story comes to rest ----
       // Each one is a finished frame or step: frame 1 (hands, phone and headline), frame 2 (the
-      // open vault), each of frame 3's steps (buy, sell, withdraw) and frame 4 (G O L D). Every
-      // gap between two checkpoints gets the same scroll distance, SCROLL_PER_CHECKPOINT; within a
-      // gap the scroll maps onto that stretch of the story.
+      // open vault), each of frame 3's steps (buy, sell, withdraw) and frame 4 (G O L D). The scroll
+      // maps straight onto the story, so a longer stretch of story takes more scrolling.
       const stepDone = (i: number) => F + 0.35 + i * STEP + (i === STEPS.length - 1 ? 0.8 : 0.68);
       const marks = [0, ZOOM_AT, F, ...STEPS.map((_, i) => stepDone(i)), tl.duration()];
-      const gaps = marks.length - 1;
-      const toStory = (progress: number) => {
-        const at = Math.min(Math.max(progress, 0), 1) * gaps;
-        const k = Math.min(Math.floor(at), gaps - 1);
-        return (marks[k] + (marks[k + 1] - marks[k]) * (at - k)) / tl.duration();
-      };
+      const watchSeconds = (units: number) => units / WATCHING_SPEED;
 
-      // The playhead plays the story towards the scroll's checkpoint at a steady watching pace,
+      // The playhead plays the story towards the scroll's position at a steady watching pace,
       // however fast the scroll, so every frame is seen through
       const playhead = createPlayhead(tl, { watchingSpeed: WATCHING_SPEED });
       const pin = ScrollTrigger.create({
         trigger: section,
         start: 'top 72px',
-        end: `+=${gaps * SCROLL_PER_CHECKPOINT}`,
+        // As long as the story takes to watch
+        end: () => `+=${Math.round(watchSeconds(tl.duration()) * PX_PER_SECOND)}`,
         pin: true,
         anticipatePin: 1,
         // Pinned sections work out their positions top to bottom (Hubble 3, this 2, Quicko 1)
         refreshPriority: 2,
-        onUpdate: (self) => playhead.follow(toStory(self.progress)),
-        // Let go between checkpoints, the scroll settles on the next one in the direction it was going
-        snap: {
-          snapTo: marks.map((_, k) => k / gaps),
-          directional: true,
-          delay: 0.05,
-          duration: { min: 0.25, max: 0.6 },
-          ease: 'power1.inOut',
-          inertia: false,
-        },
+        onUpdate: (self) => playhead.follow(self.progress),
       });
       // The story's measured moves (where the phone goes, how big the title gets) are worked out
       // again when the page is re-measured, from the story's start, then it goes back to where it was
@@ -361,87 +346,23 @@ export default function SafeGoldSection() {
       };
       ScrollTrigger.addEventListener('refresh', remeasure);
 
-      // Inside the story each gesture (a wheel flick, a swipe, a key) moves exactly one checkpoint,
-      // and only once the one before has finished playing; meanwhile the page holds still. A flick
-      // from outside stops at the story's edge.
-      const playing = () => {
-        const y = window.scrollY;
-        if (y < pin.start - 1 || y > pin.end + 1) return false;
-        return Math.abs(tl.time() - toStory(pin.progress) * tl.duration()) > 0.02;
-      };
-      const ARRIVAL_QUIET_MS = 400;
-      let arrivedAt = 0;
-      const markY = (k: number) => Math.round(pin.start + ((pin.end - pin.start) * k) / gaps);
-      const gate = (e: Event, delta: number, mayStep: boolean) => {
-        if (delta === 0) return false;
-        const y = window.scrollY;
-        const dir = Math.sign(delta);
-        const prevent = () => e.cancelable && e.preventDefault();
-        if (y < pin.start - 1 || y > pin.end + 1) {
-          if (dir > 0 && y < pin.start - 1 && y + delta > pin.start) {
-            prevent();
-            window.scrollTo({ top: pin.start, behavior: 'instant' });
-            arrivedAt = performance.now();
-          } else if (dir < 0 && y > pin.end + 1 && y + delta < pin.end) {
-            prevent();
-            window.scrollTo({ top: pin.end, behavior: 'instant' });
-            arrivedAt = performance.now();
-          }
-          return false;
-        }
-        const busy = playing();
-        if (!busy && ((dir > 0 && y >= pin.end - 1) || (dir < 0 && y <= pin.start + 1))) return false;
-        prevent();
-        if (busy || !mayStep || performance.now() - arrivedAt < ARRIVAL_QUIET_MS) return false;
-        const at = pin.progress * gaps;
-        const k = dir > 0 ? Math.floor(at + 0.01) + 1 : Math.ceil(at - 0.01) - 1;
-        window.scrollTo({ top: markY(Math.min(Math.max(k, 0), gaps)), behavior: 'instant' });
-        return true;
-      };
-      const LINE_PX = 16;
-      const onWheel = (e: WheelEvent) => {
-        const scale = e.deltaMode === 1 ? LINE_PX : e.deltaMode === 2 ? window.innerHeight : 1;
-        if (performance.now() - arrivedAt < ARRIVAL_QUIET_MS) arrivedAt = performance.now();
-        gate(e, e.deltaY * scale, true);
-      };
-      const SWIPE_PX = 24;
-      let touchY = 0;
-      let swiped = false;
-      const onTouchStart = (e: TouchEvent) => {
-        touchY = e.touches[0]?.clientY ?? 0;
-        swiped = false;
-      };
-      const onTouchMove = (e: TouchEvent) => {
-        const delta = touchY - (e.touches[0]?.clientY ?? touchY);
-        if (gate(e, delta, !swiped && Math.abs(delta) > SWIPE_PX)) swiped = true;
-      };
-      const KEY_DIR: Record<string, number> = { ' ': 1, PageDown: 1, ArrowDown: 1, End: 1, PageUp: -1, ArrowUp: -1, Home: -1 };
-      const onKey = (e: KeyboardEvent) => {
-        const el = e.target as HTMLElement | null;
-        if (el?.closest('input, textarea, select, [contenteditable="true"]')) return;
-        const dir = e.key === ' ' && e.shiftKey ? -1 : KEY_DIR[e.key];
-        if (!dir) return;
-        const y = window.scrollY;
-        if (y < pin.start - 1 || y > pin.end + 1) return;
-        gate(e, dir, true);
-      };
-      window.addEventListener('wheel', onWheel, { passive: false });
-      window.addEventListener('touchstart', onTouchStart, { passive: true });
-      window.addEventListener('touchmove', onTouchMove, { passive: false });
-      window.addEventListener('keydown', onKey);
+      // One checkpoint per gesture, played through before the next (see stepScroll.ts)
+      const unstep = stepScroll({
+        pin,
+        stops: () => marks.map((m) => m / tl.duration()),
+        seconds: (from, to) => watchSeconds((to - from) * tl.duration()),
+        settled: () => Math.abs(tl.time() - pin.progress * tl.duration()) < 0.02,
+      });
 
       // The partner link jumps past the section: the story finishes at once
-      const onRevealPartner = () => playhead.jump(toStory(1));
+      const onRevealPartner = () => playhead.jump(1);
       window.addEventListener('reveal-partner', onRevealPartner);
 
       ScrollTrigger.sort();
       document.fonts?.ready.then(() => ScrollTrigger.refresh());
 
       return () => {
-        window.removeEventListener('wheel', onWheel);
-        window.removeEventListener('touchstart', onTouchStart);
-        window.removeEventListener('touchmove', onTouchMove);
-        window.removeEventListener('keydown', onKey);
+        unstep();
         window.removeEventListener('reveal-partner', onRevealPartner);
         ScrollTrigger.removeEventListener('refresh', remeasure);
         playhead.kill();

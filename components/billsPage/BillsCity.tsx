@@ -3,7 +3,7 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import gsap from 'gsap';
 import { Gradient } from '../IntroHero';
-import { glideBetweenLabels, pinned, usePointerVars } from '../scrollSteps';
+import { stepThroughLabels, pinned, usePointerVars } from '../scrollSteps';
 import { useTypeOnShow } from '../useTypeOnShow';
 
 // Bills & Subscriptions, as a city. This month's calendar lies flat on the screen, then tilts
@@ -417,7 +417,7 @@ export default function BillsCity() {
         paidText.textContent = total.paid < 1 ? 'Nothing paid yet' : `${rupees(total.paid)} of ${rupees(TOTAL)} paid`;
         paidBar.style.transform = `scaleX(${total.paid / TOTAL})`;
       };
-      const tl = gsap.timeline({ defaults: { ease: 'none' }, onUpdate: render, scrollTrigger: { ...pinned(section, STEPS, 9), end: () => `+=${window.innerHeight * 0.6 * STEPS}` } });
+      const tl = gsap.timeline({ defaults: { ease: 'none' }, onUpdate: render, scrollTrigger: pinned(section, 9) });
       for (let c = 0; c <= STEPS; c++) tl.addLabel(`s${c}`, c);
       const caption = (k: number, at: number) => {
         tl.fromTo(caps[k - 1], { autoAlpha: 1, y: 0 }, { autoAlpha: 0, y: -14, duration: 0.2, immediateRender: false }, at);
@@ -497,7 +497,7 @@ export default function BillsCity() {
       tl.set({}, {}, STEPS);
 
       render();
-      const unglide = glideBetweenLabels(tl);
+      const unglide = stepThroughLabels(tl);
       return () => {
         unglide();
         intro.kill();

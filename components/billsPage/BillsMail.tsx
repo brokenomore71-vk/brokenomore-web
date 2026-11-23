@@ -3,7 +3,7 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import gsap from 'gsap';
 import { Gradient } from '../IntroHero';
-import { glideBetweenLabels, pinned, usePointerVars } from '../scrollSteps';
+import { stepThroughLabels, pinned, usePointerVars } from '../scrollSteps';
 import { useTypeOnShow } from '../useTypeOnShow';
 import { Mark, STATUS_COLOR, SUBS, TOTAL, rupees } from './BillsCity';
 
@@ -170,7 +170,7 @@ export default function BillsMail() {
         totalEl.textContent = rupees(sum.total);
         paidEl.textContent = sum.paid < 1 ? 'Nothing paid yet' : `${rupees(sum.paid)} paid`;
       };
-      const tl = gsap.timeline({ defaults: { ease: 'none' }, onUpdate: render, scrollTrigger: { ...pinned(section, STEPS, 9), end: () => `+=${window.innerHeight * 0.6 * STEPS}` } });
+      const tl = gsap.timeline({ defaults: { ease: 'none' }, onUpdate: render, scrollTrigger: pinned(section, 9) });
       for (let c = 0; c <= STEPS; c++) tl.addLabel(`s${c}`, c);
       for (let c = 1; c <= STEPS; c++) {
         tl.fromTo(caps[c - 1], { autoAlpha: 1, y: 0 }, { autoAlpha: 0, y: -14, duration: 0.2, immediateRender: false }, c - 1 + 0.05);
@@ -245,7 +245,7 @@ export default function BillsMail() {
       tl.set({}, {}, STEPS);
 
       render();
-      const unglide = glideBetweenLabels(tl);
+      const unglide = stepThroughLabels(tl);
       return () => {
         unglide();
         intro.kill();

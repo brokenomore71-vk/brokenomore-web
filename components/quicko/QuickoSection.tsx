@@ -3,9 +3,12 @@
 import React, { useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { PX_PER_SECOND, stepScroll } from '../stepScroll';
 
 gsap.registerPlugin(ScrollTrigger);
 
+// How long one unit of the story takes to play, in seconds
+const SECONDS_PER_UNIT = 0.6;
 
 // File ITR with Quicko. Quicko's logo builds itself in the middle of the screen; scrolling then
 // flies it up into the top-left corner, brings the heading in, and slides a row of flat cards from
@@ -95,11 +98,12 @@ export default function QuickoSection() {
         scrollTrigger: {
           trigger: section,
           start: 'top 72px',
-          end: () => `+=${distance() + window.innerHeight * 1.2}`,
+          // As long as the story takes to watch
+          end: () => `+=${Math.round(tl.duration() * SECONDS_PER_UNIT * PX_PER_SECOND)}`,
           pin: true,
           anticipatePin: 1,
           refreshPriority: 1,
-          scrub: 0.7,
+          scrub: 0.4,
           invalidateOnRefresh: true,
           onRefresh: () => {
             measure();
@@ -173,7 +177,21 @@ export default function QuickoSection() {
       syncCards();
       // Put every pinned section back in page order, and measure again once the fonts have settled
       ScrollTrigger.sort();
+      ScrollTrigger.refresh();
       document.fonts?.ready.then(() => ScrollTrigger.refresh());
+
+      // One step per gesture: the title flies up and the heading comes in, then the row slides
+      // halfway, then the rest of the way
+      const pin = tl.scrollTrigger!;
+      const unstep = stepScroll({
+        pin,
+        stops: () => {
+          const d = tl.duration();
+          return [1.5 / d, (1 + (d - 1) / 2) / d];
+        },
+        seconds: (from, to) => (to - from) * tl.duration() * SECONDS_PER_UNIT,
+        settled: () => Math.abs(tl.progress() - pin.progress) < 0.003,
+      });
 
       const onRevealPartner = () => {
         tl.progress(1);
@@ -181,6 +199,7 @@ export default function QuickoSection() {
       window.addEventListener('reveal-partner', onRevealPartner);
 
       return () => {
+        unstep();
         window.removeEventListener('reveal-partner', onRevealPartner);
         arrival.kill();
         build.kill();
@@ -195,7 +214,7 @@ export default function QuickoSection() {
       id="file-itr"
       data-quicko
       aria-label="File ITR with Quicko"
-      className={`relative flex w-full flex-col overflow-hidden bg-black text-[#F5F5F5] select-none motion-safe:h-[calc(100svh-72px)]`}
+      className={`scroll-mt-[72px] relative flex w-full flex-col overflow-hidden bg-black text-[#F5F5F5] select-none motion-safe:h-[calc(100svh-72px)]`}
     >
       {/* The title: "Income Tax Return", big in the middle at first, then it flies up into the corner
           and closes up into "ITR" */}

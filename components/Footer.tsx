@@ -129,7 +129,7 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2.5">
               <li>
-                <Link href="/#quicko" className="text-sm text-neutral-400 hover:text-white transition-colors">
+                <Link href="/#file-itr" className="text-sm text-neutral-400 hover:text-white transition-colors">
                   Tax Filing
                 </Link>
               </li>

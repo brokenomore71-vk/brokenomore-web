@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
+import { PX_PER_SECOND, stepScroll } from './stepScroll';
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 // Phones' address bar resizing the window shouldn't re-measure every pin mid-scroll
@@ -48,52 +49,34 @@ export function usePointerVars(ref: React.RefObject<HTMLElement | null>) {
   }, [ref]);
 }
 
-// Pinned, one scroll per step (the timeline has a label at each whole step, 0 to `steps`)
+// A pinned section whose timeline the scroll scrubs. Its length is set by stepThroughLabels, from
+// the timeline's own length.
 // These pins sit above every other one on the page, so they're measured first (the split story's
 // pin, next down, has refreshPriority 4)
-export function pinned(section: HTMLElement, steps: number, refreshPriority: number) {
+export function pinned(section: HTMLElement, refreshPriority: number) {
   return {
     refreshPriority,
     trigger: section,
     start: 'top 72px',
-    end: () => `+=${window.innerHeight * 0.7 * steps}`,
+    end: '+=1',
     pin: true,
     anticipatePin: 1,
-    scrub: 0.8,
+    scrub: 0.4,
     invalidateOnRefresh: true,
   };
 }
 
-// Each scroll moves exactly one step: when the scroll comes to rest between two labels, it glides
-// on to the next one in the direction it was going (as the Loan Planner does)
-export function glideBetweenLabels(tl: gsap.core.Timeline, glide = 0.7) {
+// One step per gesture, from label to label (see stepScroll.ts). `secondsPerUnit` is how long one
+// unit of the timeline takes to play; the pin is as long as the whole timeline takes to watch.
+export function stepThroughLabels(tl: gsap.core.Timeline, secondsPerUnit = 0.8) {
   const st = tl.scrollTrigger!;
-  const stops = () => Object.values(tl.labels).map((v) => v / tl.duration()).sort((a, b) => a - b);
-  let settledAt = st.scroll();
-  let gliding = false;
-  const onScrollEnd = () => {
-    if (gliding || !st.isActive) {
-      settledAt = st.scroll();
-      return;
-    }
-    const now = st.scroll();
-    const dir = Math.sign(now - settledAt);
-    const p = st.progress;
-    const eps = 0.004;
-    const list = stops();
-    if (dir === 0 || list.some((q) => Math.abs(q - p) < eps)) {
-      settledAt = now;
-      return;
-    }
-    const target = dir > 0 ? (list.find((q) => q > p + eps) ?? 1) : ([...list].reverse().find((q) => q < p - eps) ?? 0);
-    gliding = true;
-    const done = () => {
-      gliding = false;
-      settledAt = st.scroll();
-    };
-    gsap.to(window, { scrollTo: { y: st.start + target * (st.end - st.start), autoKill: true }, duration: glide, ease: 'power2.inOut', onComplete: done, onInterrupt: done });
-  };
-  ScrollTrigger.addEventListener('scrollEnd', onScrollEnd);
-  return () => ScrollTrigger.removeEventListener('scrollEnd', onScrollEnd);
+  st.vars.end = () => `+=${Math.round(tl.duration() * secondsPerUnit * PX_PER_SECOND)}`;
+  ScrollTrigger.refresh();
+  return stepScroll({
+    pin: st,
+    stops: () => Object.values(tl.labels).map((t) => t / tl.duration()),
+    seconds: (from, to) => (to - from) * tl.duration() * secondsPerUnit,
+    settled: () => Math.abs(tl.progress() - st.progress) < 0.003,
+  });
 }
 

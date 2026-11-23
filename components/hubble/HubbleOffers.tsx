@@ -4,8 +4,12 @@ import React, { useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { hurryWhenLeft } from '../playhead';
+import { PX_PER_SECOND, stepScroll } from '../stepScroll';
 
 gsap.registerPlugin(ScrollTrigger);
+
+// How long the ring's whole story takes to play, in seconds
+const RING_SECONDS = 2.6;
 
 
 // Hubble's gift card offers, on a black stage. Hubble's logo sits in the middle and draws itself in
@@ -144,7 +148,8 @@ export default function HubbleOffers() {
       const pin = ScrollTrigger.create({
         trigger: section,
         start: 'top 72px',
-        end: '+=180%',
+        // As long as the ring takes to watch
+        end: `+=${Math.round(RING_SECONDS * PX_PER_SECOND)}`,
         pin: true,
         anticipatePin: 1,
         // Pinned sections must work out their positions top to bottom, whatever order they were made in
@@ -252,7 +257,16 @@ export default function HubbleOffers() {
         }
       );
 
+      // One step per gesture: the ring bursts out and the words come in, then it opens out
+      const unstep = stepScroll({
+        pin,
+        stops: () => [0.62],
+        seconds: (from, to) => (to - from) * RING_SECONDS,
+        settled: () => Math.abs(target - progress) < 0.01,
+      });
+
       return () => {
+        unstep();
         releaseHold();
         nearObserver.disconnect();
         resizeObserver.disconnect();

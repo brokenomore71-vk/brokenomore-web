@@ -4,7 +4,7 @@ import React, { useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { IBM_Plex_Mono } from 'next/font/google';
 import { Gradient } from '../IntroHero';
-import { glideBetweenLabels, pinned, usePointerVars } from '../scrollSteps';
+import { stepThroughLabels, pinned, usePointerVars } from '../scrollSteps';
 import { useTypeOnShow } from '../useTypeOnShow';
 import { typeText, type Typing } from '../typewriter';
 import { BILL, CAPTIONS, EQUAL, EQUAL_MEMBERS, ITEM_OWNERS, PEOPLE, TO_COLLECT, inr, itemWithTax } from '../splitStory/splitData';
@@ -217,7 +217,6 @@ const DECK_H = 600;
 const VIS_W = 460;
 const VIS_H = 560;
 const COINS = 12;
-const STEP_SCROLL = 0.55;
 
 const FINAL_CAPTIONS = [{ title: 'Every split, in one place.', body: 'Your groups, your recent splits and every friend’s balance, in the Split tab. One number tells you where you stand.' }];
 const ROOMS = [
@@ -466,7 +465,7 @@ function SplitJourney() {
       const tl = gsap.timeline({
         defaults: { ease: 'none' },
         onUpdate: render,
-        scrollTrigger: { ...pinned(section, STEPS, 9), end: () => `+=${window.innerHeight * STEP_SCROLL * STEPS}` },
+        scrollTrigger: pinned(section, 9),
       });
       const press = (el: Element, at: number) => {
         tl.to(el, { scale: 0.93, filter: 'brightness(1.3)', duration: 0.05 }, at);
@@ -654,7 +653,7 @@ function SplitJourney() {
       tl.set({}, {}, STEPS);
 
       render();
-      return glideBetweenLabels(tl);
+      return stepThroughLabels(tl);
     });
     return () => mm.revert();
   }, []);

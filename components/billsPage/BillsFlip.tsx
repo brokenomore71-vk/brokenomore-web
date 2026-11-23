@@ -3,7 +3,7 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import gsap from 'gsap';
 import { Gradient } from '../IntroHero';
-import { glideBetweenLabels, pinned } from '../scrollSteps';
+import { stepThroughLabels, pinned } from '../scrollSteps';
 import { useTypeOnShow } from '../useTypeOnShow';
 import { Mark, SUBS, TOTAL, rupees } from './BillsCity';
 
@@ -39,14 +39,10 @@ function useStory() {
     const REMIND = { text: 'REMINDER SET', color: '#d97706' };
     const stops: Stop[] = [
       { day: 1, eyebrow: 'Bills & Subscriptions', title: 'One page a day.', body: 'Your month, a day at a time. Scroll, and we’ll stop wherever a bill is due.' },
-      { day: at('netflix').day, key: 'netflix', stamp: PAID, eyebrow: `The ${nth(at('netflix').day)}`, title: 'Netflix renews.', body: 'Auto-paid on the day, and stamped. Nothing for you to do.' },
-      { day: at('prime').day, key: 'prime', stamp: PAID, eyebrow: `The ${nth(at('prime').day)}`, title: 'Amazon Prime.', body: 'The annual one you’d have forgotten about. Paid.' },
-      { day: at('power').day, key: 'power', stamp: { text: 'DUE TODAY', color: '#d97706' }, eyebrow: `The ${nth(at('power').day)}`, title: 'Electricity is due.', body: `${rupees(at('power').amount)} due today, and a reminder went out this morning.` },
+      { day: at('netflix').day, key: 'netflix', stamp: PAID, eyebrow: `The ${nth(at('netflix').day)}`, title: 'Renewals, handled.', body: 'Netflix and Amazon Prime, auto-paid on the day and stamped. Nothing for you to do.' },
       { day: today, key: 'power', stamp: { text: '2 DAYS LATE', color: '#dc2626' }, eyebrow: `The ${nth(today)} · today`, title: 'It slipped.', body: 'Electricity is two days late, flagged red the moment it slipped past.' },
       { day: today, key: 'power', stamp: PAID, eyebrow: 'Still today', title: 'Sorted in a tap.', body: 'Paid over UPI straight from the alert. No late fee.' },
-      { day: at('spotify').day, key: 'spotify', stamp: REMIND, eyebrow: `The ${nth(at('spotify').day)}`, title: 'Spotify, coming up.', body: 'Three days away. You’ll get a nudge before it lands.' },
-      { day: at('youtube').day, key: 'youtube', stamp: REMIND, eyebrow: `The ${nth(at('youtube').day)}`, title: 'YouTube Premium.', body: 'Reminder set. No surprises on your statement.' },
-      { day: at('hotstar').day, key: 'hotstar', stamp: REMIND, eyebrow: `The ${nth(at('hotstar').day)}`, title: 'Disney+ Hotstar.', body: 'The last one this month, quarterly, and already on the calendar.' },
+      { day: at('spotify').day, key: 'spotify', stamp: REMIND, eyebrow: `The ${nth(at('spotify').day)}`, title: 'The rest, on the calendar.', body: 'Spotify, YouTube Premium and Disney+ Hotstar. You’ll get a nudge before each one lands.' },
       { day: days, eyebrow: `${monthName}, done`, title: 'Your month, sorted.', body: `${rupees(TOTAL)} across ${SUBS.length} bills. Every one on time, and not a single late fee.` },
     ];
     const pageDays = stops.map((st) => st.day).filter((d, i, a) => a.indexOf(d) === i);
@@ -271,7 +267,7 @@ export default function BillsFlip() {
         }
         render();
       };
-      const tl = gsap.timeline({ defaults: { ease: 'none' }, onUpdate, scrollTrigger: { ...pinned(section, steps, 9), end: () => `+=${window.innerHeight * 1.4 * steps}` } });
+      const tl = gsap.timeline({ defaults: { ease: 'none' }, onUpdate, scrollTrigger: pinned(section, 9) });
       for (let c = 0; c <= steps; c++) tl.addLabel(`s${c}`, c);
       let shownCard: string | undefined;
       s.stops.forEach((stop, c) => {
@@ -335,7 +331,7 @@ export default function BillsFlip() {
       tl.fromTo(one('summary'), { autoAlpha: 0, x: 160, z: -260, rotationY: -65 }, { autoAlpha: 1, x: 0, z: 0, rotationY: -14, duration: 0.4, ease: 'back.out(1.3)', immediateRender: false }, steps - 1 + 0.62);
       tl.set({}, {}, steps);
 
-      const unglide = glideBetweenLabels(tl, 1.6);
+      const unglide = stepThroughLabels(tl, 1.2);
       return () => {
         unglide();
         intro.kill();
@@ -459,8 +455,8 @@ export default function BillsFlip() {
               {b.key === 'power' ? (
                 <>
                   <div className="relative mt-2 h-6 text-[13px] font-semibold md:mt-3">
-                    <span data-f="state" data-s="due" className="absolute inset-0 text-[#F5A524]">● Due today · reminder sent</span>
-                    <span data-f="state" data-s="overdue" className="absolute inset-0 text-[#EF4444] opacity-0">● 2 days late · late fee in 3 days</span>
+                    <span data-f="state" data-s="due" className="absolute inset-0 text-[#F5A524] opacity-0">● Due today · reminder sent</span>
+                    <span data-f="state" data-s="overdue" className="absolute inset-0 text-[#EF4444]">● 2 days late · late fee in 3 days</span>
                     <span data-f="state" data-s="paid" className="absolute inset-0 text-[#22C55E] opacity-0">✓ Paid via UPI · no late fee</span>
                   </div>
                   <div className="relative mt-2 h-10 md:mt-3 md:h-11">

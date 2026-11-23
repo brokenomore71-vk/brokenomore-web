@@ -5,7 +5,7 @@ import Image from 'next/image';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Gradient } from '../IntroHero';
-import { glideBetweenLabels, pinned } from '../scrollSteps';
+import { stepThroughLabels, pinned } from '../scrollSteps';
 import { useTypeOnShow } from '../useTypeOnShow';
 import { Avatar } from '../splitPage/screens';
 
@@ -415,7 +415,7 @@ export default function BillsBoard({ flat = false }: { flat?: boolean }) {
         });
 
       // ---- One step per scroll ----
-      const tl = gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { ...pinned(section, STEPS, 9), end: () => `+=${window.innerHeight * 0.65 * STEPS}` } });
+      const tl = gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: pinned(section, 9) });
       for (let c = 0; c <= STEPS; c++) tl.addLabel(`s${c}`, c);
       for (let c = 1; c <= STEPS; c++) {
         tl.fromTo(caps[c - 1], { autoAlpha: 1, y: 0 }, { autoAlpha: 0, y: -14, duration: 0.15, immediateRender: false }, c - 1 + 0.03);
@@ -486,7 +486,7 @@ export default function BillsBoard({ flat = false }: { flat?: boolean }) {
       showFloat(4, 4.65);
       tl.set({}, {}, STEPS);
 
-      const unglide = glideBetweenLabels(tl);
+      const unglide = stepThroughLabels(tl);
       return () => {
         unglide();
         intro.kill();

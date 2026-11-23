@@ -33,12 +33,12 @@ export const SKINS: Record<string, Skin> = {
 };
 
 // Each hand: whose, the direction it points (degrees; 0 points right), how far from the phone
-// it rests, its skin and sleeve, and what it holds
+// it rests, and its skin and sleeve
 const HANDS = [
-  { id: 'you', angle: -32, rest: 250, skin: 'light', sleeve: '#2a2457', holds: 'card' },
-  { id: 'atharva', angle: 28, rest: 260, skin: 'brown', sleeve: '#4f1c37', holds: 'card' },
-  { id: 'parva', angle: -146, rest: 255, skin: 'medium', sleeve: '#1d364c', holds: 'card' },
-  { id: 'ruchi', angle: 152, rest: 270, skin: 'deep', sleeve: '#36363c', holds: 'phone' },
+  { id: 'you', angle: -32, rest: 250, skin: 'light', sleeve: '#2a2457' },
+  { id: 'atharva', angle: 28, rest: 260, skin: 'brown', sleeve: '#4f1c37' },
+  { id: 'parva', angle: -146, rest: 255, skin: 'medium', sleeve: '#1d364c' },
+  { id: 'ruchi', angle: 152, rest: 270, skin: 'deep', sleeve: '#36363c' },
 ] as const;
 const share = (id: string) => PEOPLE.find((p) => p.id === id)!.dutch;
 
@@ -164,24 +164,6 @@ function TablePhone() {
   );
 }
 
-// The phone in Ruchi's hand, with the app's UPI screen
-function HandPhone() {
-  return (
-    <div style={{ transform: 'rotate(90deg)', transformOrigin: '50% 50%' }} className="-my-[46px]">
-      <PhoneBody w={98} h={196} radius={18}>
-        <div className="flex h-full flex-col p-2 text-white">
-          <div className="rounded-md p-1.5" style={{ background: 'linear-gradient(140deg,#6E5BFF,#E86AB4)' }}>
-            <p className="text-[6px] font-semibold tracking-wider text-white/80">PAY VIA UPI</p>
-            <p className="text-[13px] font-bold">{inr(share('ruchi'), 0)}</p>
-          </div>
-          <span className="mt-1.5 block h-1.5 w-full rounded-full bg-white/10" />
-          <span className="mt-1 block h-1.5 w-2/3 rounded-full bg-white/10" />
-          <span className="mt-auto rounded-md bg-[#6E5BFF] py-1 text-center text-[7px] font-bold">Pay</span>
-        </div>
-      </PhoneBody>
-    </div>
-  );
-}
 
 // A cup of coffee, seen from above
 export function Coffee() {
@@ -376,7 +358,7 @@ function Hand({ hand, shadow }: { hand: (typeof HANDS)[number]; shadow?: boolean
       <HandLayers skin={skin} sleeve={hand.sleeve} shadow={shadow} part="under" />
       {/* What it holds: its back edge tucked under the curled fingers, the index along its top */}
       <div className="absolute left-[322px] top-[30px]" style={{ filter: shadow ? 'brightness(0)' : undefined, transform: 'rotate(-3deg)', transformOrigin: '0% 30%' }}>
-        {hand.holds === 'card' ? <Card color={PERSON_COLORS[hand.id]} /> : <HandPhone />}
+        <Card color={PERSON_COLORS[hand.id]} />
       </div>
       <HandLayers skin={skin} sleeve={hand.sleeve} shadow={shadow} part="over" />
     </div>
