@@ -6,6 +6,7 @@
 // the same rule as the rest of /admin.
 
 import { adminSupabase } from '@/lib/admin/client';
+import { CMS_API_URL } from '@/lib/site';
 
 export type Kind = 'credit-cards' | 'festivals' | 'feature-slides' | 'faqs';
 
@@ -33,9 +34,7 @@ export type UploadResult = {
 };
 
 // The app backend's address (the api.brokenomore.in gateway or the Cloud Run URL), not NEXT_PUBLIC_ADMIN_API_URL.
-export const API_BASE = (
-  process.env.NEXT_PUBLIC_CMS_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '')
-).replace(/\/$/, '');
+export const API_BASE = CMS_API_URL;
 
 // Public bucket the app streams assets from (AppConstants.gcpBucketBaseUrl in the app)
 const ASSET_BUCKET = 'https://storage.googleapis.com/bnm-public-assets';
