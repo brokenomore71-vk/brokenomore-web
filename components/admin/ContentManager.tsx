@@ -54,6 +54,10 @@ type Props<T> = {
   savedMessage?: string;
   /** After any change is saved (add, edit, switch, delete, reorder) */
   onChanged?: () => void;
+  /** Changing this number reloads the list (after changes made outside it, e.g. renaming FAQ categories) */
+  reloadSignal?: number;
+  /** Let long titles and details wrap onto more lines in the list instead of being cut off */
+  wrapRowText?: boolean;
 };
 
 type Editor<T> = { item: Item<T> | null; draft: T; initial: string; errors: Record<string, string>; conflict: boolean };
@@ -91,7 +95,7 @@ export default function ContentManager<T extends Record<string, unknown>>(props:
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, props.reloadSignal]);
 
   const dirty = !!editor && JSON.stringify(editor.draft) !== editor.initial;
   useEffect(() => {
@@ -313,8 +317,10 @@ export default function ContentManager<T extends Record<string, unknown>>(props:
                 </div>
                 {rowMedia && <MediaPreview value={rowMedia(item.data)} className={cn('rounded-md shrink-0', props.mediaClass || 'h-12 w-20')} />}
                 <button className="flex-1 min-w-0 text-left" onClick={() => openEditor(item)}>
-                  <p className="text-[13px] font-medium text-[#f4f4f5] truncate">{rowTitle(item.data) || item.id}</p>
-                  <div className="text-xs text-[#8b8b94] truncate mt-0.5">{rowMeta(item.data)}</div>
+                  <p className={cn('text-[13px] font-medium text-[#f4f4f5]', props.wrapRowText ? 'whitespace-normal break-words' : 'truncate')}>
+                    {rowTitle(item.data) || `Untitled ${noun}`}
+                  </p>
+                  <div className={cn('text-xs text-[#8b8b94] mt-0.5', props.wrapRowText ? 'whitespace-normal break-words' : 'truncate')}>{rowMeta(item.data)}</div>
                 </button>
                 {!toggles && (
                   <span
@@ -380,7 +386,7 @@ export default function ContentManager<T extends Record<string, unknown>>(props:
             <div className="flex items-center justify-between gap-3 px-5 sm:px-6 h-16 border-b border-white/[0.06] shrink-0">
               <div className="min-w-0">
                 <p className="text-base font-semibold truncate">{editor.item ? `Edit ${rowTitle(editor.item.data) || noun}` : `New ${noun}`}</p>
-                {editor.item && <p className="text-[11px] text-[#7b7b84]">ID: {editor.item.id}</p>}
+                
               </div>
               <IconButton label="Close" onClick={() => closeEditor()}>
                 <IconX size={18} />

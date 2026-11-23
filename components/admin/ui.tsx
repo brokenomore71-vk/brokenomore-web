@@ -129,6 +129,38 @@ export function TextArea({ invalid, className, ...rest }: React.TextareaHTMLAttr
   return <textarea {...rest} className={cn(inputClass, 'h-auto py-2 leading-relaxed resize-y', invalid && 'border-[#EF4444]/70', className)} />;
 }
 
+/** A text box that wraps long text onto the next line and grows to fit it. singleLine: Enter adds no line
+ * break (for fields saved as one line), so the text only wraps on screen. */
+export function AutoTextArea({
+  invalid,
+  className,
+  singleLine,
+  value,
+  onKeyDown,
+  ...rest
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean; singleLine?: boolean }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight + 2}px`;
+  }, [value]);
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      value={value}
+      onKeyDown={(e) => {
+        if (singleLine && e.key === 'Enter') e.preventDefault();
+        onKeyDown?.(e);
+      }}
+      {...rest}
+      className={cn(inputClass, 'h-auto min-h-11 py-2.5 leading-relaxed resize-none overflow-hidden whitespace-pre-wrap break-words', invalid && 'border-[#EF4444]/70', className)}
+    />
+  );
+}
+
 export function Select({
   invalid,
   className,

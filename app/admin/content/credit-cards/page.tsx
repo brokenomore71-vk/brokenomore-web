@@ -36,7 +36,7 @@ const str = (v: unknown) => (typeof v === 'string' ? v : '');
 // Stored as "• one\n• two"; edited as one benefit per line (the server adds the bullets back)
 const unbullet = (v: unknown) => str(v).replace(/^•\s?/gm, '');
 
-function CardForm({ value, onChange, errors, isNew, disabled }: FormProps<Card>) {
+function CardForm({ value, onChange, errors, disabled }: FormProps<Card>) {
   const set = (field: string) => (v: string) => onChange({ ...value, [field]: v });
   const text = (field: string, props: { placeholder?: string; hint?: string; required?: boolean; label?: string } = {}) => (
     <Field label={props.label || field} required={props.required} error={errors[field]} hint={props.hint}>
@@ -66,20 +66,7 @@ function CardForm({ value, onChange, errors, isNew, disabled }: FormProps<Card>)
           {text('Card Name', { required: true, placeholder: 'HDFC Bank Millennia Credit Card' })}
           {text('Issuer', { required: true, placeholder: 'HDFC' })}
         </Grid>
-        <Grid>
-          {text('Referral / Deal Link', { label: 'Apply link', placeholder: 'https://…', hint: 'Where the app sends people to apply.' })}
-          {isNew ? (
-            text('Source Card ID', {
-              label: 'Card ID',
-              placeholder: 'Leave empty to generate',
-              hint: "Can't be changed later. Letters, numbers, - and _.",
-            })
-          ) : (
-            <Field label="Card ID" hint="Fixed once created.">
-              <TextInput value={str(value['Source Card ID'])} disabled />
-            </Field>
-          )}
-        </Grid>
+        {text('Referral / Deal Link', { label: 'Apply link', placeholder: 'https://…', hint: 'Where the app sends people to apply.' })}
       </Section>
 
       <Section title="Fees" description="Plain numbers like 1500 are saved as ₹1,500.">

@@ -17,6 +17,9 @@ export type Item<T = Record<string, unknown>> = {
   data: T;
 };
 
+/** A FAQ category and how many questions are in it */
+export type FaqCategory = { name: string; count: number };
+
 export type SessionInfo = {
   email: string;
   storage: 'local' | 'gcs';
@@ -108,6 +111,14 @@ export const adminApi = {
     request<{ display_duration_seconds: number }>('/admin/content/festivals/settings', {
       method: 'PUT',
       body: JSON.stringify({ display_duration_seconds: seconds }),
+    }),
+  faqCategories: () => request<{ categories: FaqCategory[] }>('/admin/content/faqs/categories'),
+  addFaqCategory: (name: string) =>
+    request<{ categories: FaqCategory[] }>('/admin/content/faqs/categories', { method: 'POST', body: JSON.stringify({ name }) }),
+  renameFaqCategory: (oldName: string, newName: string) =>
+    request<{ categories: FaqCategory[] }>('/admin/content/faqs/categories', {
+      method: 'PUT',
+      body: JSON.stringify({ old_name: oldName, new_name: newName }),
     }),
   upload: (kind: Kind, file: File, purpose: 'image' | 'video' = 'image') => {
     const form = new FormData();
