@@ -5,8 +5,9 @@
 // backend can't be reached, the built-in copy in lib/faqData.ts is shown instead, so the section never breaks.
 
 import { FAQ_CATEGORIES, type FAQCategory } from '@/lib/faqData';
+import { CMS_API_URL } from '@/lib/site';
 
-const API = (process.env.NEXT_PUBLIC_CMS_API_URL || '').replace(/\/$/, '');
+const API = CMS_API_URL;
 export const FAQ_REVALIDATE_SECONDS = 60;
 
 type ApiResponse = { categories?: { name: string; items: { id: string; question: string; answer: string }[] }[] };

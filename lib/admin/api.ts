@@ -6,6 +6,7 @@
 // the same rule as the rest of /admin.
 
 import { adminSupabase } from '@/lib/admin/client';
+import { CMS_API_URL } from '@/lib/site';
 
 export type Kind = 'credit-cards' | 'festivals' | 'feature-slides' | 'faqs';
 
@@ -15,6 +16,9 @@ export type Item<T = Record<string, unknown>> = {
   is_active: boolean;
   data: T;
 };
+
+/** A FAQ category and how many questions are in it */
+export type FaqCategory = { name: string; count: number };
 
 export type SessionInfo = {
   email: string;
@@ -33,9 +37,7 @@ export type UploadResult = {
 };
 
 // The app backend's address (the api.brokenomore.in gateway or the Cloud Run URL), not NEXT_PUBLIC_ADMIN_API_URL.
-export const API_BASE = (
-  process.env.NEXT_PUBLIC_CMS_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '')
-).replace(/\/$/, '');
+export const API_BASE = CMS_API_URL;
 
 // Public bucket the app streams assets from (AppConstants.gcpBucketBaseUrl in the app)
 const ASSET_BUCKET = 'https://storage.googleapis.com/bnm-public-assets';
@@ -110,6 +112,19 @@ export const adminApi = {
       method: 'PUT',
       body: JSON.stringify({ display_duration_seconds: seconds }),
     }),
+  faqCategories: () => request<{ categories: FaqCategory[] }>('/admin/content/faqs/categories'),
+  addFaqCategory: (name: string) =>
+    request<{ categories: FaqCategory[] }>('/admin/content/faqs/categories', { method: 'POST', body: JSON.stringify({ name }) }),
+  deleteFaqCategory: (name: string) =>
+    request<{ categories: FaqCategory[]; deleted_questions: number }>(
+      `/admin/content/faqs/categories?name=${encodeURIComponent(name)}`,
+      { method: 'DELETE' },
+    ),
+  renameFaqCategory: (oldName: string, newName: string) =>
+    request<{ categories: FaqCategory[] }>('/admin/content/faqs/categories', {
+      method: 'PUT',
+      body: JSON.stringify({ old_name: oldName, new_name: newName }),
+    }),
   upload: (kind: Kind, file: File, purpose: 'image' | 'video' = 'image') => {
     const form = new FormData();
     form.append('file', file);
@@ -133,8 +148,9 @@ export function mediaUrl(value: string | null | undefined): string {
   if (!v) return '';
   if (/^https?:\/\//i.test(v)) return v;
   if (v.startsWith('/static/')) return `${API_BASE}${v}`;
-  // Uploaded from this panel: in the public bucket, where the app also loads it from
-  if (v.startsWith('assets/cms/')) return encodeURI(`${ASSET_BUCKET}/${v}`);
+  // Uploaded from this panel: in the public bucket under assets/assets/cms/, where the app's getGcpAssetUrl
+  // also looks ("assets/x" -> <bucket>/assets/assets/x)
+  if (v.startsWith('assets/cms/')) return encodeURI(`${ASSET_BUCKET}/assets/${v}`);
   // Shipped inside the app: previewed from the copy in public/app-assets/ (same folder layout as the app)
   if (v.startsWith('assets/')) return encodeURI(`/app-assets/${v.slice('assets/'.length)}`);
   return '';

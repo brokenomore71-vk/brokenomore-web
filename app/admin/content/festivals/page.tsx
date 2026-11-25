@@ -57,7 +57,7 @@ function schedule(f: Festival): string {
   return parts.join(' · ') || 'No dates';
 }
 
-function FestivalForm({ value, onChange, errors, isNew, disabled }: FormProps<Festival>) {
+function FestivalForm({ value, onChange, errors, disabled }: FormProps<Festival>) {
   const set = <K extends keyof Festival>(k: K, v: Festival[K]) => onChange({ ...value, [k]: v });
   const [newDate, setNewDate] = useState('');
   const yearly = /^\d{2}-\d{2}$/.test(value.date) ? value.date : '';
@@ -100,11 +100,6 @@ function FestivalForm({ value, onChange, errors, isNew, disabled }: FormProps<Fe
             <TextInput value={value.greeting} onChange={(e) => set('greeting', e.target.value)} placeholder="Happy Diwali!" disabled={disabled} />
           </Field>
         </Grid>
-        {isNew && (
-          <Field label="ID" error={errors.id} hint="Optional. Generated from the name if empty; can't be changed later.">
-            <TextInput value={value.id || ''} onChange={(e) => set('id', e.target.value)} placeholder="diwali" disabled={disabled} />
-          </Field>
-        )}
       </Section>
 
       {value.is_birthday ? (

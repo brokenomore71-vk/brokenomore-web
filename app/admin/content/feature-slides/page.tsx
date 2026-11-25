@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { IconChevronDown } from '@tabler/icons-react';
 import ContentManager, { type FormProps } from '@/components/admin/ContentManager';
-import { ColorInput, Field, Grid, MediaField, Section, Select, SizeNote, TextArea, TextInput } from '@/components/admin/ui';
+import { AutoTextArea, ColorInput, Field, Grid, MediaField, Section, Select, SizeNote, TextArea, TextInput } from '@/components/admin/ui';
 import { isVideo } from '@/lib/admin/api';
 import { cn } from '@/lib/utils';
 
@@ -70,7 +70,7 @@ const blank = (): Slide => ({
   action: { type: 'navigate', target: '' },
 });
 
-function SlideForm({ value, onChange, errors, isNew, disabled }: FormProps<Slide>) {
+function SlideForm({ value, onChange, errors, disabled }: FormProps<Slide>) {
   const [advanced, setAdvanced] = useState(false);
   const t = TEMPLATES.find((x) => x.value === value.template_type) || TEMPLATES[TEMPLATES.length - 1];
   const header = (patch: Partial<Slide['header']>) => onChange({ ...value, header: { ...value.header, ...patch } });
@@ -93,19 +93,14 @@ function SlideForm({ value, onChange, errors, isNew, disabled }: FormProps<Slide
             <ColorInput value={value.background_color} onChange={(background_color) => onChange({ ...value, background_color })} invalid={!!e('background_color')} />
           </Field>
         </Grid>
-        {isNew && (
-          <Field label="ID" error={e('id')} hint="Optional. Generated from the title if empty; can't be changed later.">
-            <TextInput value={value.id || ''} onChange={(ev) => onChange({ ...value, id: ev.target.value })} placeholder="gold_savings" disabled={disabled} />
-          </Field>
-        )}
       </Section>
 
       <Section title="Text">
         <Field label="Title" error={e('header.title')} hint="Optional. Leave empty if the video already shows the title. Press Enter for a line break.">
-          <TextArea rows={3} value={value.header.title} onChange={(ev) => header({ title: ev.target.value })} invalid={!!e('header.title')} disabled={disabled} placeholder={'Loan\nPlanner'} />
+          <AutoTextArea value={value.header.title} onChange={(ev) => header({ title: ev.target.value })} invalid={!!e('header.title')} disabled={disabled} placeholder={'Loan\nPlanner'} />
         </Field>
-        <Field label="Subtitle" error={e('header.subtitle')}>
-          <TextInput value={value.header.subtitle} onChange={(ev) => header({ subtitle: ev.target.value })} disabled={disabled} placeholder="Map your way to zero debt" />
+        <Field label="Subtitle" error={e('header.subtitle')} hint="Long text wraps onto the next line by itself.">
+          <AutoTextArea singleLine value={value.header.subtitle} onChange={(ev) => header({ subtitle: ev.target.value })} disabled={disabled} placeholder="Map your way to zero debt" />
         </Field>
         {t.catchphrase && (
           <Field label="Catchphrase" error={e('catchphrase.text')} hint="Optional large line on the slide.">
@@ -316,6 +311,7 @@ export default function FeatureSlidesPage() {
       rowMeta={(s) => [TEMPLATES.find((x) => x.value === s.template_type)?.label.split(' (')[0] || s.template_type, `${s.duration_seconds}s`, s.header?.subtitle].filter(Boolean).join(' · ')}
       rowMedia={(s) => s.main_illustration?.source}
       mediaClass="h-16 w-10"
+      wrapRowText
       searchText={(s) => `${s.header?.title} ${s.header?.subtitle} ${s.template_type}`}
     />
   );

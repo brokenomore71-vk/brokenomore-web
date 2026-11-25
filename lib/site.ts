@@ -4,6 +4,13 @@
 export const SITE_URL = 'https://brokenomore.in';
 export const SITE_NAME = 'BrokeNoMore';
 
+// The app backend that holds the admin-managed content (credit cards, festivals, feature slides, FAQs): the admin
+// panel edits it and the homepage FAQ reads it. NEXT_PUBLIC_CMS_API_URL overrides it (e.g. localhost:8000 in
+// development). Staging and production backends share the same content storage, so either works here.
+export const CMS_API_URL = (
+  process.env.NEXT_PUBLIC_CMS_API_URL || 'https://staging-broke-no-more-448142641323.asia-south1.run.app'
+).replace(/\/$/, '');
+
 export const SITE_TITLE = 'BrokeNoMore';
 export const SITE_DESCRIPTION =
   'BrokeNoMore is a free personal finance app for India. Track expenses and budgets, split bills with friends, buy digital gold, analyse NSE and BSE stocks with AI, plan loans and EMIs, track bills and subscriptions, and file ITR, all in one place.';
