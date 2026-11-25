@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { ANDROID_INVITE_DOWNLOAD_URL, APP_STORE_URL } from '@/lib/site';
+import { ANDROID_INVITE_DOWNLOAD_URL, IOS_INVITE_DOWNLOAD_URL } from '@/lib/site';
 
 // /download: the smart link sent in the app's friend / split invites over WhatsApp
 // (https://brokenomore.in/download?ref=<invite code>).
@@ -20,7 +20,7 @@ export default async function DownloadPage() {
   const ua = (await headers()).get('user-agent') ?? '';
 
   if (/android/i.test(ua)) redirect(ANDROID_INVITE_DOWNLOAD_URL);
-  if (/iPhone|iPad|iPod/i.test(ua)) redirect(APP_STORE_URL);
+  if (/iPhone|iPad|iPod/i.test(ua)) redirect(IOS_INVITE_DOWNLOAD_URL);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[#0f0f0f] px-4 text-center text-white">
@@ -38,7 +38,7 @@ export default async function DownloadPage() {
           Download for Android
         </a>
         <a
-          href={APP_STORE_URL}
+          href={IOS_INVITE_DOWNLOAD_URL}
           className="flex-1 rounded-xl border border-[#6B46C1] px-5 py-3 font-semibold text-[#C9B8F0] transition hover:bg-[#6B46C1]/15"
         >
           Download for iPhone

@@ -138,5 +138,11 @@ export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com
 // internal-test list can install from it. When the build goes to production, set this
 // back to PLAY_STORE_URL.
 export const ANDROID_INVITE_DOWNLOAD_URL = 'https://play.google.com/apps/internaltest/4701179351539799933';
+
 export const APP_STORE_URL = 'https://apps.apple.com/in/app/brokenomore/id6756296299';
+
+// Where /download (the app's invite link) sends iPhone/iPad users.
+// TESTFLIGHT TESTING: the TestFlight public link. When the build goes to production, set this
+// back to APP_STORE_URL.
+export const IOS_INVITE_DOWNLOAD_URL = 'https://testflight.apple.com/join/taTMfTbF';
 export const SUPPORT_EMAIL = 'support@brokenomore.in';
