@@ -132,5 +132,11 @@ export const CALCULATORS_KEYWORDS = [
 ];
 
 export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.bnm.broke_no_more';
+
+// Where /download (the app's invite link) sends Android users.
+// INTERNAL TESTING: the Play Console internal-test opt-in link. Only testers on the
+// internal-test list can install from it. When the build goes to production, set this
+// back to PLAY_STORE_URL.
+export const ANDROID_INVITE_DOWNLOAD_URL = 'https://play.google.com/apps/internaltest/4701179351539799933';
 export const APP_STORE_URL = 'https://apps.apple.com/in/app/brokenomore/id6756296299';
 export const SUPPORT_EMAIL = 'support@brokenomore.in';

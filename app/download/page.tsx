@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/site';
+import { ANDROID_INVITE_DOWNLOAD_URL, APP_STORE_URL } from '@/lib/site';
 
 // /download: the smart link sent in the app's friend / split invites over WhatsApp
 // (https://brokenomore.in/download?ref=<invite code>).
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export default async function DownloadPage() {
   const ua = (await headers()).get('user-agent') ?? '';
 
-  if (/android/i.test(ua)) redirect(PLAY_STORE_URL);
+  if (/android/i.test(ua)) redirect(ANDROID_INVITE_DOWNLOAD_URL);
   if (/iPhone|iPad|iPod/i.test(ua)) redirect(APP_STORE_URL);
 
   return (
@@ -32,7 +32,7 @@ export default async function DownloadPage() {
       </p>
       <div className="flex w-full max-w-md flex-col gap-3 sm:flex-row">
         <a
-          href={PLAY_STORE_URL}
+          href={ANDROID_INVITE_DOWNLOAD_URL}
           className="flex-1 rounded-xl bg-[#6B46C1] px-5 py-3 font-semibold text-white transition hover:bg-[#7c5ad1]"
         >
           Download for Android
