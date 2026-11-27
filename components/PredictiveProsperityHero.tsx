@@ -81,6 +81,8 @@ function Phone({
           alt=""
           width={1024}
           height={512}
+          // Matches the wrapper's clamp(340px, 50vw, 660px), so phones fetch a ~640px file, not 2048px
+          sizes="(min-width: 1320px) 660px, (min-width: 680px) 50vw, 340px"
           className="w-full h-auto object-contain select-none"
           draggable={false}
           priority

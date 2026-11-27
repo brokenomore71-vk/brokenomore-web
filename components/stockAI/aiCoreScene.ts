@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isLowPowerGraphics } from '../lowPowerGraphics';
 
 // The AI core: the app's crystal (the shape on its "Running fundamental analysis…" screen) built in
 // 3D, in glass and violet light, with a stream of data rising through it. In the hero it also has
@@ -47,6 +48,10 @@ export class AiCoreScene {
   private disposables: { dispose: () => void }[] = [];
   private frame = 0;
   private running = false;
+  // Without a GPU every frame is drawn on the CPU, so the core is drawn in its settled state, and
+  // only again when something about it changes (size, intro), instead of animating continuously
+  private still = isLowPowerGraphics();
+  private dirty = true;
   private last = 0;
   private time = 0;
   private pointer = { x: 0, y: 0, tx: 0, ty: 0 };
@@ -344,6 +349,13 @@ export class AiCoreScene {
   setIntro(appear: boolean, emerge: boolean) {
     this.appear.target = appear ? 1 : 0;
     this.emerge.target = emerge ? 1 : 0;
+    this.invalidate();
+  }
+
+  // In still mode, asks for one more frame to be drawn
+  private invalidate() {
+    this.dirty = true;
+    if (this.still && this.running && !this.frame) this.frame = requestAnimationFrame(this.loop);
   }
 
   resize(width: number, height: number) {
@@ -359,6 +371,7 @@ export class AiCoreScene {
     const fog = this.scene.fog as THREE.Fog;
     fog.near = z - 0.6;
     fog.far = z + 3.4;
+    this.invalidate();
   }
 
   setActive(on: boolean) {
@@ -367,11 +380,25 @@ export class AiCoreScene {
     if (on) {
       this.last = performance.now();
       this.frame = requestAnimationFrame(this.loop);
-    } else cancelAnimationFrame(this.frame);
+    } else {
+      cancelAnimationFrame(this.frame);
+      this.frame = 0;
+    }
   }
 
   private loop = (now: number) => {
+    this.frame = 0;
     if (!this.running) return;
+    if (this.still) {
+      if (!this.dirty) return;
+      this.dirty = false;
+      this.appear.v = this.appear.target;
+      this.emerge.v = this.emerge.target;
+      this.energy.v = this.energy.target;
+      this.step(0);
+      this.renderer.render(this.scene, this.camera);
+      return;
+    }
     const dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
     this.time += dt;
